@@ -49,12 +49,18 @@
             background-image: linear-gradient(#ffffff08 1px, transparent 1px), linear-gradient(90deg, #ffffff08 1px, transparent 1px);
             background-size: 24px 24px; }
   @media (max-width: 560px) { .office { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .tile { transition: transform .12s ease, box-shadow .15s ease; }
   .tile { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:4px; min-height:96px; padding:8px 6px;
-          background:#e2e8f0; color:#0f172a; border:2px solid #94a3b8; border-radius:12px; font-weight:600; font-size:.8rem;
+          background:#fff; color:#1b1446; border:3px solid #c4b5fd; border-radius:16px; font-weight:700; font-size:.8rem;
           line-height:1.25; text-align:center; overflow-wrap:anywhere; }
-  .tile .ico { font-size:1.8rem; line-height:1; }
-  .tile.found { background:#dcfce7; border-color:var(--good); }
-  .tile.decoy-checked { background:#e5e7eb; border-style:dashed; }
+  .tile .ico { font-size:2.1rem; line-height:1; }
+  .tile:nth-child(4n+1) { border-color:#ff9fcd; } .tile:nth-child(4n+2) { border-color:#7fe7f5; }
+  .tile:nth-child(4n+3) { border-color:#ffe27a; } .tile:nth-child(4n+4) { border-color:#b3f5a3; }
+  .tile.found { background:linear-gradient(160deg,#d9ffcf,#84f06b); border-color:#3fbf2a; }
+  .tile.decoy-checked { background:#ece8ff; border-style:dashed; border-color:#a78bfa; color:#5b4a99; }
+  .popover { animation: nb-screen .3s cubic-bezier(.2,1.2,.4,1) both; border-width:3px; border-radius:24px; }
+  .hacked { background:linear-gradient(135deg,#ff2e63,#7a0b2e); }
+  .office { background-color: rgba(10,4,40,.35); border:2px solid rgba(255,255,255,.18); }
   .tile.hinted { border-color:var(--warn); box-shadow:0 0 0 4px #f59e0b88; animation: pulse 1s ease-in-out infinite alternate; }
   .tile:disabled { opacity:1; cursor:default; }
   .tile .mark { font-size:.72rem; font-weight:800; }
@@ -282,6 +288,7 @@ function tap(id) {
 }
 
 function dispatch(move) {
+  const prev = { phase: state.phase, popover: !!state.popover, hinted: state.hinted };
   switch (move.type) {
     case 'draft': state.namesDraft = move.text; return; // typing; no re-render
     case 'start': {
@@ -348,6 +355,25 @@ function dispatch(move) {
     default: return;
   }
   render();
+  feedback(prev);
+}
+
+/* Sounds and effects after a move (never change state). */
+function feedback(prev) {
+  const pop = state.popover;
+  if (pop && !prev.popover) {
+    if (pop.correct) {
+      sfx('correct'); fx('pop', '[data-testid="lesson-result"]'); fx('confetti', '[data-testid="lesson-result"]', 26);
+    } else {
+      sfx('wrong'); fx('shake', '[data-testid="lesson-popover"]');
+    }
+    if (pop.lesson.warning) setTimeout(() => { sfx('warning'); fx('glow', '[data-testid="shield-warning"]'); }, 450);
+  }
+  if (state.hinted && state.hinted !== prev.hinted) { sfx('go'); fx('glow', '[data-hinted="true"]'); }
+  if (state.phase === 'leaderboard' && prev.phase === 'scene') {
+    if (state.endReason === 'time') sfx('wrong');
+    setTimeout(() => { sfx('win'); fx('confetti', '[data-testid="winner-banner"]', 80); }, state.endReason === 'time' ? 350 : 0);
+  }
 }
 
 /* ------------------------------------------------------------------ *
@@ -367,9 +393,12 @@ function shieldBadge() {
   return '<span class="badge" data-testid="shield-status">🛡️ Shield: ' + Shield.mode + ' · prototype, scripted agent</span>';
 }
 function timerText() { return '⏱️ ' + Math.ceil(state.timeLeft) + 's'; }
+let lastTickSecond = null;
 function updateTimer() {
   const el = app.querySelector('[data-testid="timer"]');
   if (!el) return;
+  const sec = Math.ceil(state.timeLeft);
+  if (sec <= 10 && sec > 0 && sec !== lastTickSecond) { lastTickSecond = sec; sfx('tick'); fx('pop', el); }
   el.textContent = timerText();
   el.dataset.seconds = String(Math.ceil(state.timeLeft));
   el.classList.toggle('low', state.timeLeft <= 15);
@@ -435,7 +464,7 @@ function view() {
       '<p>' + shieldBadge() + '</p></section>';
     if (state.popover) h += popoverView();
   } else if (state.phase === 'leaderboard') {
-    h += '<section class="panel" data-testid="leaderboard"><h2>🏆 Leaderboard</h2>' +
+    h += '<section class="panel" data-testid="leaderboard">' + winnerBanner() + '<h2>🏆 Leaderboard</h2>' +
       '<p data-testid="found-count">Risks found: ' + state.found.length + '/' + RISK_COUNT + '</p>' +
       '<p class="muted small" data-testid="end-reason">' + (state.endReason === 'time' ? '⏱️ Time is up.' : '🎉 Every risk found.') + '</p>' +
       '<ol class="board">' +
@@ -464,9 +493,19 @@ function view() {
   return h;
 }
 
+function winnerBanner() {
+  const board = leaderboard();
+  const tie = board.length > 1 && board[0].score === board[1].score;
+  return '<p class="winner-banner" data-testid="winner-banner"><span class="trophy">🏆</span> ' +
+    (tie ? 'It\'s a tie at the top!' : esc(board[0].name) + ' wins the hunt!') + ' <span class="trophy">🎉</span></p>';
+}
+
+let lastPhase = null;
 function render() {
   const doc = new DOMParser().parseFromString('<body>' + view() + '</body>', 'text/html');
   app.replaceChildren(...Array.from(doc.body.childNodes));
+  if (state.phase !== lastPhase && app.firstElementChild) app.firstElementChild.classList.add('screen-in');
+  lastPhase = state.phase;
   const focusTarget = app.querySelector('[data-testid="btn-lesson-ok"]');
   if (focusTarget && !(document.activeElement && document.activeElement.closest('.nbm-panel'))) focusTarget.focus({ preventScroll: true });
 }

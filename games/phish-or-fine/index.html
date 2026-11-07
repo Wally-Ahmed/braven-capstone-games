@@ -66,7 +66,15 @@
   .snip .from { font-family: ui-monospace, Menlo, Consolas, monospace; font-size:.85rem; margin-top:6px; }
   .snip .body { margin-top:6px; }
   .timebar { height:8px; border-radius:999px; background:#0b1222; border:1px solid var(--line); overflow:hidden; margin:8px 0 4px; }
-  .timebar span { display:block; height:100%; background:var(--warn); width:100%; }
+  .timebar { height:12px; }
+  .timebar span { display:block; height:100%; background:linear-gradient(90deg,#84f06b,#ffd23f); width:100%; transition: width .2s linear; }
+  .timebar.low span { background:linear-gradient(90deg,#ff5c7a,#ff8a3d); }
+  .count.c3 { color:#ff4fa3; } .count.c2 { color:#22d3ee; } .count.c1 { color:#84f06b; }
+  .champ { font-size:1.5rem; animation: nb-bounce-in .7s cubic-bezier(.2,1.6,.4,1) both; }
+  .zone { border-width:3px; border-radius:20px; }
+  .zone.p1 { background:linear-gradient(180deg, rgba(167,139,250,.35), rgba(10,4,40,.4)); }
+  .zone.p2 { background:linear-gradient(180deg, rgba(255,138,61,.35), rgba(10,4,40,.4)); }
+  .snip .ch { background:#ffe3f1; color:#9d174d; }
   .status { font-weight:600; min-height:1.4em; }
 
   ol.board { padding-left:0; list-style:none; margin:0; }
@@ -376,6 +384,7 @@ function buzz(slot, choice) {
 }
 
 function dispatch(move) {
+  const prev = { phase: state.phase, buzzes: state.q ? state.q.buzzes.length : 0, count: state.count };
   switch (move.type) {
     case 'draft': state.namesDraft = move.text; return; // typing; no re-render
     case 'start': {
@@ -435,6 +444,27 @@ function dispatch(move) {
   }
   schedule();
   render();
+  feedback(prev);
+}
+
+/* Sounds and effects after a move (never change state). */
+function feedback(prev) {
+  if (state.phase === 'countdown' && (prev.phase !== 'countdown' || prev.count !== state.count)) { sfx('tick'); }
+  if (state.phase === 'question' && prev.phase === 'countdown') sfx('go');
+  if (state.phase === 'question' && state.q && state.q.buzzes.length > prev.buzzes) {
+    const b = state.q.buzzes[state.q.buzzes.length - 1];
+    if (!b.correct) { sfx('wrong'); fx('shake', '[data-testid="p' + (b.slot + 1) + '-zone"]'); }
+  }
+  if (state.phase === 'reveal' && prev.phase === 'question') {
+    const win = state.reveal.buzzes.find(b => b.correct);
+    if (win) { sfx('correct'); fx('pop', '[data-testid="reveal-result"]'); fx('confetti', '[data-testid="reveal-result"]', 24); }
+    else { sfx('wrong'); fx('shake', '[data-testid="reveal"]'); }
+  }
+  if (state.phase === 'bracket' && prev.phase === 'reveal') {
+    if (state.champion != null) { sfx('win'); fx('confetti', '[data-testid="champion"]', 80); }
+    else { sfx('correct'); fx('confetti', '[data-testid="heat-result"]', 30); }
+  }
+  if (state.phase === 'leaderboard' && prev.phase === 'bracket') { sfx('win'); fx('confetti', '[data-testid="winner-banner"]', 80); }
 }
 
 /* ------------------------------------------------------------------ *
@@ -454,9 +484,14 @@ function schedule() {
     ticker = setInterval(updateTimer, 200);
   } else if (state.phase === 'reveal') timer = setTimeout(() => dispatch({ type: 'next', step }), REVEAL_MS);
 }
+let lastTickSecond = null;
 function updateTimer() {
   if (state.phase !== 'question') return;
   const left = Math.max(0, state.q.deadline - now());
+  const sec = Math.ceil(left / 1000);
+  if (sec <= 3 && sec > 0 && sec !== lastTickSecond) { lastTickSecond = sec; sfx('tick'); }
+  const tb = app.querySelector('.timebar');
+  if (tb) tb.classList.toggle('low', left <= 2000);
   const t = app.querySelector('[data-testid="timer"]'), bar = app.querySelector('.timebar span');
   if (t) t.textContent = Math.ceil(left / 1000) + ' s';
   if (bar) bar.style.width = (100 * left / BUZZ_MS) + '%';
@@ -536,7 +571,7 @@ function view() {
     const x = curHeat();
     h += '<section class="panel" data-testid="countdown-screen"><h2>' + esc(state.players[x.a].name) + ' vs ' + esc(state.players[x.b].name) + '</h2>' +
       '<p class="muted">Fingers on A/S and K/L, or get ready to tap.</p>' +
-      '<div class="count" data-testid="countdown" aria-live="assertive">' + state.count + '</div></section>';
+      '<div class="count c' + state.count + '" data-testid="countdown" aria-live="assertive">' + state.count + '</div></section>';
   } else if (state.phase === 'question') {
     const q = state.q, x = curHeat(), item = SNIP[q.item];
     const wrong = q.buzzes.find(b => !b.correct);
@@ -563,7 +598,7 @@ function view() {
       '<p class="small">' + esc(state.players[x.a].name) + ' ' + x.scores[0] + ' · ' + esc(state.players[x.b].name) + ' ' + x.scores[1] + '</p>' +
       '<div class="row"><button class="primary" data-testid="btn-next" data-action="next">' + (lastItem ? 'End heat' : 'Next snippet') + '</button></div></section>';
   } else if (state.phase === 'leaderboard') {
-    h += '<section class="panel" data-testid="leaderboard"><h2>🏆 Leaderboard</h2><ol class="board">' +
+    h += '<section class="panel" data-testid="leaderboard">' + winnerBanner() + '<h2>🏆 Leaderboard</h2><ol class="board">' +
       leaderboard().map((r, i) => '<li data-testid="leaderboard-row" data-score="' + r.score + '"><span>' + (i + 1) + '. <span data-testid="leaderboard-name">' + esc(r.name) + '</span>' +
         (r.index === state.champion ? ' 🏆' : '') + '</span><span data-testid="leaderboard-score">' + r.score + '</span></li>').join('') +
       '</ol><div class="row" style="margin-top:12px"><button class="primary" data-testid="btn-debrief" data-action="debrief">🛡️ Shield debrief</button>' +
@@ -591,9 +626,18 @@ function view() {
   return h;
 }
 
+function winnerBanner() {
+  const board = leaderboard();
+  const name = state.champion != null ? state.players[state.champion].name : board[0].name;
+  return '<p class="winner-banner" data-testid="winner-banner"><span class="trophy">🏆</span> ' + esc(name) + ' wins the battle! <span class="trophy">🎉</span></p>';
+}
+
+let lastPhase = null;
 function render() {
   const doc = new DOMParser().parseFromString('<body>' + view() + '</body>', 'text/html');
   app.replaceChildren(...Array.from(doc.body.childNodes));
+  if (state.phase !== lastPhase && app.firstElementChild) app.firstElementChild.classList.add('screen-in');
+  lastPhase = state.phase;
   const focusTarget = app.querySelector('[data-testid="btn-start-heat"], [data-testid="btn-results"], [data-testid="btn-next"]');
   if (focusTarget && !(document.activeElement && document.activeElement.closest('.nbm-panel'))) focusTarget.focus({ preventScroll: true });
 }

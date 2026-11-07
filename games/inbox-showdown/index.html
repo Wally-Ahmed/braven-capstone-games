@@ -56,6 +56,9 @@
   .scores span.active { border-color:var(--accent); color:var(--accent); }
   .debrief-team { border-top:1px solid var(--line); padding-top:10px; margin-top:10px; }
   .debrief-team ul { margin:6px 0; padding-left:18px; }
+  .delta { display:inline-block; font-weight:900; padding:2px 10px; border-radius:999px; }
+  .delta.up { background:#84f06b; color:#0b2a1a; } .delta.down { background:#ff5c7a; color:#fff; }
+  .msg .ch { background:#ffe3f1; color:#9d174d; }
   pre.results { white-space:pre-wrap; background:#0b1222; border:1px solid var(--line); border-radius:10px; padding:10px; font-size:.8rem; overflow-wrap:anywhere; }
 </style>
 <link rel="stylesheet" href="/shared/theme.css">
@@ -289,6 +292,7 @@ function resolve(challenger) {
 }
 
 function dispatch(move) {
+  const prev = { phase: state.phase, warning: !!(state.current && state.current.warning) };
   switch (move.type) {
     case 'draft': state.namesDraft = move.text; return; // typing; no re-render
     case 'start': {
@@ -347,6 +351,21 @@ function dispatch(move) {
     default: return;
   }
   render();
+  feedback(prev);
+}
+
+/* Sounds and effects after a move (never change state). */
+function feedback(prev) {
+  if (state.phase === 'turn' && state.current && state.current.warning && !prev.warning) {
+    sfx('warning'); fx('glow', '[data-testid="shield-warning"]');
+  }
+  if (state.phase === 'reveal' && prev.phase !== 'reveal') {
+    if (state.reveal.correct) {
+      sfx('correct'); fx('pulse', '[data-testid="reveal"]'); fx('pop', '[data-testid="reveal-delta"]');
+      fx('confetti', '[data-testid="reveal-result"]', 22);
+    } else { sfx('wrong'); fx('shake', '[data-testid="reveal"]'); }
+  }
+  if (state.phase === 'leaderboard' && prev.phase === 'reveal') { sfx('win'); fx('confetti', '[data-testid="winner-banner"]', 80); }
 }
 
 /* ------------------------------------------------------------------ *
@@ -427,7 +446,7 @@ function view() {
     const last = state.turn + 1 >= totalTurns();
     h += '<section class="panel" data-testid="reveal"><h2 data-testid="reveal-result" class="' + (r.correct ? 'result-good' : 'result-bad') + '">' +
       (r.correct ? '✅ Correct' : '❌ Not quite') + ': this was ' + (item.risky ? 'a phish / scam' : 'safe') + '</h2>' +
-      '<p>' + esc(t.name) + ' chose ' + r.decision + ' · ' + (r.delta >= 0 ? '+' : '') + r.delta + ' points</p>' +
+      '<p>' + esc(t.name) + ' chose ' + r.decision + ' · <span class="delta ' + (r.delta >= 0 ? 'up' : 'down') + '" data-testid="reveal-delta">' + (r.delta >= 0 ? '+' : '') + r.delta + ' points</span></p>' +
       (r.steal ? '<p data-testid="steal-result">' + esc(state.teams[r.steal.by].name) + ' challenged: ' + (r.steal.ok ? 'steal +' + r.steal.points : 'no steal') + '</p>' : '') +
       messageCard(item) +
       '<div class="shield" data-testid="reveal-lesson"><div class="tag">🛡️ Shield explains · ' + esc(CATEGORIES[item.category].label) + '</div>' +
@@ -435,7 +454,7 @@ function view() {
       scoreStrip(-1) +
       '<div class="row"><button class="primary" data-testid="btn-next" data-action="next">' + (last ? 'See leaderboard' : 'Next team') + '</button></div></section>';
   } else if (state.phase === 'leaderboard') {
-    h += '<section class="panel" data-testid="leaderboard"><h2>🏆 Leaderboard</h2><ol class="board">' +
+    h += '<section class="panel" data-testid="leaderboard">' + winnerBanner() + '<h2>🏆 Leaderboard</h2><ol class="board">' +
       leaderboard().map((r, i) => '<li data-testid="leaderboard-row" data-score="' + r.score + '"><span>' + (i + 1) + '. <span data-testid="leaderboard-name">' + esc(r.name) + '</span></span><span data-testid="leaderboard-score">' + r.score + '</span></li>').join('') +
       '</ol><div class="row" style="margin-top:12px"><button class="primary" data-testid="btn-debrief" data-action="debrief">🛡️ Shield debrief</button>' +
       '<button data-testid="btn-play-again" data-action="restart">Play again</button></div></section>';
@@ -459,9 +478,19 @@ function view() {
   return h;
 }
 
+function winnerBanner() {
+  const board = leaderboard();
+  const tie = board.length > 1 && board[0].score === board[1].score;
+  return '<p class="winner-banner" data-testid="winner-banner"><span class="trophy">🏆</span> ' +
+    (tie ? 'It\'s a tie at the top!' : esc(board[0].name) + ' wins!') + ' <span class="trophy">🎉</span></p>';
+}
+
+let lastPhase = null;
 function render() {
   const doc = new DOMParser().parseFromString('<body>' + view() + '</body>', 'text/html');
   app.replaceChildren(...Array.from(doc.body.childNodes));
+  if (state.phase !== lastPhase && app.firstElementChild) app.firstElementChild.classList.add('screen-in');
+  lastPhase = state.phase;
   const focusTarget = app.querySelector('[data-testid="btn-back-out"], [data-testid="btn-ready"], [data-testid="btn-next"]');
   if (focusTarget && !(document.activeElement && document.activeElement.closest('.nbm-panel'))) focusTarget.focus({ preventScroll: true });
 }
