@@ -1,0 +1,13 @@
+{
+  "name": "braven-capstone-games",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Braven Capstone cyber-safety sample games with the Shield assistant",
+  "scripts": {
+    "serve": "python3 -m http.server 8080",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1"
+  }
+}
