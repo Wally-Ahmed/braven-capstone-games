@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inbox Showdown</title>
+<link rel="stylesheet" href="/shared/menu.css">
+<script src="/shared/menu.js" defer></script>
+<style>
+  :root { --bg:#0f172a; --card:#1e293b; --line:#334155; --text:#f1f5f9; --muted:#94a3b8; --accent:#38bdf8;
+          --good:#22c55e; --bad:#ef4444; --warn:#f59e0b; --ink:#0f172a; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; overflow-x:hidden; }
+  body { background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height:1.45; }
+  #app { max-width:720px; margin:0 auto; padding:16px; }
+  h1, h2, h3 { margin:0 0 8px; line-height:1.2; }
+  h1 { font-size:1.5rem; } h2 { font-size:1.25rem; } h3 { font-size:1.05rem; }
+  p { margin:6px 0; }
+  .muted { color:var(--muted); }
+  .small { font-size:.85rem; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin:12px 0; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; }
+  .row > button { flex:1 1 140px; }
+  button { min-height:44px; padding:10px 16px; border-radius:10px; border:1px solid var(--line); background:#273449; color:var(--text);
+           font:inherit; font-weight:600; cursor:pointer; }
+  button:hover:not(:disabled) { filter:brightness(1.12); }
+  button:focus-visible, textarea:focus-visible, select:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .primary { background:var(--accent); color:var(--ink); border-color:transparent; }
+  .open { background:#1d4ed8; border-color:transparent; }
+  .report { background:#b91c1c; border-color:transparent; }
+  .ask { background:#0f766e; border-color:transparent; }
+  textarea, select { width:100%; font:inherit; color:var(--text); background:#0b1222; border:1px solid var(--line); border-radius:10px; padding:10px; }
+  select { min-height:44px; }
+  textarea { min-height:140px; resize:vertical; }
+  .error { color:#fca5a5; font-weight:600; }
+  .msg { background:#f8fafc; color:#0f172a; border-radius:12px; padding:14px; border:1px solid #cbd5e1; overflow-wrap:anywhere; }
+  .msg .ch { display:inline-block; font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; background:#e2e8f0; border-radius:999px; padding:2px 10px; }
+  .msg .from { font-family: ui-monospace, Menlo, Consolas, monospace; font-size:.9rem; }
+  .msg .subj { font-weight:700; margin-top:6px; }
+  .msg .body { white-space:pre-wrap; margin-top:6px; }
+  .shield { background:#042f2e; border:1px solid #14b8a6; border-radius:12px; padding:12px; margin:12px 0; }
+  .shield.warn { background:#451a03; border-color:var(--warn); }
+  .shield .tag { font-size:.75rem; color:#99f6e4; }
+  .shield.warn .tag { color:#fde68a; }
+  .result-good { color:var(--good); } .result-bad { color:#fca5a5; }
+  .badge { display:inline-block; padding:2px 10px; border-radius:999px; border:1px solid var(--line); font-size:.8rem; color:var(--muted); }
+  ol.board { padding-left:0; list-style:none; margin:0; }
+  ol.board li { display:flex; justify-content:space-between; gap:10px; padding:10px 12px; border-bottom:1px solid var(--line); }
+  ol.board li:first-child { font-weight:700; }
+  .scores { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0; }
+  .scores span { font-size:.85rem; background:#0b1222; border:1px solid var(--line); border-radius:999px; padding:3px 10px; }
+  .scores span.active { border-color:var(--accent); color:var(--accent); }
+  .debrief-team { border-top:1px solid var(--line); padding-top:10px; margin-top:10px; }
+  .debrief-team ul { margin:6px 0; padding-left:18px; }
+  pre.results { white-space:pre-wrap; background:#0b1222; border:1px solid var(--line); border-radius:10px; padding:10px; font-size:.8rem; overflow-wrap:anywhere; }
+</style>
+</head>
+<body>
+<main id="app" aria-live="polite"></main>
+<script>
+'use strict';
+
+/* ------------------------------------------------------------------ *
+ * Message bank: 18 fictional Northbridge Co. messages (10 risky, 8 legit)
+ * Categories are the 8 Shield categories from the spec (section 4).
+ * ------------------------------------------------------------------ */
+const CATEGORIES = {
+  urgency:     { label: 'Urgency pressure',  tip: 'Pressure to act right now is a red flag. Slow down and verify through a channel you already trust.' },
+  lookalike:   { label: 'Look-alike domain', tip: 'Read the sender domain letter by letter; northbridge.co is the only real one.' },
+  credential:  { label: 'Credential ask',    tip: 'Never enter your password from a link in a message. Open the portal from your own bookmark.' },
+  giftcard:    { label: 'Gift card scam',    tip: 'Real managers never ask you to buy gift cards. Call them on a number you already have.' },
+  attachment:  { label: 'Risky attachment',  tip: 'Unexpected files, double extensions (.pdf.exe) and macro prompts mean report, do not open.' },
+  mfa:         { label: 'MFA fatigue',       tip: 'Only approve an MFA prompt you just triggered yourself. Never read a code to a caller.' },
+  oversharing: { label: 'Oversharing',       tip: 'Badges, screens and travel plans help attackers. Keep them off public posts.' },
+  device:      { label: 'Device hygiene',    tip: 'Install software only from the official IT portal, and lock your laptop when you step away.' }
+};
+
+const MESSAGES = [
+  // ---- risky (10) ----
+  { id:'r1', risky:true, category:'lookalike', channel:'Email', from:'it-support@northbr1dge.co', subject:'Your password expires today',
+    body:'Hi new hire,\nYour Northbridge password expires in 2 hours. Keep your access by confirming it here: northbr1dge.co/reset',
+    hint:'Check the sender: "northbr1dge.co" uses the number 1 instead of the letter i.',
+    flag:'Look-alike domain: northbr1dge.co is not northbridge.co.', habit:'Report it, then reset passwords only from the IT portal bookmark.' },
+  { id:'r2', risky:true, category:'urgency', channel:'Email', from:'dana.ortiz.ceo@northbridge-exec.com', subject:'URGENT: wire before 5 PM',
+    body:'I am stuck in board meetings. Wire $4,800 to the new vendor before 5 PM today or we lose the contract. Do not call, just do it.',
+    hint:'An outside domain, a deadline and "do not call" together are classic pressure tactics.',
+    flag:'Urgency plus "do not call me" from an outside domain.', habit:'Verify payment requests by calling the person on a known number.' },
+  { id:'r3', risky:true, category:'credential', channel:'SMS', from:'+1 (555) 013-2291', subject:'Northbridge Payroll',
+    body:'Northbridge Payroll: your direct deposit is on hold. Log in with your work email and password at nb-payroll-login.com to release it.',
+    hint:'Payroll never asks for your password by text, and nb-payroll-login.com is not a Northbridge site.',
+    flag:'A text asking for your work password on an outside site.', habit:'Open payroll from the HR portal yourself, never from a text link.' },
+  { id:'r4', risky:true, category:'giftcard', channel:'Chat', from:'"Sam (your manager)" - external account', subject:'quick favor',
+    body:'Hey, are you free? I need 5 x $100 gift cards for a client thank-you. Buy them and send me the codes, I will pay you back Friday.',
+    hint:'Gift card requests over chat, from an external account, are almost always scams.',
+    flag:'Gift card request from an account outside Northbridge.', habit:'Call your manager directly before buying anything for anyone.' },
+  { id:'r5', risky:true, category:'attachment', channel:'Email', from:'billing@harborline-supplies.com', subject:'Overdue invoice attached',
+    body:'Please review the attached overdue invoice today.\nAttachment: Invoice_Nov.pdf.exe (2.1 MB)',
+    hint:'The attachment ends in .exe. A real invoice is a PDF, not a program.',
+    flag:'Double extension: Invoice_Nov.pdf.exe is a program, not a PDF.', habit:'Report unexpected attachments; never run files from email.' },
+  { id:'r6', risky:true, category:'mfa', channel:'Call', from:'"Northbridge IT Helpdesk" (blocked number)', subject:'Phone call',
+    body:'"Hi, this is IT. We are fixing your account. I just sent a 6-digit code to your phone, can you read it back to me so I can verify you?"',
+    hint:'IT never needs your MFA code. Anyone asking you to read it back is trying to log in as you.',
+    flag:'A caller asking for your MFA code.', habit:'Hang up and call the helpdesk number on the intranet yourself.' },
+  { id:'r7', risky:true, category:'oversharing', channel:'Email', from:'welcome@northbridge-careers.net', subject:'Show off your first day!',
+    body:'Welcome aboard! Post a close-up photo of your new ID badge and desk screen on social media with #NorthbridgeNewHire to win a hoodie.',
+    hint:'A badge close-up and your screen give attackers what they need to copy your badge or target you.',
+    flag:'Asks you to post your badge and screen publicly, from an outside domain.', habit:'Never post badges, screens or travel plans.' },
+  { id:'r8', risky:true, category:'device', channel:'Chat', from:'"IT Updates" - external guest', subject:'required VPN update',
+    body:'IT here. Everyone must install the new VPN tonight. Download VPN_Fix.zip from this file-share link and run setup.exe.',
+    hint:'Real updates come from the IT software portal, never from a guest account with a zip file.',
+    flag:'Software from a guest account instead of the official IT portal.', habit:'Install only from the IT portal; report odd "update" messages.' },
+  { id:'r9', risky:true, category:'lookalike', channel:'Email', from:'docs@northbridge.share-files.io', subject:'Document shared with you',
+    body:'A document "Q4 Bonuses.xlsx" was shared with you. Sign in with your Northbridge credentials to view it.',
+    hint:'Read the domain from the right: it ends in share-files.io, not northbridge.co. "northbridge" at the start is just decoration.',
+    flag:'Look-alike domain: northbridge.share-files.io belongs to share-files.io.', habit:'Read the domain from the right; the last part is the real owner.' },
+  { id:'r10', risky:true, category:'urgency', channel:'SMS', from:'+1 (555) 019-7710', subject:'Mailroom notice',
+    body:'Northbridge Mailroom: your package is held. Pay a $1.99 redelivery fee within 1 hour or it is returned: pkg-redeliver.info',
+    hint:'The mailroom does not charge fees, and a 1-hour deadline is there to rush you.',
+    flag:'A tiny fee plus a short deadline, a common card-stealing trick.', habit:'Check with the mailroom in person; never pay through a text link.' },
+  // ---- legit (8) ----
+  { id:'l1', risky:false, category:'device', channel:'Email', from:'it@northbridge.co', subject:'Laptop pickup Tuesday 10 AM',
+    body:'Your new laptop is ready. Pick it up Tuesday at 10 AM in room 4B and bring your badge. No reply or link needed.',
+    hint:'Sender is the real northbridge.co, there is no link, no attachment and no request for information.',
+    flag:'Real domain, no link, no ask: this one is fine.', habit:'Still lock your new laptop whenever you step away.' },
+  { id:'l2', risky:false, category:'credential', channel:'Email', from:'hr@northbridge.co', subject:'Benefits enrollment opens Monday',
+    body:'Benefits enrollment opens Monday. Sign in through the HR portal from your intranet bookmark. We will never ask for your password by email.',
+    hint:'Real domain, and it tells you to use your own bookmark instead of a link. That is what a safe message looks like.',
+    flag:'Fine: real domain and it points you to your own bookmark.', habit:'Use bookmarks for portals, exactly as this email says.' },
+  { id:'l3', risky:false, category:'giftcard', channel:'Email', from:'people-team@northbridge.co', subject:'Welcome gift at the front desk',
+    body:'Welcome to Northbridge! Your welcome gift is at the front desk. Show your badge to pick it up. Nothing to click or buy.',
+    hint:'Nothing to buy, nothing to click, real domain. Gifts you pick up in person are not the gift card scam.',
+    flag:'Fine: no purchase, no codes, real sender.', habit:'The red flag is being asked to BUY cards and send codes.' },
+  { id:'l4', risky:false, category:'mfa', channel:'MFA prompt', from:'Northbridge Authenticator', subject:'Sign-in request',
+    body:'You just signed in to the Northbridge portal on your laptop 5 seconds ago. Approve sign-in from "Your laptop, New York"?',
+    hint:'You triggered this yourself a moment ago, from your own device and city. Approving your own sign-in is fine.',
+    flag:'Fine: a prompt you just triggered yourself.', habit:'Approve only prompts you started; deny any surprise prompt.' },
+  { id:'l5', risky:false, category:'urgency', channel:'Chat', from:'Priya Shah (your team, northbridge.co)', subject:'standup moved',
+    body:'Heads up, standup moved to 10:30 today because of the fire drill. Same room.',
+    hint:'An internal teammate, no link, no ask. Normal schedule chatter.',
+    flag:'Fine: internal teammate, no link, no request.', habit:'Urgency alone is not a flag; urgency plus an ask is.' },
+  { id:'l6', risky:false, category:'attachment', channel:'Email', from:'jordan.lee@northbridge.co', subject:'Agenda for Thursday, as discussed',
+    body:'As we talked about in the hallway, here is the agenda for Thursday.\nAttachment: Thursday-agenda.pdf (88 KB)',
+    hint:'Expected attachment, from a colleague on the real domain, a normal .pdf you discussed in person.',
+    flag:'Fine: an expected PDF from a colleague you spoke to.', habit:'If a file asks to "enable macros", report it even from a colleague.' },
+  { id:'l7', risky:false, category:'lookalike', channel:'Email', from:'security@northbridge.co', subject:'Reminder: use the Report button',
+    body:'Thanks for completing security onboarding. If anything looks off, use the Report button in your mail app. No action needed today.',
+    hint:'Spell it out: n-o-r-t-h-b-r-i-d-g-e dot co. The real domain, no link, no ask.',
+    flag:'Fine: the real northbridge.co domain, spelled correctly.', habit:'Keep checking domains letter by letter like you just did.' },
+  { id:'l8', risky:false, category:'oversharing', channel:'Chat', from:'comms@northbridge.co', subject:'Share our job posting',
+    body:'We are hiring! Feel free to share the public job posting from our careers page. Please do not post photos of badges or screens.',
+    hint:'Sharing a public job post is fine, and the message itself warns against oversharing.',
+    flag:'Fine: public job post, and it warns you about badges and screens.', habit:'Share public pages; keep badges and screens private.' }
+];
+
+const MSG = Object.fromEntries(MESSAGES.map(m => [m.id, m]));
+const PER_TEAM = 3;
+const SCORE = { correct: 100, correctAssisted: 60, steal: 50, openedPhish: -50 };
+
+/* ------------------------------------------------------------------ *
+ * URL params: ?shield=off|nudge|coach, ?seed=<number> (deterministic deck)
+ * ------------------------------------------------------------------ */
+const params = new URLSearchParams(location.search);
+const SHIELD_MODES = ['off', 'nudge', 'coach'];
+const initialShield = SHIELD_MODES.includes(params.get('shield')) ? params.get('shield') : 'nudge';
+const seedParam = params.get('seed');
+
+function rng(seed) { // mulberry32
+  let a = seed >>> 0;
+  return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+function shuffle(list, rand) {
+  const a = list.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+function now() { return Date.now(); }
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])); }
+
+/* ------------------------------------------------------------------ *
+ * Shield: the scripted agent assistant (spec section 4).
+ * beforeAction -> {allow, warning}; afterAction -> lesson; debrief(player).
+ * shieldLog is in memory only; nothing leaves the page.
+ * ------------------------------------------------------------------ */
+const Shield = {
+  mode: initialShield,
+  log: {},                       // shieldLog: teamIndex -> [{item, category, action, warned, backedOut, asked, seconds, correct}]
+  stopped: {},                   // teamIndex -> count of mistakes Shield stopped
+  reset() { this.log = {}; this.stopped = {}; },
+  misses(player, category) {
+    return (this.log[player] || []).filter(e => e.category === category && !e.correct).length;
+  },
+  hint(player, item) {
+    const extra = this.misses(player, item.category) ? ' You missed a ' + CATEGORIES[item.category].label.toLowerCase() + ' one earlier, so look twice.' : '';
+    return item.hint + extra;
+  },
+  // Coach mode personalises: before a team even acts, a nudge on categories it keeps missing.
+  coachTip(player, item) {
+    if (this.mode !== 'coach') return null;
+    if (this.misses(player, item.category) > 0) return 'Shield coach: you have missed ' + CATEGORIES[item.category].label.toLowerCase() + ' before. ' + CATEGORIES[item.category].tip;
+    return null;
+  },
+  beforeAction(player, action, item) {
+    if (this.mode === 'off' || action !== 'open' || !item.risky) return { allow: true, warning: null };
+    const domain = (item.from.match(/@([\w.-]+)/) || [])[1];
+    let warning;
+    if (item.category === 'lookalike' && domain) warning = 'Hold on, the sender is ' + domain + ', not northbridge.co. Still open it?';
+    else warning = 'Hold on. ' + item.hint + ' Still open it?';
+    if (this.misses(player, item.category) > 0) warning += ' (You missed this kind of message earlier.)';
+    return { allow: false, warning };
+  },
+  afterAction(player, entry) {
+    (this.log[player] = this.log[player] || []).push(entry);
+    if (entry.warned && entry.backedOut) this.stopped[player] = (this.stopped[player] || 0) + 1;
+    const item = MSG[entry.item];
+    return { flag: item.flag, habit: item.habit };
+  },
+  debrief(player) {
+    const entries = this.log[player] || [];
+    const stats = {};
+    Object.keys(CATEGORIES).forEach(c => { stats[c] = { seen: 0, misses: 0, assisted: 0, seconds: 0 }; });
+    entries.forEach(e => { const s = stats[e.category]; s.seen++; if (!e.correct) s.misses++;
+      if (e.warned || e.asked) s.assisted++; s.seconds += e.seconds; });
+    const weight = c => { const s = stats[c]; return s.misses * 1000 + s.assisted * 100 + (s.seen ? s.seconds / s.seen : -1); };
+    const seen = Object.keys(stats).filter(c => stats[c].seen > 0).sort((a, b) => weight(b) - weight(a));
+    const unseen = Object.keys(stats).filter(c => stats[c].seen === 0);
+    const weakest = seen.concat(unseen).slice(0, 2).map(c => ({
+      category: c, label: CATEGORIES[c].label, tip: CATEGORIES[c].tip,
+      misses: stats[c].misses, seen: stats[c].seen
+    }));
+    return { weakest, stopped: this.stopped[player] || 0, decisions: entries.length,
+             correct: entries.filter(e => e.correct).length };
+  }
+};
+
+/* ------------------------------------------------------------------ *
+ * State + dispatch: every move goes through dispatch(move).
+ * ------------------------------------------------------------------ */
+function freshState() {
+  return { phase: 'setup', teams: [], deck: [], turn: 0, error: null, namesDraft: 'Red Team\nBlue Team',
+           current: null, reveal: null, shieldMode: Shield.mode };
+}
+let state = freshState();
+
+function teamOf(turn) { return turn % state.teams.length; }
+function totalTurns() { return state.teams.length * PER_TEAM; }
+
+function startTurn() {
+  state.current = { team: teamOf(state.turn), item: state.deck[state.turn], asked: false, hint: null,
+                    warning: null, warned: false, backedOut: false, decision: null, startedAt: null };
+  state.phase = 'pass';
+}
+
+function decide(decision) {
+  const c = state.current;
+  c.decision = decision;
+  c.seconds = Math.round((now() - (c.startedAt || now())) / 100) / 10;
+  state.phase = 'challenge';
+}
+
+function resolve(challenger) {
+  const c = state.current, item = MSG[c.item], team = state.teams[c.team];
+  const correct = (item.risky && c.decision === 'report') || (!item.risky && c.decision === 'open');
+  let delta = 0;
+  if (correct) delta = (c.asked || c.backedOut) ? SCORE.correctAssisted : SCORE.correct;
+  else if (item.risky && c.decision === 'open') delta = SCORE.openedPhish;
+  team.score += delta;
+  let steal = null;
+  if (challenger != null) {
+    const ok = !correct;
+    if (ok) state.teams[challenger].score += SCORE.steal;
+    steal = { by: challenger, ok, points: ok ? SCORE.steal : 0 };
+  }
+  const lesson = Shield.afterAction(c.team, { item: c.item, category: item.category, action: c.decision,
+    warned: c.warned, backedOut: c.backedOut, asked: c.asked, seconds: c.seconds || 0, correct });
+  state.reveal = { correct, delta, steal, lesson, item: c.item, decision: c.decision, team: c.team };
+  state.phase = 'reveal';
+}
+
+function dispatch(move) {
+  switch (move.type) {
+    case 'draft': state.namesDraft = move.text; return; // typing; no re-render
+    case 'start': {
+      const names = String(move.names).split(/\n|,/).map(s => s.trim()).filter(Boolean);
+      state.namesDraft = move.names;
+      if (names.length < 2 || names.length > 6) {
+        state.error = 'Enter 2 to 6 team names (you entered ' + names.length + ').';
+        break;
+      }
+      if (new Set(names.map(n => n.toLowerCase())).size !== names.length) { state.error = 'Team names must be different.'; break; }
+      const rand = seedParam != null && seedParam !== '' ? rng(Number(seedParam) || 0) : Math.random;
+      state.error = null;
+      state.teams = names.map(name => ({ name, score: 0 }));
+      state.deck = shuffle(MESSAGES.map(m => m.id), rand).slice(0, names.length * PER_TEAM);
+      state.turn = 0;
+      Shield.reset();
+      startTurn();
+      break;
+    }
+    case 'ready': if (state.phase === 'pass') { state.phase = 'turn'; state.current.startedAt = now(); } break;
+    case 'ask':
+      if (state.phase !== 'turn' || Shield.mode === 'off') break;
+      state.current.asked = true;
+      state.current.hint = Shield.hint(state.current.team, MSG[state.current.item]);
+      break;
+    case 'open': {
+      if (state.phase !== 'turn') break;
+      const res = Shield.beforeAction(state.current.team, 'open', MSG[state.current.item]);
+      if (!res.allow && !state.current.warned) { state.current.warning = res.warning; state.current.warned = true; break; }
+      decide('open');
+      break;
+    }
+    case 'openAnyway': if (state.phase === 'turn' && state.current.warning) { state.current.warning = null; decide('open'); } break;
+    case 'backOut': if (state.phase === 'turn' && state.current.warning) { state.current.warning = null; state.current.backedOut = true; } break;
+    case 'report': if (state.phase === 'turn') { state.current.warning = null; decide('report'); } break;
+    case 'challenge': if (state.phase === 'challenge') resolve(Number(move.by)); break;
+    case 'noChallenge': if (state.phase === 'challenge') resolve(null); break;
+    case 'next':
+      if (state.phase !== 'reveal') break;
+      state.turn++;
+      if (state.turn >= totalTurns()) state.phase = 'leaderboard';
+      else startTurn();
+      break;
+    case 'debrief': if (state.phase === 'leaderboard') state.phase = 'debrief'; break;
+    case 'leaderboard': if (state.phase === 'debrief') state.phase = 'leaderboard'; break;
+    case 'restart': {
+      const draft = state.namesDraft;
+      state = freshState(); state.namesDraft = draft; Shield.reset();
+      break;
+    }
+    case 'setShield':
+      Shield.mode = SHIELD_MODES.includes(move.mode) ? move.mode : 'nudge';
+      state.shieldMode = Shield.mode;
+      if (Shield.mode === 'off' && state.current) { state.current.warning = null; }
+      break;
+    default: return;
+  }
+  render();
+}
+
+/* ------------------------------------------------------------------ *
+ * Rendering. Every dynamic string goes through esc(); the markup is parsed
+ * with DOMParser (scripts in parsed markup never run) and swapped in.
+ * ------------------------------------------------------------------ */
+const app = document.getElementById('app');
+
+function leaderboard() {
+  return state.teams.map((t, i) => ({ name: t.name, score: t.score, index: i }))
+    .sort((a, b) => b.score - a.score || a.index - b.index);
+}
+function scoreStrip(active) {
+  return '<div class="scores" data-testid="score-strip">' + state.teams.map((t, i) =>
+    '<span class="' + (i === active ? 'active' : '') + '">' + esc(t.name) + ': ' + t.score + '</span>').join('') + '</div>';
+}
+function shieldBadge() {
+  return '<span class="badge" data-testid="shield-status">🛡️ Shield: ' + Shield.mode + ' · prototype, scripted agent</span>';
+}
+function messageCard(item) {
+  return '<div class="msg" data-testid="message-card" data-msg-id="' + item.id + '">' +
+    '<span class="ch">' + esc(item.channel) + '</span>' +
+    '<div class="from" data-testid="message-from">From: ' + esc(item.from) + '</div>' +
+    '<div class="subj">' + esc(item.subject) + '</div>' +
+    '<div class="body">' + esc(item.body) + '</div></div>';
+}
+
+function view() {
+  let h = '';
+  if (state.phase === 'setup') {
+    h += '<section data-testid="setup-screen"><h1>📥 Inbox Showdown</h1>' +
+      '<p>Day one at Northbridge Co. Teams take turns on one shared inbox: <b>Open</b> it, <b>Report</b> it, or <b>Ask Shield</b>. Other teams can <b>Challenge</b> to steal points.</p>' +
+      '<div class="panel"><label for="team-names"><h2>Teams (2 to 6, one per line)</h2></label>' +
+      '<textarea id="team-names" data-testid="team-names" aria-describedby="setup-help">' + esc(state.namesDraft) + '</textarea>' +
+      '<p id="setup-help" class="muted small">Each team gets ' + PER_TEAM + ' messages. Pass the device (or share your screen) between turns.</p>' +
+      (state.error ? '<p class="error" role="alert" data-testid="setup-error">' + esc(state.error) + '</p>' : '') +
+      '<div class="row"><button class="primary" data-testid="btn-start" data-action="start">Start match</button></div></div>' +
+      '<p>' + shieldBadge() + '</p></section>';
+  } else if (state.phase === 'pass') {
+    const t = state.teams[state.current.team];
+    h += '<section class="panel" data-testid="pass-screen"><h2>Pass to ' + esc(t.name) + '</h2>' +
+      '<p class="muted">Message ' + (Math.floor(state.turn / state.teams.length) + 1) + ' of ' + PER_TEAM + ' for this team · turn ' + (state.turn + 1) + ' of ' + totalTurns() + '</p>' +
+      scoreStrip(state.current.team) +
+      '<div class="row"><button class="primary" data-testid="btn-ready" data-action="ready">' + esc(t.name) + ' is ready</button></div></section>';
+  } else if (state.phase === 'turn') {
+    const c = state.current, item = MSG[c.item], t = state.teams[c.team];
+    const coach = Shield.coachTip(c.team, item);
+    h += '<section data-testid="turn-card" data-team="' + esc(t.name) + '"><h2 data-testid="turn-team">' + esc(t.name) + '\'s inbox</h2>' +
+      scoreStrip(c.team) + messageCard(item) +
+      (coach ? '<div class="shield" data-testid="shield-coach-tip"><div class="tag">Shield · prototype, scripted agent</div>' + esc(coach) + '</div>' : '') +
+      (c.hint ? '<div class="shield" data-testid="agent-hint"><div class="tag">🛡️ Shield says · prototype, scripted agent</div>' + esc(c.hint) + '</div>' : '');
+    if (c.warning) {
+      h += '<div class="shield warn" role="alertdialog" aria-label="Shield warning" data-testid="shield-warning">' +
+        '<div class="tag">🛡️ Shield nudge · prototype, scripted agent</div><p>' + esc(c.warning) + '</p>' +
+        '<div class="row"><button class="primary" data-testid="btn-back-out" data-action="backOut">Back out</button>' +
+        '<button class="open" data-testid="btn-open-anyway" data-action="openAnyway">Open anyway</button></div></div>';
+    } else {
+      h += '<div class="row" style="margin-top:12px">' +
+        '<button class="open" data-testid="btn-open" data-action="open">📂 Open</button>' +
+        '<button class="report" data-testid="btn-report" data-action="report">🚩 Report</button>' +
+        '<button class="ask" data-testid="btn-ask" data-action="ask"' + (Shield.mode === 'off' || c.asked ? ' disabled' : '') + '>' +
+        (Shield.mode === 'off' ? '🛡️ Shield is off' : '🛡️ Ask Shield') + '</button></div>' +
+        '<p class="muted small">Correct: +100 (+60 if Shield helped). Opening a phish: -50.</p>';
+    }
+    h += '<p>' + shieldBadge() + '</p></section>';
+  } else if (state.phase === 'challenge') {
+    const c = state.current, t = state.teams[c.team];
+    const others = state.teams.map((x, i) => ({ x, i })).filter(o => o.i !== c.team);
+    h += '<section class="panel" data-testid="challenge-screen"><h2>' + esc(t.name) + ' chose ' + (c.decision === 'open' ? '📂 Open' : '🚩 Report') + '</h2>' +
+      messageCard(MSG[c.item]) +
+      '<p>Does another team disagree? A correct challenge steals +' + SCORE.steal + '.</p>' +
+      '<label for="challenge-team" class="small muted">Challenging team</label>' +
+      '<select id="challenge-team" data-testid="challenge-team">' + others.map(o => '<option value="' + o.i + '">' + esc(o.x.name) + '</option>').join('') + '</select>' +
+      '<div class="row" style="margin-top:10px"><button class="report" data-testid="btn-challenge" data-action="challenge">⚔️ Challenge</button>' +
+      '<button class="primary" data-testid="btn-reveal" data-action="noChallenge">No challenge, reveal</button></div></section>';
+  } else if (state.phase === 'reveal') {
+    const r = state.reveal, item = MSG[r.item], t = state.teams[r.team];
+    const last = state.turn + 1 >= totalTurns();
+    h += '<section class="panel" data-testid="reveal"><h2 data-testid="reveal-result" class="' + (r.correct ? 'result-good' : 'result-bad') + '">' +
+      (r.correct ? '✅ Correct' : '❌ Not quite') + ': this was ' + (item.risky ? 'a phish / scam' : 'safe') + '</h2>' +
+      '<p>' + esc(t.name) + ' chose ' + r.decision + ' · ' + (r.delta >= 0 ? '+' : '') + r.delta + ' points</p>' +
+      (r.steal ? '<p data-testid="steal-result">' + esc(state.teams[r.steal.by].name) + ' challenged: ' + (r.steal.ok ? 'steal +' + r.steal.points : 'no steal') + '</p>' : '') +
+      messageCard(item) +
+      '<div class="shield" data-testid="reveal-lesson"><div class="tag">🛡️ Shield explains · ' + esc(CATEGORIES[item.category].label) + '</div>' +
+      '<p><b>Red flag:</b> ' + esc(r.lesson.flag) + '</p><p><b>Safe habit:</b> ' + esc(r.lesson.habit) + '</p></div>' +
+      scoreStrip(-1) +
+      '<div class="row"><button class="primary" data-testid="btn-next" data-action="next">' + (last ? 'See leaderboard' : 'Next team') + '</button></div></section>';
+  } else if (state.phase === 'leaderboard') {
+    h += '<section class="panel" data-testid="leaderboard"><h2>🏆 Leaderboard</h2><ol class="board">' +
+      leaderboard().map((r, i) => '<li data-testid="leaderboard-row" data-score="' + r.score + '"><span>' + (i + 1) + '. <span data-testid="leaderboard-name">' + esc(r.name) + '</span></span><span data-testid="leaderboard-score">' + r.score + '</span></li>').join('') +
+      '</ol><div class="row" style="margin-top:12px"><button class="primary" data-testid="btn-debrief" data-action="debrief">🛡️ Shield debrief</button>' +
+      '<button data-testid="btn-play-again" data-action="restart">Play again</button></div></section>';
+  } else if (state.phase === 'debrief') {
+    const total = state.teams.reduce((n, t, i) => n + Shield.debrief(i).stopped, 0);
+    h += '<section class="panel" data-testid="debrief"><h2>🛡️ Shield debrief</h2>' +
+      '<p class="muted small">Prototype, scripted agent. Shield mode this match: ' + Shield.mode + '.</p>' +
+      '<p data-testid="shield-stopped-total">Shield stopped ' + total + ' mistake' + (total === 1 ? '' : 's') + '.</p>' +
+      state.teams.map((t, i) => {
+        const d = Shield.debrief(i);
+        return '<div class="debrief-team" data-testid="debrief-team" data-team="' + esc(t.name) + '"><h3>' + esc(t.name) + ' · ' + t.score + ' pts · ' + d.correct + '/' + d.decisions + ' correct</h3>' +
+          '<p class="small">Weakest categories:</p><ul>' + d.weakest.map(w => '<li data-testid="debrief-weak" data-category="' + w.category + '"><b>' + esc(w.label) + '</b>' +
+          (w.seen ? ' (' + w.misses + ' missed of ' + w.seen + ')' : ' (not practiced yet)') + ': ' + esc(w.tip) + '</li>').join('') + '</ul>' +
+          '<p class="small" data-testid="debrief-stopped">Shield stopped ' + d.stopped + ' mistake' + (d.stopped === 1 ? '' : 's') + '.</p></div>';
+      }).join('') +
+      '<div class="row" style="margin-top:12px"><button data-testid="btn-copy-results" data-action="copy">📋 Copy results</button>' +
+      '<button data-testid="btn-back-leaderboard" data-action="leaderboard">Back to leaderboard</button>' +
+      '<button class="primary" data-testid="btn-play-again" data-action="restart">Play again</button></div>' +
+      '<pre class="results" data-testid="results-text">' + esc(resultsText()) + '</pre></section>';
+  }
+  return h;
+}
+
+function render() {
+  const doc = new DOMParser().parseFromString('<body>' + view() + '</body>', 'text/html');
+  app.replaceChildren(...Array.from(doc.body.childNodes));
+  const focusTarget = app.querySelector('[data-testid="btn-back-out"], [data-testid="btn-ready"], [data-testid="btn-next"]');
+  if (focusTarget && !(document.activeElement && document.activeElement.closest('.nbm-panel'))) focusTarget.focus({ preventScroll: true });
+}
+
+function resultsText() {
+  const lines = ['Inbox Showdown results (Shield: ' + Shield.mode + ')'];
+  leaderboard().forEach((r, i) => {
+    const d = Shield.debrief(r.index);
+    lines.push((i + 1) + '. ' + r.name + ': ' + r.score + ' pts, ' + d.correct + '/' + d.decisions + ' correct, Shield stopped ' + d.stopped +
+      ', weakest: ' + d.weakest.map(w => w.label).join(', '));
+  });
+  return lines.join('\n');
+}
+
+function copyResults() {
+  const text = resultsText();
+  const done = () => { const b = app.querySelector('[data-testid="btn-copy-results"]'); if (b) b.textContent = '✅ Copied'; };
+  const fallback = () => {
+    const pre = app.querySelector('[data-testid="results-text"]');
+    if (!pre) return;
+    const range = document.createRange(); range.selectNodeContents(pre);
+    const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    try { document.execCommand('copy'); done(); } catch (e) { /* text stays selected for a manual copy */ }
+  };
+  try {
+    if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(done, fallback); return; }
+  } catch (e) { /* fall through */ }
+  fallback();
+}
+
+app.addEventListener('click', e => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn || btn.disabled) return;
+  const a = btn.dataset.action;
+  if (a === 'start') dispatch({ type: 'start', names: app.querySelector('[data-testid="team-names"]').value });
+  else if (a === 'challenge') dispatch({ type: 'challenge', by: app.querySelector('[data-testid="challenge-team"]').value });
+  else if (a === 'copy') copyResults();
+  else dispatch({ type: a });
+});
+app.addEventListener('input', e => {
+  if (e.target.matches('[data-testid="team-names"]')) dispatch({ type: 'draft', text: e.target.value });
+});
+
+const HOW_TO = [
+  'Day one at Northbridge Co. 2 to 6 teams share one inbox (one device or a Zoom screen share).',
+  '- On your turn you get a message: email, text, chat, a call or an MFA prompt.',
+  '- Pick Open (it is safe), Report (it is a phish or scam) or Ask Shield for a hint first.',
+  '- After you choose, another team may Challenge. If you were wrong they steal +50.',
+  '- Scoring: +100 correct, +60 correct with Shield\'s help, -50 for opening a phish.',
+  '- Each team gets 3 messages, then the leaderboard and Shield\'s debrief.',
+  'Shield is a prototype, scripted agent. With Shield on it pauses you before you open something risky. Turn it off in this menu to compare error counts.'
+].join('\n');
+
+render();
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.Menu) {
+    window.Menu.init({
+      name: '📥 Inbox Showdown',
+      restart: () => dispatch({ type: 'restart' }),
+      setShield: on => dispatch({ type: 'setShield', mode: on ? (initialShield === 'coach' ? 'coach' : 'nudge') : 'off' }),
+      howTo: HOW_TO,
+      shield: Shield.mode !== 'off'
+    });
+  }
+});
+
+// Test / console hook (read-only view plus dispatch); used by the Playwright checks.
+window.InboxShowdown = { dispatch, get state() { return state; }, MESSAGES, Shield };
+</script>
+</body>
+</html>
