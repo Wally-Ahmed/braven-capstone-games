@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>First Week Hunt</title>
+<link rel="stylesheet" href="/shared/menu.css">
+<script src="/shared/menu.js" defer></script>
+<style>
+  :root { --bg:#0f172a; --card:#1e293b; --line:#334155; --text:#f1f5f9; --muted:#94a3b8; --accent:#38bdf8;
+          --good:#22c55e; --bad:#ef4444; --warn:#f59e0b; --ink:#0f172a; --floor:#1a2438; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; overflow-x:hidden; }
+  body { background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height:1.45; }
+  #app { max-width:820px; margin:0 auto; padding:16px; }
+  h1, h2, h3 { margin:0 0 8px; line-height:1.2; }
+  h1 { font-size:1.5rem; } h2 { font-size:1.25rem; } h3 { font-size:1.05rem; }
+  p { margin:6px 0; }
+  .muted { color:var(--muted); }
+  .small { font-size:.85rem; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin:12px 0; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; }
+  .row > button { flex:1 1 140px; }
+  button { min-height:44px; padding:10px 16px; border-radius:10px; border:1px solid var(--line); background:#273449; color:var(--text);
+           font:inherit; font-weight:600; cursor:pointer; }
+  button:hover:not(:disabled) { filter:brightness(1.12); }
+  button:focus-visible, textarea:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .primary { background:var(--accent); color:var(--ink); border-color:transparent; }
+  .hint { background:#0f766e; border-color:transparent; }
+  textarea { width:100%; min-height:140px; resize:vertical; font:inherit; color:var(--text); background:#0b1222; border:1px solid var(--line); border-radius:10px; padding:10px; }
+  .error { color:#fca5a5; font-weight:600; }
+  .badge { display:inline-block; padding:2px 10px; border-radius:999px; border:1px solid var(--line); font-size:.8rem; color:var(--muted); }
+
+  .status { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; }
+  .turn-banner { font-size:1.15rem; font-weight:800; background:#0b1222; border:2px solid var(--accent); border-radius:12px; padding:8px 12px; flex:1 1 200px; min-width:0; overflow-wrap:anywhere; }
+  .timer { font-variant-numeric: tabular-nums; font-weight:800; font-size:1.1rem; background:#0b1222; border:1px solid var(--line); border-radius:12px; padding:8px 12px; }
+  .timer.low { color:#fca5a5; border-color:var(--bad); }
+  .scores { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0; }
+  .scores span { font-size:.85rem; background:#0b1222; border:1px solid var(--line); border-radius:999px; padding:3px 10px; }
+  .scores span.active { border-color:var(--accent); color:var(--accent); }
+
+  /* Office scene: a CSS grid "floor plan"; each tile is a spot you can tap. */
+  .office { display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:8px; background:var(--floor);
+            border:1px solid var(--line); border-radius:16px; padding:10px;
+            background-image: linear-gradient(#ffffff08 1px, transparent 1px), linear-gradient(90deg, #ffffff08 1px, transparent 1px);
+            background-size: 24px 24px; }
+  @media (max-width: 560px) { .office { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .tile { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:4px; min-height:96px; padding:8px 6px;
+          background:#e2e8f0; color:#0f172a; border:2px solid #94a3b8; border-radius:12px; font-weight:600; font-size:.8rem;
+          line-height:1.25; text-align:center; overflow-wrap:anywhere; }
+  .tile .ico { font-size:1.8rem; line-height:1; }
+  .tile.found { background:#dcfce7; border-color:var(--good); }
+  .tile.decoy-checked { background:#e5e7eb; border-style:dashed; }
+  .tile.hinted { border-color:var(--warn); box-shadow:0 0 0 4px #f59e0b88; animation: pulse 1s ease-in-out infinite alternate; }
+  .tile:disabled { opacity:1; cursor:default; }
+  .tile .mark { font-size:.72rem; font-weight:800; }
+  @keyframes pulse { from { box-shadow:0 0 0 2px #f59e0b66; } to { box-shadow:0 0 0 6px #f59e0baa; } }
+  @media (prefers-reduced-motion: reduce) { .tile.hinted { animation:none; } }
+
+  .shield { background:#042f2e; border:1px solid #14b8a6; border-radius:12px; padding:12px; margin:12px 0; }
+  .shield.warn { background:#451a03; border-color:var(--warn); }
+  .shield .tag { font-size:.75rem; color:#99f6e4; }
+  .shield.warn .tag { color:#fde68a; }
+
+  .pop-overlay { position:fixed; inset:0; background:rgba(2,6,23,.7); display:flex; align-items:center; justify-content:center; padding:16px; z-index:900; }
+  .popover { width:min(460px, 100%); max-height:100%; overflow-y:auto; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; }
+  .result-good { color:var(--good); } .result-bad { color:#fca5a5; }
+  .hacked { background:#7f1d1d; border:2px solid var(--bad); border-radius:12px; padding:12px; margin:10px 0; font-weight:800; text-align:center; }
+  .hacked .big { font-size:1.4rem; display:block; }
+
+  ol.board { padding-left:0; list-style:none; margin:0; }
+  ol.board li { display:flex; justify-content:space-between; gap:10px; padding:10px 12px; border-bottom:1px solid var(--line); }
+  ol.board li:first-child { font-weight:700; }
+  .debrief-player { border-top:1px solid var(--line); padding-top:10px; margin-top:10px; }
+  .debrief-player ul { margin:6px 0; padding-left:18px; }
+  pre.results { white-space:pre-wrap; background:#0b1222; border:1px solid var(--line); border-radius:10px; padding:10px; font-size:.8rem; overflow-wrap:anywhere; }
+</style>
+</head>
+<body>
+<main id="app" aria-live="polite"></main>
+<script>
+'use strict';
+
+/* ------------------------------------------------------------------ *
+ * The 8 Shield categories (spec section 4), same keys as Inbox Showdown.
+ * ------------------------------------------------------------------ */
+const CATEGORIES = {
+  urgency:     { label: 'Urgency pressure',  tip: 'Pressure to act right now is a red flag. Slow down and verify through a channel you already trust.' },
+  lookalike:   { label: 'Look-alike domain', tip: 'Read web addresses letter by letter; northbridge.co is the only real one.' },
+  credential:  { label: 'Credential ask',    tip: 'Passwords live in the password manager, never on paper or in a link you were sent.' },
+  giftcard:    { label: 'Gift card scam',    tip: 'Real managers never ask you to buy gift cards. Call them on a number you already have.' },
+  attachment:  { label: 'Risky attachment',  tip: 'Unknown files and found USB sticks go to IT unopened.' },
+  mfa:         { label: 'MFA fatigue',       tip: 'Only approve an MFA prompt you just triggered yourself; deny and report the rest.' },
+  oversharing: { label: 'Oversharing',       tip: 'Badges, screens and travel plans help attackers. Keep them off public posts.' },
+  device:      { label: 'Device hygiene',    tip: 'Lock your screen when you step away and install updates when they are offered.' }
+};
+
+/* ------------------------------------------------------------------ *
+ * Office scene: 8 hidden risks + 8 decoys (safe look-alikes).
+ * ------------------------------------------------------------------ */
+const TILES = [
+  // ---- risks (8) ----
+  { id:'sticky',   risk:true,  icon:'🖥️', label:'Monitor with a yellow note: "pw: Spring2026!"', category:'credential',
+    flag:'A password on a sticky note: anyone walking past can read it.', habit:'Keep passwords in the Northbridge password manager, never on paper.' },
+  { id:'laptop',   risk:true,  icon:'💻', label:'Empty desk, laptop open on email', category:'device',
+    flag:'An unlocked laptop lets anyone send mail or open files as you.', habit:'Press Windows+L (or Ctrl+Cmd+Q on a Mac) every time you stand up.' },
+  { id:'usb',      risk:true,  icon:'💾', label:'USB stick on the lobby floor, labelled "Salaries"', category:'attachment',
+    flag:'A found USB stick is a classic bait drop; plugging it in can run malware.', habit:'Hand found drives to IT unplugged.' },
+  { id:'qr',       risk:true,  icon:'📄', label:'Flyer: "Scan for free parking", QR sticker taped on top', category:'lookalike',
+    flag:'The sticker QR goes to northbr1dge-parking.co, a look-alike login page.', habit:'Type northbridge.co yourself instead of scanning stray QR codes.' },
+  { id:'tailgate', risk:true,  icon:'🚪', label:'Stranger with two coffees: "Hold the door, I\'m late!"', category:'urgency',
+    flag:'Tailgating: hurry plus full hands gets people through a badge door without a badge.', habit:'Let the door close; point them to reception to sign in.' },
+  { id:'post',     risk:true,  icon:'📱', label:'Coworker\'s phone post: new badge photo, "first day!"', category:'oversharing',
+    flag:'A clear badge photo lets someone print a copy and learn your name and team.', habit:'Post the excitement, not the badge or your screen.' },
+  { id:'update',   risk:true,  icon:'⚠️', label:'Banner: "Security update ready" (Remind me later x5)', category:'device',
+    flag:'Skipped security updates leave known holes open on your laptop.', habit:'Install updates when they are offered, or schedule them for tonight.' },
+  { id:'mfa',      risk:true,  icon:'🔔', label:'Phone: "Approve sign-in?" and you did not just sign in', category:'mfa',
+    flag:'An MFA prompt you did not start means someone else has your password.', habit:'Tap Deny, then report it and change your password.' },
+  // ---- decoys (8): look risky, are fine ----
+  { id:'locked',   risk:false, icon:'🔒', label:'Empty desk, laptop on its lock screen', category:'device',
+    flag:'Fine: the laptop is locked, so nobody can use it.', habit:'This is the habit: lock it every time you step away.' },
+  { id:'shred',    risk:false, icon:'🗑️', label:'Locked shred bin by the copier', category:'credential',
+    flag:'Fine: papers with names and numbers go in the locked shred bin.', habit:'Shred printouts with customer or login details.' },
+  { id:'poster',   risk:false, icon:'📌', label:'IT poster: "Help desk: help.northbridge.co"', category:'lookalike',
+    flag:'Fine: help.northbridge.co is the real Northbridge domain.', habit:'Check the domain letter by letter; this one matches.' },
+  { id:'badge',    risk:false, icon:'🪪', label:'Coworker taps their own badge at the door', category:'urgency',
+    flag:'Fine: everyone badging in on their own is how the door should work.', habit:'One person, one badge tap.' },
+  { id:'printer',  risk:false, icon:'🖨️', label:'Printer that holds jobs until you badge in', category:'attachment',
+    flag:'Fine: secure print release keeps documents off the tray until you arrive.', habit:'Use badge release for anything sensitive.' },
+  { id:'photo',    risk:false, icon:'🖼️', label:'Team photo on the wall, no badges or screens', category:'oversharing',
+    flag:'Fine: a team photo with no badges, screens or plans gives nothing away.', habit:'Check the background before you post a photo.' },
+  { id:'restart',  risk:false, icon:'🔄', label:'Laptop restarting to install updates', category:'device',
+    flag:'Fine: an update installing is exactly what you want.', habit:'Let updates finish; save your work first.' },
+  { id:'mfaok',    risk:false, icon:'📲', label:'MFA prompt right after you signed in yourself', category:'mfa',
+    flag:'Fine: you just signed in, so this prompt is yours to approve.', habit:'Approve only prompts that match what you just did.' }
+];
+const TILE = Object.fromEntries(TILES.map(t => [t.id, t]));
+const RISK_COUNT = TILES.filter(t => t.risk).length;
+const SCORE = { find: 150, hint: -50 };
+
+/* ------------------------------------------------------------------ *
+ * URL params: ?shield=off|nudge|coach, ?seed=<number> (tile layout), ?fast=1 (3 s timer)
+ * ------------------------------------------------------------------ */
+const params = new URLSearchParams(location.search);
+const SHIELD_MODES = ['off', 'nudge', 'coach'];
+const initialShield = SHIELD_MODES.includes(params.get('shield')) ? params.get('shield') : 'nudge';
+const seedParam = params.get('seed');
+const ROUND_SECONDS = params.get('fast') === '1' ? 3 : 120;
+
+function rng(seed) { // mulberry32
+  let a = seed >>> 0;
+  return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+function shuffle(list, rand) {
+  const a = list.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+function now() { return Date.now(); }
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])); }
+
+/* ------------------------------------------------------------------ *
+ * Shield: the scripted agent assistant (spec section 4), same shape as Game A.
+ * Game B: one hint per player, and a warning after the first decoy tap.
+ * beforeAction -> {allow, warning}; afterAction -> lesson; debrief(player).
+ * ------------------------------------------------------------------ */
+const Shield = {
+  mode: initialShield,
+  log: {},          // shieldLog: playerIndex -> [{item, category, action, warned, backedOut, asked, seconds, correct}]
+  stopped: {},      // playerIndex -> hacks Shield helped avoid (a find right after its warning)
+  warned: {},       // playerIndex -> true while a decoy warning is pending
+  reset() { this.log = {}; this.stopped = {}; this.warned = {}; },
+  misses(player, category) {
+    return (this.log[player] || []).filter(e => e.category === category && !e.correct).length;
+  },
+  beforeAction(player, action, item) {
+    if (action === 'hint') {
+      if (this.mode === 'off') return { allow: false, warning: 'Shield is off.' };
+      if (state.players[player].hintUsed) return { allow: false, warning: 'You already used your Shield hint.' };
+      return { allow: true, warning: null };
+    }
+    return { allow: true, warning: null }; // taps are never blocked in this game
+  },
+  // Picks the unfound risk to highlight: one in a category this player keeps missing (personalised), else the first unfound.
+  pickHint(player, unfound) {
+    const missed = unfound.find(id => this.misses(player, TILE[id].category) > 0);
+    return missed || unfound[0];
+  },
+  hintText(player, tileId) {
+    const c = CATEGORIES[TILE[tileId].category];
+    const extra = this.misses(player, TILE[tileId].category) ? ' You missed a ' + c.label.toLowerCase() + ' spot earlier, so this one is for you.' : '';
+    return 'Look at the highlighted spot. Think: ' + c.label.toLowerCase() + '.' + extra;
+  },
+  afterAction(player, entry) {
+    (this.log[player] = this.log[player] || []).push(entry);
+    const item = TILE[entry.item];
+    let warning = null;
+    if (entry.action === 'tap') {
+      if (entry.correct) {
+        if (this.warned[player]) this.stopped[player] = (this.stopped[player] || 0) + 1;
+        this.warned[player] = false;
+      } else if (entry.hacked) {
+        this.warned[player] = false;
+      } else if (this.mode !== 'off') {
+        this.warned[player] = true;
+        warning = 'Careful: that was a decoy. One more wrong tap in a row and you get hacked.' +
+          (this.mode === 'coach' && this.misses(player, item.category) > 1 ? ' Coach tip: ' + CATEGORIES[item.category].tip : '');
+      }
+    }
+    return { flag: item.flag, habit: item.habit, warning };
+  },
+  debrief(player) {
+    const entries = (this.log[player] || []).filter(e => e.action === 'tap');
+    const stats = {};
+    Object.keys(CATEGORIES).forEach(c => { stats[c] = { seen: 0, misses: 0, assisted: 0, seconds: 0 }; });
+    entries.forEach(e => { const s = stats[e.category]; s.seen++; if (!e.correct) s.misses++;
+      if (e.asked) s.assisted++; s.seconds += e.seconds; });
+    const weight = c => { const s = stats[c]; return s.misses * 1000 + s.assisted * 100 + (s.seen ? s.seconds / s.seen : -1); };
+    const seen = Object.keys(stats).filter(c => stats[c].seen > 0).sort((a, b) => weight(b) - weight(a));
+    const unseen = Object.keys(stats).filter(c => stats[c].seen === 0);
+    const weakest = seen.concat(unseen).slice(0, 2).map(c => ({
+      category: c, label: CATEGORIES[c].label, tip: CATEGORIES[c].tip, misses: stats[c].misses, seen: stats[c].seen
+    }));
+    return { weakest, stopped: this.stopped[player] || 0, taps: entries.length,
+             found: entries.filter(e => e.correct).length };
+  }
+};
+
+/* ------------------------------------------------------------------ *
+ * State + dispatch: every move goes through dispatch(move).
+ * ------------------------------------------------------------------ */
+function freshState() {
+  return { phase: 'setup', players: [], layout: [], found: [], checked: [], current: 0, hinted: null, hintText: null,
+           popover: null, error: null, namesDraft: 'Alex\nSam\nJordan', timeLeft: ROUND_SECONDS, lastTick: null,
+           turnStartedAt: null, endReason: null, shieldMode: Shield.mode };
+}
+let state = freshState();
+
+function unfoundRisks() { return state.layout.filter(id => TILE[id].risk && !state.found.includes(id)); }
+function passTurn() {
+  state.current = (state.current + 1) % state.players.length;
+  state.hinted = null; state.hintText = null;
+  state.turnStartedAt = now();
+}
+function finish(reason) { state.phase = 'leaderboard'; state.endReason = reason; state.popover = null; }
+
+function tap(id) {
+  const tile = TILE[id];
+  if (!tile || state.found.includes(id) || state.checked.includes(id)) return;
+  const p = state.current, player = state.players[p];
+  Shield.beforeAction(p, 'tap', tile);
+  const seconds = Math.round((now() - (state.turnStartedAt || now())) / 100) / 10;
+  const asked = state.hinted === id;
+  let hacked = false, delta = 0;
+  if (tile.risk) {
+    state.found.push(id);
+    player.score += SCORE.find; delta = SCORE.find;
+    player.found++;
+    player.streak = 0;
+    if (state.hinted === id) { state.hinted = null; state.hintText = null; }
+  } else {
+    state.checked.push(id);
+    player.streak++;
+    if (player.streak >= 2) { hacked = true; delta = -player.score; player.score = 0; player.streak = 0; player.hacks++; }
+  }
+  const lesson = Shield.afterAction(p, { item: id, category: tile.category, action: 'tap', warned: !!Shield.warned[p],
+    backedOut: false, asked, seconds, correct: tile.risk, hacked });
+  state.popover = { tile: id, player: p, correct: tile.risk, hacked, delta, lesson, passes: !tile.risk };
+  state.turnStartedAt = now();
+}
+
+function dispatch(move) {
+  switch (move.type) {
+    case 'draft': state.namesDraft = move.text; return; // typing; no re-render
+    case 'start': {
+      const names = String(move.names).split(/\n|,/).map(s => s.trim()).filter(Boolean);
+      state.namesDraft = move.names;
+      if (names.length < 2 || names.length > 6) { state.error = 'Enter 2 to 6 player names (you entered ' + names.length + ').'; break; }
+      if (new Set(names.map(n => n.toLowerCase())).size !== names.length) { state.error = 'Player names must be different.'; break; }
+      const rand = seedParam != null && seedParam !== '' ? rng(Number(seedParam) || 0) : Math.random;
+      Shield.reset();
+      state.error = null;
+      state.players = names.map(name => ({ name, score: 0, found: 0, streak: 0, hintUsed: false, hacks: 0 }));
+      state.layout = shuffle(TILES.map(t => t.id), rand);
+      state.found = []; state.checked = []; state.current = 0; state.hinted = null; state.hintText = null; state.popover = null;
+      state.timeLeft = ROUND_SECONDS; state.lastTick = now(); state.turnStartedAt = now(); state.endReason = null;
+      state.phase = 'scene';
+      break;
+    }
+    case 'tap': if (state.phase === 'scene' && !state.popover) tap(move.id); break;
+    case 'hint': {
+      if (state.phase !== 'scene' || state.popover) break;
+      const p = state.current;
+      if (!Shield.beforeAction(p, 'hint', null).allow) break;
+      const unfound = unfoundRisks();
+      if (!unfound.length) break;
+      const id = Shield.pickHint(p, unfound);
+      state.players[p].hintUsed = true;
+      state.players[p].score += SCORE.hint;
+      state.hinted = id;
+      state.hintText = Shield.hintText(p, id);
+      Shield.afterAction(p, { item: id, category: TILE[id].category, action: 'hint', warned: false, backedOut: false, asked: true, seconds: 0, correct: true });
+      break;
+    }
+    case 'closeLesson': {
+      if (state.phase !== 'scene' || !state.popover) break;
+      const pop = state.popover;
+      state.popover = null;
+      state.lastTick = now();            // the clock pauses while a lesson is open
+      if (state.found.length >= RISK_COUNT) { finish('all'); break; }
+      if (pop.passes) passTurn();
+      break;
+    }
+    case 'tick': {
+      if (state.phase !== 'scene') return;
+      const t = move.now != null ? move.now : now();
+      const dt = Math.max(0, (t - (state.lastTick || t)) / 1000);
+      state.lastTick = t;
+      if (state.popover) return;
+      state.timeLeft = Math.max(0, state.timeLeft - dt);
+      if (state.timeLeft > 0) { updateTimer(); return; }
+      finish('time');
+      break;
+    }
+    case 'debrief': if (state.phase === 'leaderboard') state.phase = 'debrief'; break;
+    case 'leaderboard': if (state.phase === 'debrief') state.phase = 'leaderboard'; break;
+    case 'restart': {
+      const draft = state.namesDraft;
+      state = freshState(); state.namesDraft = draft; Shield.reset();
+      break;
+    }
+    case 'setShield':
+      Shield.mode = SHIELD_MODES.includes(move.mode) ? move.mode : 'nudge';
+      state.shieldMode = Shield.mode;
+      break;
+    default: return;
+  }
+  render();
+}
+
+/* ------------------------------------------------------------------ *
+ * Rendering (same approach as Inbox Showdown: escaped strings, DOMParser swap).
+ * ------------------------------------------------------------------ */
+const app = document.getElementById('app');
+
+function leaderboard() {
+  return state.players.map((p, i) => ({ name: p.name, score: p.score, found: p.found, index: i }))
+    .sort((a, b) => b.score - a.score || a.index - b.index);
+}
+function scoreStrip(active) {
+  return '<div class="scores" data-testid="score-strip">' + state.players.map((p, i) =>
+    '<span class="' + (i === active ? 'active' : '') + '">' + esc(p.name) + ': ' + p.score + '</span>').join('') + '</div>';
+}
+function shieldBadge() {
+  return '<span class="badge" data-testid="shield-status">🛡️ Shield: ' + Shield.mode + ' · prototype, scripted agent</span>';
+}
+function timerText() { return '⏱️ ' + Math.ceil(state.timeLeft) + 's'; }
+function updateTimer() {
+  const el = app.querySelector('[data-testid="timer"]');
+  if (!el) return;
+  el.textContent = timerText();
+  el.dataset.seconds = String(Math.ceil(state.timeLeft));
+  el.classList.toggle('low', state.timeLeft <= 15);
+}
+
+function tileButton(id) {
+  const t = TILE[id];
+  const found = state.found.includes(id), checked = state.checked.includes(id), hinted = state.hinted === id;
+  const cls = 'tile' + (found ? ' found' : '') + (checked ? ' decoy-checked' : '') + (hinted ? ' hinted' : '');
+  const mark = found ? '<span class="mark">✅ risk found</span>' : checked ? '<span class="mark">👍 safe</span>' : '';
+  return '<button class="' + cls + '" data-testid="tile" data-tile-id="' + id + '" data-risk="' + (t.risk ? 'true' : 'false') + '"' +
+    (found ? ' data-found="true"' : '') + (hinted ? ' data-hinted="true"' : '') +
+    ' data-action="tap" aria-label="' + esc(t.label) + (found ? ', risk found' : checked ? ', safe' : '') + '"' +
+    (found || checked ? ' disabled' : '') + '><span class="ico" aria-hidden="true">' + t.icon + '</span><span>' + esc(t.label) + '</span>' + mark + '</button>';
+}
+
+function popoverView() {
+  const pop = state.popover, t = TILE[pop.tile], player = state.players[pop.player];
+  const next = state.players[(pop.player + 1) % state.players.length];
+  const done = state.found.length >= RISK_COUNT;
+  let h = '<div class="pop-overlay"><div class="popover" role="dialog" aria-modal="true" aria-label="Lesson" data-testid="lesson-popover" data-correct="' + pop.correct + '">';
+  h += '<h2 class="' + (pop.correct ? 'result-good' : 'result-bad') + '" data-testid="lesson-result">' + t.icon + ' ' +
+    (pop.correct ? 'Risk found! +' + SCORE.find : 'Decoy, that one is safe') + '</h2>';
+  if (pop.hacked) {
+    h += '<div class="hacked" role="alert" data-testid="hacked-banner"><span class="big">💀 ' + esc(player.name) + ', you got hacked!</span>' +
+      'Two wrong taps in a row. Your score resets to 0. Start over!</div>';
+  }
+  h += '<div class="shield" data-testid="lesson-text"><div class="tag">🛡️ Shield explains · ' + esc(CATEGORIES[t.category].label) + '</div>' +
+    '<p><b>' + (t.risk ? 'Red flag' : 'Why it is fine') + ':</b> ' + esc(pop.lesson.flag) + '</p><p><b>Safe habit:</b> ' + esc(pop.lesson.habit) + '</p></div>';
+  if (pop.lesson.warning) {
+    h += '<div class="shield warn" role="alert" data-testid="shield-warning"><div class="tag">🛡️ Shield nudge · prototype, scripted agent</div>' + esc(pop.lesson.warning) + '</div>';
+  }
+  h += '<div class="row"><button class="primary" data-testid="btn-lesson-ok" data-action="closeLesson">' +
+    (done ? 'See leaderboard' : pop.passes ? 'Pass to ' + esc(next.name) : 'Keep hunting, ' + esc(player.name)) + '</button></div></div></div>';
+  return h;
+}
+
+function view() {
+  let h = '';
+  if (state.phase === 'setup') {
+    h += '<section data-testid="setup-screen"><h1>🔎 First Week Hunt</h1>' +
+      '<p>Your first week at Northbridge Co. The office hides <b>' + RISK_COUNT + ' security risks</b> among safe look-alikes. Take turns tapping spots: a find keeps your turn, a decoy passes it, and two decoys in a row means you got hacked.</p>' +
+      '<div class="panel"><label for="player-names"><h2>Players (2 to 6, one per line)</h2></label>' +
+      '<textarea id="player-names" data-testid="player-names" aria-describedby="setup-help">' + esc(state.namesDraft) + '</textarea>' +
+      '<p id="setup-help" class="muted small">' + ROUND_SECONDS + ' seconds on the clock for the whole group. Pass the device (or share your screen) when the turn changes.</p>' +
+      (state.error ? '<p class="error" role="alert" data-testid="setup-error">' + esc(state.error) + '</p>' : '') +
+      '<div class="row"><button class="primary" data-testid="btn-start" data-action="start">Start hunt</button></div></div>' +
+      '<p>' + shieldBadge() + '</p></section>';
+  } else if (state.phase === 'scene') {
+    const p = state.players[state.current];
+    const hintBlocked = !Shield.beforeAction(state.current, 'hint', null).allow;
+    h += '<section data-testid="scene-screen">' +
+      '<div class="status"><div class="turn-banner" data-testid="turn-banner" data-player="' + esc(p.name) + '">🎯 ' + esc(p.name) + '\'s turn</div>' +
+      '<div class="timer' + (state.timeLeft <= 15 ? ' low' : '') + '" data-testid="timer" data-seconds="' + Math.ceil(state.timeLeft) + '" aria-label="Time left">' + timerText() + '</div></div>' +
+      '<p class="small"><span data-testid="found-progress">Risks found: ' + state.found.length + '/' + RISK_COUNT + '</span>' +
+      (p.streak === 1 ? ' · <span class="result-bad">one wrong tap so far</span>' : '') + '</p>' +
+      scoreStrip(state.current) +
+      (state.hintText ? '<div class="shield" data-testid="agent-hint"><div class="tag">🛡️ Shield hint · prototype, scripted agent</div>' + esc(state.hintText) + '</div>' : '') +
+      '<div class="office" data-testid="scene" role="group" aria-label="Northbridge office">' + state.layout.map(tileButton).join('') + '</div>' +
+      '<div class="row" style="margin-top:12px"><button class="hint" data-testid="hint-btn" data-action="hint"' + (hintBlocked ? ' disabled' : '') + '>' +
+      (Shield.mode === 'off' ? '🛡️ Shield is off' : p.hintUsed ? '🛡️ Hint used' : '🛡️ Shield hint (-50, once each)') + '</button></div>' +
+      '<p class="muted small">+150 per risk · -50 for your one hint · two decoys in a row resets your score to 0.</p>' +
+      '<p>' + shieldBadge() + '</p></section>';
+    if (state.popover) h += popoverView();
+  } else if (state.phase === 'leaderboard') {
+    h += '<section class="panel" data-testid="leaderboard"><h2>🏆 Leaderboard</h2>' +
+      '<p data-testid="found-count">Risks found: ' + state.found.length + '/' + RISK_COUNT + '</p>' +
+      '<p class="muted small" data-testid="end-reason">' + (state.endReason === 'time' ? '⏱️ Time is up.' : '🎉 Every risk found.') + '</p>' +
+      '<ol class="board">' +
+      leaderboard().map((r, i) => '<li data-testid="leaderboard-row" data-score="' + r.score + '"><span>' + (i + 1) + '. <span data-testid="leaderboard-name">' + esc(r.name) + '</span> <span class="muted small">(' + r.found + ' found)</span></span><span data-testid="leaderboard-score">' + r.score + '</span></li>').join('') +
+      '</ol>' +
+      (unfoundRisks().length ? '<p class="small muted" data-testid="missed-risks">Still hidden: ' + unfoundRisks().map(id => esc(TILE[id].label)).join('; ') + '</p>' : '') +
+      '<div class="row" style="margin-top:12px"><button class="primary" data-testid="btn-debrief" data-action="debrief">🛡️ Shield debrief</button>' +
+      '<button data-testid="btn-play-again" data-action="restart">Play again</button></div></section>';
+  } else if (state.phase === 'debrief') {
+    const total = state.players.reduce((n, p, i) => n + Shield.debrief(i).stopped, 0);
+    h += '<section class="panel" data-testid="debrief"><h2>🛡️ Shield debrief</h2>' +
+      '<p class="muted small">Prototype, scripted agent. Shield mode this match: ' + Shield.mode + '.</p>' +
+      '<p data-testid="shield-stopped-total">Shield stopped ' + total + ' mistake' + (total === 1 ? '' : 's') + '.</p>' +
+      state.players.map((p, i) => {
+        const d = Shield.debrief(i);
+        return '<div class="debrief-player" data-testid="debrief-player" data-player="' + esc(p.name) + '"><h3>' + esc(p.name) + ' · ' + p.score + ' pts · ' + d.found + ' found in ' + d.taps + ' taps</h3>' +
+          '<p class="small">Weakest categories:</p><ul>' + d.weakest.map(w => '<li data-testid="debrief-weak" data-category="' + w.category + '"><b>' + esc(w.label) + '</b>' +
+          (w.seen ? ' (' + w.misses + ' wrong of ' + w.seen + ')' : ' (not practiced yet)') + ': ' + esc(w.tip) + '</li>').join('') + '</ul>' +
+          '<p class="small" data-testid="debrief-stopped">Shield stopped ' + d.stopped + ' mistake' + (d.stopped === 1 ? '' : 's') + '.</p></div>';
+      }).join('') +
+      '<div class="row" style="margin-top:12px"><button data-testid="btn-copy-results" data-action="copy">📋 Copy results</button>' +
+      '<button data-testid="btn-back-leaderboard" data-action="leaderboard">Back to leaderboard</button>' +
+      '<button class="primary" data-testid="btn-play-again" data-action="restart">Play again</button></div>' +
+      '<pre class="results" data-testid="results-text">' + esc(resultsText()) + '</pre></section>';
+  }
+  return h;
+}
+
+function render() {
+  const doc = new DOMParser().parseFromString('<body>' + view() + '</body>', 'text/html');
+  app.replaceChildren(...Array.from(doc.body.childNodes));
+  const focusTarget = app.querySelector('[data-testid="btn-lesson-ok"]');
+  if (focusTarget && !(document.activeElement && document.activeElement.closest('.nbm-panel'))) focusTarget.focus({ preventScroll: true });
+}
+
+function resultsText() {
+  const lines = ['First Week Hunt results (Shield: ' + Shield.mode + '), risks found ' + state.found.length + '/' + RISK_COUNT];
+  leaderboard().forEach((r, i) => {
+    const d = Shield.debrief(r.index);
+    lines.push((i + 1) + '. ' + r.name + ': ' + r.score + ' pts, ' + d.found + ' found in ' + d.taps + ' taps, hacked ' + state.players[r.index].hacks +
+      'x, Shield stopped ' + d.stopped + ', weakest: ' + d.weakest.map(w => w.label).join(', '));
+  });
+  return lines.join('\n');
+}
+
+function copyResults() {
+  const text = resultsText();
+  const done = () => { const b = app.querySelector('[data-testid="btn-copy-results"]'); if (b) b.textContent = '✅ Copied'; };
+  const fallback = () => {
+    const pre = app.querySelector('[data-testid="results-text"]');
+    if (!pre) return;
+    const range = document.createRange(); range.selectNodeContents(pre);
+    const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    try { document.execCommand('copy'); done(); } catch (e) { /* text stays selected for a manual copy */ }
+  };
+  try {
+    if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(done, fallback); return; }
+  } catch (e) { /* fall through */ }
+  fallback();
+}
+
+app.addEventListener('click', e => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn || btn.disabled) return;
+  const a = btn.dataset.action;
+  if (a === 'start') dispatch({ type: 'start', names: app.querySelector('[data-testid="player-names"]').value });
+  else if (a === 'tap') dispatch({ type: 'tap', id: btn.dataset.tileId });
+  else if (a === 'copy') copyResults();
+  else dispatch({ type: a });
+});
+app.addEventListener('input', e => {
+  if (e.target.matches('[data-testid="player-names"]')) dispatch({ type: 'draft', text: e.target.value });
+});
+setInterval(() => dispatch({ type: 'tick' }), 250);
+
+const HOW_TO = [
+  'Your first week at Northbridge Co. The office hides 8 security risks among safe look-alikes. 2 to 6 players take turns on one screen.',
+  '- Tap a spot you think is risky. A real risk scores +150 and you keep the turn.',
+  '- A decoy (safe spot) passes the turn to the next player.',
+  '- Two decoys in a row and you got hacked: your score resets to 0. Start over!',
+  '- Each player gets one Shield hint (-50) that highlights a hidden risk.',
+  '- The hunt ends when all 8 are found or the 120 second clock runs out. Highest score wins.',
+  'Shield is a prototype, scripted agent. It gives hints, warns you after a first wrong tap, and debriefs each player at the end.'
+].join('\n');
+
+render();
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.Menu) {
+    window.Menu.init({
+      name: '🔎 First Week Hunt',
+      restart: () => dispatch({ type: 'restart' }),
+      setShield: on => dispatch({ type: 'setShield', mode: on ? (initialShield === 'coach' ? 'coach' : 'nudge') : 'off' }),
+      howTo: HOW_TO,
+      shield: Shield.mode !== 'off'
+    });
+  }
+});
+
+// Test / console hook (read-only view plus dispatch); used by the Playwright checks.
+window.FirstWeekHunt = { dispatch, get state() { return state; }, TILES, Shield };
+</script>
+</body>
+</html>
