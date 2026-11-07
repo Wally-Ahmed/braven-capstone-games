@@ -8,7 +8,7 @@
  */
 (function () {
   'use strict';
-  var cfg = null, bar, overlay, panel, menuBtn, shieldBtn, howtoBox, shieldOn = true, lastFocus = null;
+  var cfg = null, bar, overlay, panel, menuBtn, shieldBtn, howtoBox, soundBtn = null, shieldOn = true, lastFocus = null;
 
   function el(tag, attrs, text) {
     var e = document.createElement(tag);
@@ -19,6 +19,11 @@
 
   function renderHowTo(text) {
     howtoBox.textContent = '';
+    if (window.Tutorial) {
+      var tut = el('button', { 'class': 'nbm-btn nbm-tut', type: 'button', 'data-testid': 'menu-tutorial' }, '🎬 Watch the tutorial (with voice)');
+      tut.addEventListener('click', function () { close(); window.Tutorial.open(); });
+      howtoBox.appendChild(tut);
+    }
     var lines = String(text || 'No rules text yet.').split('\n'), ul = null;
     lines.forEach(function (line) {
       line = line.trim();
@@ -37,6 +42,15 @@
     shieldBtn.textContent = '🛡️ Shield: ' + (shieldOn ? 'on' : 'off');
     shieldBtn.setAttribute('aria-pressed', shieldOn ? 'true' : 'false');
     shieldBtn.setAttribute('data-state', shieldOn ? 'on' : 'off');
+  }
+
+  function updateSoundLabel() {
+    if (!soundBtn) return;
+    var m = window.Sfx.muted();
+    soundBtn.textContent = m ? '🔇' : '🔊';
+    soundBtn.setAttribute('aria-label', m ? 'Sound off, turn sound on' : 'Sound on, turn sound off');
+    soundBtn.setAttribute('aria-pressed', m ? 'true' : 'false');
+    soundBtn.setAttribute('data-state', m ? 'muted' : 'on');
   }
 
   function open() {
@@ -61,7 +75,17 @@
     menuBtn = el('button', { 'class': 'nbm-btn', type: 'button', 'data-testid': 'menu-btn', 'aria-haspopup': 'dialog',
       'aria-expanded': 'false', 'aria-controls': 'nbm-panel' }, '☰ Menu');
     bar.appendChild(title);
-    bar.appendChild(menuBtn);
+    var right = el('div', { 'class': 'nbm-right' });
+    right.appendChild(menuBtn);
+    if (window.Sfx) {
+      // After the Menu button in the DOM so Tab still reaches Menu first; shown to its left.
+      soundBtn = el('button', { 'class': 'nbm-btn nbm-sound', type: 'button', 'data-testid': 'sound-toggle', 'data-sfx': 'none' });
+      soundBtn.addEventListener('click', function () { window.Sfx.toggle(); });
+      window.Sfx.onChange(updateSoundLabel);
+      right.appendChild(soundBtn);
+      updateSoundLabel();
+    }
+    bar.appendChild(right);
 
     overlay = el('div', { 'class': 'nbm-overlay', 'data-testid': 'menu-overlay' });
     overlay.hidden = true;

@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Phish or Fine? Buzzer Battle</title>
 <link rel="stylesheet" href="/shared/menu.css">
+<script src="/shared/audio.js" defer></script>
+<script src="/shared/fx.js" defer></script>
 <script src="/shared/menu.js" defer></script>
+<script src="/shared/tutorial.js" defer></script>
 <style>
   :root { --bg:#0f172a; --card:#1e293b; --line:#334155; --text:#f1f5f9; --muted:#94a3b8; --accent:#38bdf8;
           --good:#22c55e; --bad:#ef4444; --warn:#f59e0b; --ink:#0f172a; --p1:#a855f7; --p2:#f97316; }
@@ -76,6 +79,8 @@
   code { font-family:ui-monospace, Menlo, Consolas, monospace; font-size:.85em; background:#0b1222; border-radius:4px; padding:0 4px; }
   pre.results { white-space:pre-wrap; background:#0b1222; border:1px solid var(--line); border-radius:10px; padding:10px; font-size:.8rem; overflow-wrap:anywhere; }
 </style>
+<link rel="stylesheet" href="/shared/theme.css">
+<link rel="stylesheet" href="/shared/tutorial.css">
 </head>
 <body>
 <main id="app" aria-live="polite"></main>
@@ -205,6 +210,11 @@ function shuffle(list, rand) {
 }
 function now() { return Date.now(); }
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])); }
+/* Shared sound + visual feedback (shared/audio.js, shared/fx.js); optional, never throws. */
+function sfx(name) { try { if (window.Sfx) window.Sfx[name](); } catch (e) { /* audio is optional */ } }
+function fx(name, sel, arg) {
+  try { const node = typeof sel === 'string' ? document.querySelector(sel) : sel; if (window.FX && (node || name === 'confetti')) window.FX[name](node, arg); } catch (e) { /* effects are optional */ }
+}
 
 /* ------------------------------------------------------------------ *
  * Shield: the scripted agent assistant (spec section 4).
@@ -660,6 +670,7 @@ document.addEventListener('DOMContentLoaded', () => {
       shield: Shield.mode !== 'off'
     });
   }
+  if (window.Tutorial) window.Tutorial.init({ slug: 'phish-or-fine', name: '🎣 Phish or Fine?' });
 });
 
 // Test / console hook (read-only view plus dispatch); used by the Playwright checks.

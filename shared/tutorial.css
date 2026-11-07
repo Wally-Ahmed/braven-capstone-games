@@ -1,0 +1,86 @@
+/* Shared "How to play" tutorial overlay (shared/tutorial.js). */
+.tut-overlay { position: fixed; inset: 0; z-index: 1100; display: flex; align-items: center; justify-content: center; padding: 12px;
+  background: radial-gradient(circle at 20% 10%, rgba(255,79,163,.55), transparent 45%),
+              radial-gradient(circle at 85% 90%, rgba(34,211,238,.5), transparent 45%), rgba(17, 10, 48, .88);
+  font-family: ui-rounded, "SF Pro Rounded", "Segoe UI Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: #fff; box-sizing: border-box; overflow-y: auto; }
+.tut-overlay[hidden] { display: none; }
+.tut-overlay * { box-sizing: border-box; }
+html.tut-open, html.tut-open body { overflow: hidden; }
+.tut-box { width: min(560px, 100%); max-width: 100%; margin: auto; display: flex; flex-direction: column; gap: 12px;
+  background: linear-gradient(160deg, #2a1b6e 0%, #1b1446 100%); border: 3px solid rgba(255,255,255,.18);
+  border-radius: 26px; padding: 14px; box-shadow: 0 24px 60px rgba(0,0,0,.45), 0 0 0 6px rgba(255,255,255,.04); }
+.tut-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.tut-kicker { font-weight: 800; font-size: .95rem; letter-spacing: .02em; color: #ffd23f; min-width: 0; overflow-wrap: anywhere; }
+.tut-head-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.tut-btn { min-height: 44px; min-width: 44px; padding: 10px 16px; border-radius: 999px; border: 0; font: inherit; font-weight: 800;
+  cursor: pointer; color: #1b1446; background: #fff; transition: transform .12s ease, box-shadow .12s ease, filter .12s ease; }
+.tut-btn:hover:not(:disabled) { filter: brightness(1.08); box-shadow: 0 6px 16px rgba(0,0,0,.3); }
+.tut-btn:active:not(:disabled) { transform: scale(.95); }
+.tut-btn:focus-visible, .tut-remember input:focus-visible { outline: 3px solid #ffd23f; outline-offset: 3px; }
+.tut-btn:disabled { opacity: .4; cursor: not-allowed; }
+.tut-ghost { background: rgba(255,255,255,.14); color: #fff; }
+.tut-skip { background: linear-gradient(90deg, #ff4fa3, #ff8a3d); color: #fff; font-size: 1rem; box-shadow: 0 6px 18px rgba(255,79,163,.45); }
+.tut-next { background: linear-gradient(90deg, #84f06b, #22d3ee); color: #10203a; font-size: 1.1rem; flex: 2 1 160px; }
+.tut-listen { background: #ffd23f; color: #1b1446; margin: 0 auto; display: block; animation: tut-pulse-ring 1.2s ease-in-out infinite; }
+.tut-listen[hidden] { display: none; }
+
+.tut-card { --tut-hue: #ff4fa3; position: relative; border-radius: 22px; padding: 18px 16px 16px; text-align: center;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tut-hue) 30%, transparent), rgba(255,255,255,.05));
+  border: 2px solid color-mix(in srgb, var(--tut-hue) 70%, transparent); overflow: hidden; }
+.tut-card.tut-in { animation: tut-card-in .45s cubic-bezier(.2,1.4,.4,1); }
+.tut-art { display: flex; justify-content: center; align-items: flex-end; gap: 10px; min-height: 110px; font-size: 4rem; line-height: 1; flex-wrap: wrap; }
+.tut-emo { display: inline-block; filter: drop-shadow(0 8px 10px rgba(0,0,0,.35)); animation-delay: calc(var(--i) * .18s); }
+.anim-float .tut-emo { animation: tut-float 2.2s ease-in-out infinite; animation-delay: calc(var(--i) * .3s); }
+.anim-bounce .tut-emo { animation: tut-bounce 1.1s ease-in-out infinite; animation-delay: calc(var(--i) * .2s); }
+.anim-pop .tut-emo { animation: tut-pop .6s cubic-bezier(.2,1.6,.4,1) both, tut-float 2.4s ease-in-out .7s infinite; animation-delay: calc(var(--i) * .2s), calc(.7s + var(--i) * .3s); }
+.anim-shake .tut-emo:last-child { animation: tut-wobble 1.4s ease-in-out infinite; }
+.anim-shake .tut-emo:first-child { animation: tut-float 2s ease-in-out infinite; }
+.anim-swing .tut-emo { transform-origin: 50% 90%; animation: tut-swing 1.6s ease-in-out infinite; animation-delay: calc(var(--i) * .25s); }
+.anim-pulse .tut-emo { animation: tut-heart 1.3s ease-in-out infinite; animation-delay: calc(var(--i) * .2s); }
+.tut-chips { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin-top: 10px; min-height: 0; }
+.tut-chip { font-weight: 900; font-size: .95rem; padding: 4px 12px; border-radius: 999px; color: #1b1446; animation: tut-pop .5s cubic-bezier(.2,1.6,.4,1) both; animation-delay: calc(.3s + var(--i) * .15s); }
+.tut-chip.c0 { background: #84f06b; } .tut-chip.c1 { background: #ffd23f; } .tut-chip.c2 { background: #ff8a8a; }
+.tut-chip.c3 { background: #22d3ee; } .tut-chip.c4 { background: #c4b5fd; }
+.tut-caption h2 { margin: 12px 0 6px; font-size: 1.55rem; line-height: 1.15; color: #fff; }
+.tut-caption p { margin: 0; font-size: 1.12rem; line-height: 1.45; color: #f1ecff; }
+.tut-bars { position: absolute; top: 10px; right: 12px; display: flex; gap: 3px; align-items: flex-end; height: 18px; opacity: 0; transition: opacity .2s; }
+.tut-bars i { display: block; width: 4px; height: 6px; border-radius: 2px; background: #ffd23f; }
+.tut-card.talking .tut-bars { opacity: 1; }
+.tut-card.talking .tut-bars i { animation: tut-eq .7s ease-in-out infinite; }
+.tut-card.talking .tut-bars i:nth-child(2) { animation-delay: .15s; } .tut-card.talking .tut-bars i:nth-child(3) { animation-delay: .3s; }
+.tut-card.talking .tut-bars i:nth-child(4) { animation-delay: .45s; }
+.tut-listen { margin-top: 12px; }
+
+.tut-nav { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+.tut-dots { display: flex; justify-content: center; gap: 8px; }
+.tut-dot { width: 12px; height: 12px; border-radius: 999px; background: rgba(255,255,255,.25); transition: all .25s ease; }
+.tut-dot.done { background: #84f06b; }
+.tut-dot.on { width: 30px; background: #ffd23f; }
+.tut-progress { text-align: center; font-size: .85rem; color: #d6ccff; font-weight: 700; }
+.tut-row { display: flex; gap: 10px; }
+.tut-row .tut-ghost { flex: 1 1 100px; }
+.tut-remember { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; font-size: .95rem; color: #e6defc; cursor: pointer; }
+.tut-remember input { width: 22px; height: 22px; accent-color: #ff4fa3; }
+
+@keyframes tut-card-in { from { opacity: 0; transform: translateY(16px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes tut-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes tut-bounce { 0%, 100% { transform: translateY(0) scale(1); } 40% { transform: translateY(-18px) scale(1.05); } 60% { transform: translateY(0) scale(.95, 1.05); } }
+@keyframes tut-pop { from { opacity: 0; transform: scale(.3); } to { opacity: 1; transform: scale(1); } }
+@keyframes tut-wobble { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-14deg); } 40% { transform: rotate(12deg); } 60% { transform: rotate(-8deg); } 80% { transform: rotate(5deg); } }
+@keyframes tut-swing { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(10deg); } }
+@keyframes tut-heart { 0%, 100% { transform: scale(1); } 30% { transform: scale(1.15); } 60% { transform: scale(.97); } }
+@keyframes tut-eq { 0%, 100% { height: 5px; } 50% { height: 18px; } }
+@keyframes tut-pulse-ring { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,210,63,.7); } 50% { box-shadow: 0 0 0 10px rgba(255,210,63,0); } }
+
+@media (max-width: 400px) {
+  .tut-box { padding: 10px; border-radius: 20px; }
+  .tut-art { font-size: 3.1rem; min-height: 86px; }
+  .tut-caption h2 { font-size: 1.3rem; }
+  .tut-caption p { font-size: 1.02rem; }
+  .tut-head { justify-content: center; }
+  .tut-kicker { width: 100%; text-align: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tut-overlay *, .tut-overlay *::before { animation: none !important; transition: none !important; }
+}
