@@ -83,6 +83,7 @@
   ol.board li:first-child { font-weight:700; }
   .debrief-player { border-top:1px solid var(--line); padding-top:10px; margin-top:10px; }
   .debrief-player ul { margin:6px 0; padding-left:18px; }
+  .tutorial-btn { background:linear-gradient(90deg,#a78bfa,#ff4fa3); color:#fff; border:0; }
   pre.results { white-space:pre-wrap; background:#0b1222; border:1px solid var(--line); border-radius:10px; padding:10px; font-size:.8rem; overflow-wrap:anywhere; }
 </style>
 <link rel="stylesheet" href="/shared/theme.css">
@@ -250,7 +251,7 @@ const Shield = {
 function freshState() {
   return { phase: 'setup', players: [], layout: [], found: [], checked: [], current: 0, hinted: null, hintText: null,
            popover: null, error: null, namesDraft: 'Alex\nSam\nJordan', timeLeft: ROUND_SECONDS, lastTick: null,
-           turnStartedAt: null, endReason: null, shieldMode: Shield.mode };
+           turnStartedAt: null, endReason: null, what: null, shieldMode: Shield.mode };
 }
 let state = freshState();
 
@@ -283,6 +284,14 @@ function tap(id) {
   }
   const lesson = Shield.afterAction(p, { item: id, category: tile.category, action: 'tap', warned: !!Shield.warned[p],
     backedOut: false, asked, seconds, correct: tile.risk, hacked });
+  const nextName = state.players[(p + 1) % state.players.length].name;
+  const spot = tile.label;
+  state.what = tile.risk
+    ? player.name + ' found a real risk (' + spot + '): +' + SCORE.find + ', and it is still ' + player.name + '\'s turn.'
+    : hacked
+      ? player.name + ' tapped two safe spots in a row and got hacked: score back to 0. ' + nextName + ' is up.'
+      : player.name + ' tapped a safe spot (' + spot + '), so the turn passes to ' + nextName + '.' +
+        (player.streak === 1 ? ' Careful, ' + player.name + ': one more wrong tap in a row means hacked.' : '');
   state.popover = { tile: id, player: p, correct: tile.risk, hacked, delta, lesson, passes: !tile.risk };
   state.turnStartedAt = now();
 }
@@ -318,6 +327,7 @@ function dispatch(move) {
       state.players[p].score += SCORE.hint;
       state.hinted = id;
       state.hintText = Shield.hintText(p, id);
+      state.what = state.players[p].name + ' used the Shield hint (-50 points). Tap the glowing spot!';
       Shield.afterAction(p, { item: id, category: TILE[id].category, action: 'hint', warned: false, backedOut: false, asked: true, seconds: 0, correct: true });
       break;
     }
@@ -335,7 +345,7 @@ function dispatch(move) {
       const t = move.now != null ? move.now : now();
       const dt = Math.max(0, (t - (state.lastTick || t)) / 1000);
       state.lastTick = t;
-      if (state.popover) return;
+      if (state.popover || (window.Tutorial && window.Tutorial.isOpen())) return; // clock pauses for lessons and the tutorial
       state.timeLeft = Math.max(0, state.timeLeft - dt);
       if (state.timeLeft > 0) { updateTimer(); return; }
       finish('time');
@@ -432,7 +442,7 @@ function popoverView() {
     h += '<div class="shield warn" role="alert" data-testid="shield-warning"><div class="tag">🛡️ Shield nudge · prototype, scripted agent</div>' + esc(pop.lesson.warning) + '</div>';
   }
   h += '<div class="row"><button class="primary" data-testid="btn-lesson-ok" data-action="closeLesson">' +
-    (done ? 'See leaderboard' : pop.passes ? 'Pass to ' + esc(next.name) : 'Keep hunting, ' + esc(player.name)) + '</button></div></div></div>';
+    (done ? '🏆 See leaderboard' : pop.passes ? '👉 Pass to ' + esc(next.name) : '🔎 Keep hunting, ' + esc(player.name)) + '</button></div></div></div>';
   return h;
 }
 
@@ -440,12 +450,15 @@ function view() {
   let h = '';
   if (state.phase === 'setup') {
     h += '<section data-testid="setup-screen"><h1>🔎 First Week Hunt</h1>' +
+      '<p class="goal" data-testid="game-goal">🎯 Goal: find the ' + RISK_COUNT + ' hidden security risks in the office before the clock runs out.</p>' +
+      '<div class="how-row" aria-label="Quick rules"><span>👆 Tap risky spots</span><span>✅ Risk = +150, go again</span><span>😬 Safe spot = next player</span><span>💀 2 wrong in a row = hacked</span><span>🛡️ 1 hint each</span></div>' +
+      '<div class="row"><button class="tutorial-btn" data-testid="btn-tutorial" data-action="tutorial">🎬 How to play (30 s, with voice)</button></div>' +
       '<p>Your first week at Northbridge Co. The office hides <b>' + RISK_COUNT + ' security risks</b> among safe look-alikes. Take turns tapping spots: a find keeps your turn, a decoy passes it, and two decoys in a row means you got hacked.</p>' +
       '<div class="panel"><label for="player-names"><h2>Players (2 to 6, one per line)</h2></label>' +
       '<textarea id="player-names" data-testid="player-names" aria-describedby="setup-help">' + esc(state.namesDraft) + '</textarea>' +
       '<p id="setup-help" class="muted small">' + ROUND_SECONDS + ' seconds on the clock for the whole group. Pass the device (or share your screen) when the turn changes.</p>' +
       (state.error ? '<p class="error" role="alert" data-testid="setup-error">' + esc(state.error) + '</p>' : '') +
-      '<div class="row"><button class="primary" data-testid="btn-start" data-action="start">Start hunt</button></div></div>' +
+      '<div class="row"><button class="primary" data-testid="btn-start" data-action="start">🚀 Start hunt</button></div></div>' +
       '<p>' + shieldBadge() + '</p></section>';
   } else if (state.phase === 'scene') {
     const p = state.players[state.current];
@@ -456,8 +469,11 @@ function view() {
       '<p class="small"><span data-testid="found-progress">Risks found: ' + state.found.length + '/' + RISK_COUNT + '</span>' +
       (p.streak === 1 ? ' · <span class="result-bad">one wrong tap so far</span>' : '') + '</p>' +
       scoreStrip(state.current) +
+      (state.what ? '<p class="what" data-testid="what-happened">💡 ' + esc(state.what) + '</p>' : '') +
+      (state.found.length === 0 && state.checked.length === 0 && !state.hinted
+        ? '<p class="first-hint" data-testid="first-move-hint"><span class="arrow">👇</span> First move, ' + esc(p.name) + ': tap any spot in the office that looks like a security risk.</p>' : '') +
       (state.hintText ? '<div class="shield" data-testid="agent-hint"><div class="tag">🛡️ Shield hint · prototype, scripted agent</div>' + esc(state.hintText) + '</div>' : '') +
-      '<div class="office" data-testid="scene" role="group" aria-label="Northbridge office">' + state.layout.map(tileButton).join('') + '</div>' +
+      '<div class="office' + (state.found.length === 0 && state.checked.length === 0 && !state.hinted ? ' hint-pulse' : '') + '" data-testid="scene" role="group" aria-label="Northbridge office">' + state.layout.map(tileButton).join('') + '</div>' +
       '<div class="row" style="margin-top:12px"><button class="hint" data-testid="hint-btn" data-action="hint"' + (hintBlocked ? ' disabled' : '') + '>' +
       (Shield.mode === 'off' ? '🛡️ Shield is off' : p.hintUsed ? '🛡️ Hint used' : '🛡️ Shield hint (-50, once each)') + '</button></div>' +
       '<p class="muted small">+150 per risk · -50 for your one hint · two decoys in a row resets your score to 0.</p>' +
@@ -543,6 +559,7 @@ app.addEventListener('click', e => {
   if (a === 'start') dispatch({ type: 'start', names: app.querySelector('[data-testid="player-names"]').value });
   else if (a === 'tap') dispatch({ type: 'tap', id: btn.dataset.tileId });
   else if (a === 'copy') copyResults();
+  else if (a === 'tutorial') { if (window.Tutorial) window.Tutorial.open(); }
   else dispatch({ type: a });
 });
 app.addEventListener('input', e => {

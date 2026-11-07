@@ -5,30 +5,53 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Northbridge Cyber Games</title>
 <style>
-  :root { --bg:#0f172a; --card:#1e293b; --text:#f1f5f9; --muted:#94a3b8; --accent:#38bdf8; --accent-text:#0f172a; }
+  :root { --card:#1e293b; --text:#f1f5f9; --muted:#94a3b8; }
   * { box-sizing: border-box; }
   html, body { margin:0; padding:0; overflow-x:hidden; }
-  body { background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height:1.45; }
-  header { padding:28px 16px 8px; max-width:960px; margin:0 auto; }
-  h1 { margin:0 0 6px; font-size:1.7rem; }
-  header p { margin:0; color:var(--muted); }
-  .note { font-size:.85rem; color:var(--muted); margin-top:8px; }
-  main { max-width:960px; margin:0 auto; padding:16px; display:grid; gap:16px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
-  .game-card { background:var(--card); border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:10px; border:1px solid #334155; }
-  .game-card .icon { font-size:2rem; }
-  .game-card h2 { margin:0; font-size:1.25rem; }
-  .game-card .pitch { margin:0; color:#cbd5e1; }
-  .meta { display:flex; gap:8px; flex-wrap:wrap; font-size:.85rem; }
-  .meta span { background:#0b1222; border:1px solid #334155; border-radius:999px; padding:4px 10px; color:var(--muted); }
-  .play-btn { margin-top:auto; min-height:44px; border:0; border-radius:10px; background:var(--accent); color:var(--accent-text); font-weight:700; font-size:1rem; cursor:pointer; text-decoration:none; display:flex; align-items:center; justify-content:center; }
-  .play-btn:focus-visible { outline:3px solid #fff; outline-offset:2px; }
-  @media (max-width: 400px) { main { grid-template-columns: 1fr; } }
+  body { line-height:1.45; }
+  header { padding:28px 16px 4px; max-width:1000px; margin:0 auto; text-align:center; }
+  h1 { margin:0 0 6px; font-size:2.3rem; line-height:1.1; }
+  h1 .shield { display:inline-block; animation: hub-bob 2.4s ease-in-out infinite; }
+  header p { margin:0 auto; color:var(--muted); max-width:640px; }
+  .steps { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin:14px 0 4px; padding:0; list-style:none; }
+  .steps li { padding:6px 14px; border-radius:999px; font-weight:800; font-size:.92rem; color:#1b1446; }
+  .steps li:nth-child(1) { background:#ffd23f; } .steps li:nth-child(2) { background:#22d3ee; } .steps li:nth-child(3) { background:#84f06b; }
+  .note { font-size:.82rem; color:var(--muted); margin-top:10px; }
+  main { max-width:1000px; margin:0 auto; padding:16px; display:grid; gap:18px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .game-card { --hue:#ff4fa3; position:relative; background:rgba(29,16,78,.86); border-radius:24px; padding:0 0 16px; display:flex; flex-direction:column; gap:10px;
+    border:3px solid color-mix(in srgb, var(--hue) 75%, transparent); overflow:hidden; box-shadow:0 14px 30px rgba(10,0,40,.35);
+    transition: transform .2s ease, box-shadow .2s ease; animation: hub-card-in .5s ease both; }
+  .game-card:nth-child(2) { --hue:#22d3ee; animation-delay:.08s; } .game-card:nth-child(3) { --hue:#ffd23f; animation-delay:.16s; }
+  .game-card:nth-child(4) { --hue:#84f06b; } .game-card:nth-child(5) { --hue:#a78bfa; }
+  @media (hover: hover) and (pointer: fine) { .game-card:hover { transform: translateY(-6px); box-shadow:0 22px 40px rgba(10,0,40,.5); } }
+  .game-card .band { height:96px; display:flex; align-items:center; justify-content:center;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.35), transparent 50%), linear-gradient(135deg, var(--hue), color-mix(in srgb, var(--hue) 40%, #2b1475)); }
+  .game-card .icon { font-size:3.4rem; filter: drop-shadow(0 6px 8px rgba(0,0,0,.3)); animation: hub-bob 2.2s ease-in-out infinite; }
+  .game-card:nth-child(2) .icon { animation-delay:.4s; } .game-card:nth-child(3) .icon { animation-delay:.8s; }
+  .game-card > :not(.band) { margin-left:16px; margin-right:16px; }
+  .game-card h2 { margin:4px 16px 0; font-size:1.35rem; }
+  .game-card .goal-line { margin:0 16px; font-weight:800; color:#fff; }
+  .game-card .pitch { margin:0 16px; color:#d9d0ff; }
+  .meta { display:flex; gap:8px; flex-wrap:wrap; font-size:.9rem; }
+  .meta span { background:rgba(255,255,255,.12); border:2px solid rgba(255,255,255,.18); border-radius:999px; padding:4px 12px; color:#fff; font-weight:700; }
+  .card-actions { display:flex; flex-direction:column; gap:8px; margin-top:auto; }
+  .play-btn, .tut-link { min-height:48px; border-radius:16px; font-weight:900; font-size:1.05rem; cursor:pointer; text-decoration:none;
+    display:flex; align-items:center; justify-content:center; text-align:center; padding:8px 12px; }
+  .play-btn { background:linear-gradient(90deg,#ffd23f,#ff8a3d); color:#1b1446; box-shadow:0 6px 0 rgba(0,0,0,.2); }
+  .tut-link { background:rgba(255,255,255,.12); color:#fff; border:2px solid rgba(255,255,255,.28); }
+  .play-btn:active, .tut-link:active { transform: scale(.97); }
+  .play-btn:focus-visible, .tut-link:focus-visible { outline:3px solid #fff; outline-offset:2px; }
+  @keyframes hub-bob { 0%,100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-8px) rotate(-4deg); } }
+  @keyframes hub-card-in { from { opacity:0; } to { opacity:1; } }
+  @media (max-width: 400px) { main { grid-template-columns: 1fr; } h1 { font-size:1.8rem; } }
 </style>
+<link rel="stylesheet" href="shared/theme.css">
 </head>
 <body>
 <header>
-  <h1>🛡️ Northbridge Cyber Games</h1>
-  <p>Pick a game. Same-screen multiplayer cyber-safety practice with Shield, a scripted assistant that steps in before a mistake.</p>
+  <h1><span class="shield" aria-hidden="true">🛡️</span> Northbridge Cyber Games</h1>
+  <p>Quick party games about staying safe online. Play together on one screen while Shield, your scripted sidekick, steps in before a mistake.</p>
+  <ol class="steps" data-testid="hub-steps"><li>1 · Pick a game</li><li>2 · Watch the 30-second tutorial</li><li>3 · Play together</li></ol>
   <p class="note">Braven Capstone prototype. Fictional company "Northbridge Co.". Shield is a prototype, scripted agent.</p>
 </header>
 <main id="games" data-testid="game-list" aria-label="Games"></main>
@@ -40,6 +63,7 @@
       name: 'Inbox Showdown',
       icon: '📥',
       pitch: 'Teams triage a shared Northbridge inbox; Shield warns before a risky click.',
+      goal: 'Open the safe messages, report the scams.',
       players: '2 to 6',
       minutes: 'about 3'
     },
@@ -48,6 +72,7 @@
       name: 'First Week Hunt',
       icon: '🔎',
       pitch: 'Hot-seat scavenger hunt for 8 hidden risks in the Northbridge office; two wrong taps and you get hacked.',
+      goal: 'Tap the 8 hidden risks before time runs out.',
       players: '2 to 6',
       minutes: 'about 3'
     },
@@ -56,6 +81,7 @@
       name: 'Phish or Fine? Buzzer Battle',
       icon: '🎣',
       pitch: 'Split-screen buzzer race: call each snippet phish or fine; Shield debriefs every player.',
+      goal: 'Buzz first: is it a phish or fine?',
       players: '2 to 6',
       minutes: 'about 3'
     }
@@ -68,14 +94,18 @@
     card.setAttribute('data-testid', 'game-card');
     card.setAttribute('data-slug', g.slug);
     card.innerHTML = `
-      <div class="icon" aria-hidden="true">${g.icon}</div>
+      <div class="band" aria-hidden="true"><span class="icon">${g.icon}</span></div>
       <h2 data-testid="game-name">${g.name}</h2>
+      <p class="goal-line" data-testid="game-goal">🎯 ${g.goal}</p>
       <p class="pitch" data-testid="game-pitch">${g.pitch}</p>
       <div class="meta">
         <span data-testid="game-players">👥 ${g.players} players</span>
         <span data-testid="game-minutes">⏱️ ${g.minutes} minutes</span>
       </div>
-      <a class="play-btn" data-testid="play-btn" href="games/${g.slug}/">Play ${g.name}</a>`;
+      <div class="card-actions">
+        <a class="play-btn" data-testid="play-btn" href="games/${g.slug}/">▶️ Play ${g.name}</a>
+        <a class="tut-link" data-testid="tutorial-link" href="games/${g.slug}/?tutorial=1">🎬 Watch the 30-second tutorial</a>
+      </div>`;
     list.appendChild(card);
   }
 </script>

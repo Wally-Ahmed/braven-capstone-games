@@ -59,6 +59,8 @@
   .delta { display:inline-block; font-weight:900; padding:2px 10px; border-radius:999px; }
   .delta.up { background:#84f06b; color:#0b2a1a; } .delta.down { background:#ff5c7a; color:#fff; }
   .msg .ch { background:#ffe3f1; color:#9d174d; }
+  .tutorial-btn { background:linear-gradient(90deg,#a78bfa,#ff4fa3); color:#fff; border:0; }
+  button small { font-weight:700; opacity:.85; }
   pre.results { white-space:pre-wrap; background:#0b1222; border:1px solid var(--line); border-radius:10px; padding:10px; font-size:.8rem; overflow-wrap:anywhere; }
 </style>
 <link rel="stylesheet" href="/shared/theme.css">
@@ -252,7 +254,7 @@ const Shield = {
  * ------------------------------------------------------------------ */
 function freshState() {
   return { phase: 'setup', teams: [], deck: [], turn: 0, error: null, namesDraft: 'Red Team\nBlue Team',
-           current: null, reveal: null, shieldMode: Shield.mode };
+           current: null, reveal: null, lastWhat: null, shieldMode: Shield.mode };
 }
 let state = freshState();
 
@@ -287,7 +289,11 @@ function resolve(challenger) {
   }
   const lesson = Shield.afterAction(c.team, { item: c.item, category: item.category, action: c.decision,
     warned: c.warned, backedOut: c.backedOut, asked: c.asked, seconds: c.seconds || 0, correct });
-  state.reveal = { correct, delta, steal, lesson, item: c.item, decision: c.decision, team: c.team };
+  const what = team.name + (c.decision === 'open' ? ' opened ' : ' reported ') + (item.risky ? 'a scam' : 'a safe message') + ': ' +
+    (correct ? 'right call' : 'wrong call') + ', ' + (delta >= 0 ? '+' : '') + delta + ' points.' +
+    (steal ? ' ' + state.teams[steal.by].name + ' challenged and ' + (steal.ok ? 'stole +' + steal.points + '.' : 'got nothing (the call was right).') : '');
+  state.lastWhat = what;
+  state.reveal = { correct, delta, steal, lesson, item: c.item, decision: c.decision, team: c.team, what };
   state.phase = 'reveal';
 }
 
@@ -397,19 +403,24 @@ function view() {
   let h = '';
   if (state.phase === 'setup') {
     h += '<section data-testid="setup-screen"><h1>📥 Inbox Showdown</h1>' +
+      '<p class="goal" data-testid="game-goal">🎯 Goal: open the safe messages, report the scams, and score the most points.</p>' +
+      '<div class="how-row" aria-label="Quick rules"><span>📂 Open = safe</span><span>🚩 Report = scam</span><span>🛡️ Ask Shield = hint</span><span>⚔️ Challenge = steal +50</span></div>' +
       '<p>Day one at Northbridge Co. Teams take turns on one shared inbox: <b>Open</b> it, <b>Report</b> it, or <b>Ask Shield</b>. Other teams can <b>Challenge</b> to steal points.</p>' +
+      '<div class="row"><button class="tutorial-btn" data-testid="btn-tutorial" data-action="tutorial">🎬 How to play (30 s, with voice)</button></div>' +
       '<div class="panel"><label for="team-names"><h2>Teams (2 to 6, one per line)</h2></label>' +
       '<textarea id="team-names" data-testid="team-names" aria-describedby="setup-help">' + esc(state.namesDraft) + '</textarea>' +
       '<p id="setup-help" class="muted small">Each team gets ' + PER_TEAM + ' messages. Pass the device (or share your screen) between turns.</p>' +
       (state.error ? '<p class="error" role="alert" data-testid="setup-error">' + esc(state.error) + '</p>' : '') +
-      '<div class="row"><button class="primary" data-testid="btn-start" data-action="start">Start match</button></div></div>' +
+      '<div class="row"><button class="primary" data-testid="btn-start" data-action="start">🚀 Start match</button></div></div>' +
       '<p>' + shieldBadge() + '</p></section>';
   } else if (state.phase === 'pass') {
     const t = state.teams[state.current.team];
     h += '<section class="panel" data-testid="pass-screen"><h2>Pass to ' + esc(t.name) + '</h2>' +
       '<p class="muted">Message ' + (Math.floor(state.turn / state.teams.length) + 1) + ' of ' + PER_TEAM + ' for this team · turn ' + (state.turn + 1) + ' of ' + totalTurns() + '</p>' +
+      (state.lastWhat ? '<p class="what" data-testid="what-happened">⏪ Last turn: ' + esc(state.lastWhat) + '</p>' : '') +
       scoreStrip(state.current.team) +
-      '<div class="row"><button class="primary" data-testid="btn-ready" data-action="ready">' + esc(t.name) + ' is ready</button></div></section>';
+      '<p class="muted">Hand the screen to <b>' + esc(t.name) + '</b>. Everyone else, no peeking at the answer!</p>' +
+      '<div class="row"><button class="primary" data-testid="btn-ready" data-action="ready">👋 ' + esc(t.name) + ' is ready</button></div></section>';
   } else if (state.phase === 'turn') {
     const c = state.current, item = MSG[c.item], t = state.teams[c.team];
     const coach = Shield.coachTip(c.team, item);
@@ -423,11 +434,14 @@ function view() {
         '<div class="row"><button class="primary" data-testid="btn-back-out" data-action="backOut">Back out</button>' +
         '<button class="open" data-testid="btn-open-anyway" data-action="openAnyway">Open anyway</button></div></div>';
     } else {
-      h += '<div class="row" style="margin-top:12px">' +
-        '<button class="open" data-testid="btn-open" data-action="open">📂 Open</button>' +
-        '<button class="report" data-testid="btn-report" data-action="report">🚩 Report</button>' +
+      const first = state.turn === 0 && !c.asked;
+      h += (first ? '<p class="first-hint" data-testid="first-move-hint"><span class="arrow">👇</span> First move: read who sent it, then tap Open if it is safe or Report if it is a scam. Not sure? Ask Shield.</p>' : '') +
+        (c.backedOut ? '<p class="what good" data-testid="what-happened">🛡️ You backed out. Smart! Now report it, or open it anyway if you are sure.</p>' : '') +
+        '<div class="row' + (first ? ' hint-pulse' : '') + '" style="margin-top:12px">' +
+        '<button class="open" data-testid="btn-open" data-action="open">📂 Open <small>(safe)</small></button>' +
+        '<button class="report" data-testid="btn-report" data-action="report">🚩 Report <small>(scam)</small></button>' +
         '<button class="ask" data-testid="btn-ask" data-action="ask"' + (Shield.mode === 'off' || c.asked ? ' disabled' : '') + '>' +
-        (Shield.mode === 'off' ? '🛡️ Shield is off' : '🛡️ Ask Shield') + '</button></div>' +
+        (Shield.mode === 'off' ? '🛡️ Shield is off' : c.asked ? '🛡️ Hint shown' : '🛡️ Ask Shield <small>(hint)</small>') + '</button></div>' +
         '<p class="muted small">Correct: +100 (+60 if Shield helped). Opening a phish: -50.</p>';
     }
     h += '<p>' + shieldBadge() + '</p></section>';
@@ -435,12 +449,13 @@ function view() {
     const c = state.current, t = state.teams[c.team];
     const others = state.teams.map((x, i) => ({ x, i })).filter(o => o.i !== c.team);
     h += '<section class="panel" data-testid="challenge-screen"><h2>' + esc(t.name) + ' chose ' + (c.decision === 'open' ? '📂 Open' : '🚩 Report') + '</h2>' +
+      '<p class="what warn" data-testid="what-happened">' + esc(t.name) + (c.decision === 'open' ? ' thinks this message is safe.' : ' thinks this message is a scam.') + ' Other teams: disagree? Challenge to steal +' + SCORE.steal + '. Agree? Reveal the answer.</p>' +
       messageCard(MSG[c.item]) +
       '<p>Does another team disagree? A correct challenge steals +' + SCORE.steal + '.</p>' +
       '<label for="challenge-team" class="small muted">Challenging team</label>' +
       '<select id="challenge-team" data-testid="challenge-team">' + others.map(o => '<option value="' + o.i + '">' + esc(o.x.name) + '</option>').join('') + '</select>' +
       '<div class="row" style="margin-top:10px"><button class="report" data-testid="btn-challenge" data-action="challenge">⚔️ Challenge</button>' +
-      '<button class="primary" data-testid="btn-reveal" data-action="noChallenge">No challenge, reveal</button></div></section>';
+      '<button class="primary" data-testid="btn-reveal" data-action="noChallenge">👀 No challenge, reveal</button></div></section>';
   } else if (state.phase === 'reveal') {
     const r = state.reveal, item = MSG[r.item], t = state.teams[r.team];
     const last = state.turn + 1 >= totalTurns();
@@ -448,11 +463,12 @@ function view() {
       (r.correct ? '✅ Correct' : '❌ Not quite') + ': this was ' + (item.risky ? 'a phish / scam' : 'safe') + '</h2>' +
       '<p>' + esc(t.name) + ' chose ' + r.decision + ' · <span class="delta ' + (r.delta >= 0 ? 'up' : 'down') + '" data-testid="reveal-delta">' + (r.delta >= 0 ? '+' : '') + r.delta + ' points</span></p>' +
       (r.steal ? '<p data-testid="steal-result">' + esc(state.teams[r.steal.by].name) + ' challenged: ' + (r.steal.ok ? 'steal +' + r.steal.points : 'no steal') + '</p>' : '') +
+      '<p class="what ' + (r.correct ? 'good' : 'bad') + '" data-testid="what-happened">💡 What just happened: ' + esc(r.what) + '</p>' +
       messageCard(item) +
       '<div class="shield" data-testid="reveal-lesson"><div class="tag">🛡️ Shield explains · ' + esc(CATEGORIES[item.category].label) + '</div>' +
       '<p><b>Red flag:</b> ' + esc(r.lesson.flag) + '</p><p><b>Safe habit:</b> ' + esc(r.lesson.habit) + '</p></div>' +
       scoreStrip(-1) +
-      '<div class="row"><button class="primary" data-testid="btn-next" data-action="next">' + (last ? 'See leaderboard' : 'Next team') + '</button></div></section>';
+      '<div class="row"><button class="primary" data-testid="btn-next" data-action="next">' + (last ? '🏆 See leaderboard' : '➡️ Next team') + '</button></div></section>';
   } else if (state.phase === 'leaderboard') {
     h += '<section class="panel" data-testid="leaderboard">' + winnerBanner() + '<h2>🏆 Leaderboard</h2><ol class="board">' +
       leaderboard().map((r, i) => '<li data-testid="leaderboard-row" data-score="' + r.score + '"><span>' + (i + 1) + '. <span data-testid="leaderboard-name">' + esc(r.name) + '</span></span><span data-testid="leaderboard-score">' + r.score + '</span></li>').join('') +
@@ -528,6 +544,7 @@ app.addEventListener('click', e => {
   if (a === 'start') dispatch({ type: 'start', names: app.querySelector('[data-testid="team-names"]').value });
   else if (a === 'challenge') dispatch({ type: 'challenge', by: app.querySelector('[data-testid="challenge-team"]').value });
   else if (a === 'copy') copyResults();
+  else if (a === 'tutorial') { if (window.Tutorial) window.Tutorial.open(); }
   else dispatch({ type: a });
 });
 app.addEventListener('input', e => {

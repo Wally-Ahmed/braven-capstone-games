@@ -34,6 +34,7 @@ textarea, select { background: var(--well); border: 2px solid var(--line); borde
 .error { color: #ffd0da; background: rgba(255, 92, 122, .25); border-radius: 12px; padding: 8px 12px; }
 
 /* buttons: rounder, bolder, with press + lift */
+button { background: rgba(255, 255, 255, .14); border: 2px solid rgba(255, 255, 255, .28); color: #fff; }
 button { border-radius: 16px; font-weight: 800; font-family: var(--font); transition: transform .12s ease, box-shadow .15s ease, filter .15s ease; }
 button:active:not(:disabled) { transform: scale(.96); }
 @media (hover: hover) and (pointer: fine) {

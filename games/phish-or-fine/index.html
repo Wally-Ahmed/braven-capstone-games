@@ -85,6 +85,7 @@
   .debrief-player { border-top:1px solid var(--line); padding-top:10px; margin-top:10px; }
   .debrief-player ul { margin:6px 0; padding-left:18px; }
   code { font-family:ui-monospace, Menlo, Consolas, monospace; font-size:.85em; background:#0b1222; border-radius:4px; padding:0 4px; }
+  .tutorial-btn { background:linear-gradient(90deg,#a78bfa,#ff4fa3); color:#fff; border:0; }
   pre.results { white-space:pre-wrap; background:#0b1222; border:1px solid var(--line); border-radius:10px; padding:10px; font-size:.8rem; overflow-wrap:anywhere; }
 </style>
 <link rel="stylesheet" href="/shared/theme.css">
@@ -523,7 +524,8 @@ function zone(slot) {
   const locked = state.phase !== 'question' || state.q.locked.includes(slot);
   const keys = slot === 0 ? ['A', 'S'] : ['K', 'L'];
   const dis = locked ? ' disabled' : '';
-  return '<section class="zone p' + n + (locked && state.phase === 'question' ? ' locked' : '') + '" data-testid="p' + n + '-zone" aria-label="Buzz zone ' + n + '">' +
+  const firstQ = state.phase === 'question' && state.heats.every(z => !z.done) && state.itemPos === 0 && state.q.buzzes.length === 0;
+  return '<section class="zone p' + n + (locked && state.phase === 'question' ? ' locked' : '') + (firstQ ? ' hint-pulse' : '') + '" data-testid="p' + n + '-zone" aria-label="Buzz zone ' + n + '">' +
     '<div class="who"><span data-testid="p' + n + '-name">' + (slot === 0 ? '🟣 ' : '🟠 ') + esc(p.name) + '</span>' +
     '<span data-testid="p' + n + '-score">' + h.scores[slot] + '</span></div>' +
     '<div class="btns"><button class="phish" data-testid="p' + n + '-phish" data-action="buzz" data-slot="' + slot + '" data-choice="phish"' + dis + '>🎣 Phish <kbd>' + keys[0] + '</kbd></button>' +
@@ -535,12 +537,15 @@ function view() {
   let h = '';
   if (state.phase === 'setup') {
     h += '<section data-testid="setup-screen"><h1>🎣 Phish or Fine? Buzzer Battle</h1>' +
+      '<p class="goal" data-testid="game-goal">🎯 Goal: be the first to call each message 🎣 Phish (a scam) or ✅ Fine (safe).</p>' +
+      '<div class="how-row" aria-label="Quick rules"><span>🟣 A = Phish · S = Fine</span><span>🟠 K = Phish · L = Fine</span><span>⏱️ 6 s per message</span><span>💯 +100 first right</span><span>🔥 3 in a row = x1.5</span></div>' +
+      '<div class="row"><button class="tutorial-btn" data-testid="btn-tutorial" data-action="tutorial">🎬 How to play (30 s, with voice)</button></div>' +
       '<p>Northbridge Co. pop quiz. Two players per heat race to call each snippet <b>Phish</b> (unsafe) or <b>Fine</b> (safe). With 3 to 6 players it runs as a bracket; every point counts on one leaderboard.</p>' +
       '<div class="panel"><label for="player-names"><h2>Players (2 to 6, one per line)</h2></label>' +
       '<textarea id="player-names" data-testid="player-names" aria-describedby="setup-help">' + esc(state.namesDraft) + '</textarea>' +
       '<p id="setup-help" class="muted small">2 players: one 12-snippet heat. 3 to 6: 4 snippets per heat, winners advance. Keys A/S (left or top) and K/L (right or bottom), or tap.</p>' +
       (state.error ? '<p class="error" role="alert" data-testid="setup-error">' + esc(state.error) + '</p>' : '') +
-      '<div class="row"><button class="primary" data-testid="btn-start" data-action="start">Start battle</button></div></div>' +
+      '<div class="row"><button class="primary" data-testid="btn-start" data-action="start">🚀 Start battle</button></div></div>' +
       '<p>' + shieldBadge() + '</p></section>';
   } else if (state.phase === 'bracket') {
     const last = state.lastHeat != null ? state.heats[state.lastHeat] : null;
@@ -564,7 +569,7 @@ function view() {
       h += tips.map(t => '<div class="shield" data-testid="shield-coach-tip"><div class="tag">🛡️ Shield coach · prototype, scripted agent</div>' +
         esc(state.players[t.pi].name) + ', ' + esc(t.tip) + '</div>').join('') +
         '<p>Next: <b>' + esc(state.players[x.a].name) + '</b> (🟣 A/S) vs <b>' + esc(state.players[x.b].name) + '</b> (🟠 K/L)</p>' +
-        '<div class="row" style="margin-top:12px"><button class="primary" data-testid="btn-start-heat" data-action="startHeat">Start ' + heatName(x.round) + ' heat</button></div>';
+        '<div class="row" style="margin-top:12px"><button class="primary" data-testid="btn-start-heat" data-action="startHeat">🚦 Start ' + heatName(x.round) + ' heat</button></div>';
     }
     h += scoreStrip() + '<p>' + shieldBadge() + '</p></section>';
   } else if (state.phase === 'countdown') {
@@ -576,7 +581,10 @@ function view() {
     const q = state.q, x = curHeat(), item = SNIP[q.item];
     const wrong = q.buzzes.find(b => !b.correct);
     const left = Math.max(0, q.deadline - now());
-    h += '<section data-testid="question-screen" data-item-id="' + item.id + '"><div class="arena">' + zone(0) +
+    const first = state.heats.every(z => !z.done) && state.itemPos === 0 && q.buzzes.length === 0;
+    h += '<section data-testid="question-screen" data-item-id="' + item.id + '">' +
+      (first ? '<p class="first-hint" data-testid="first-move-hint"><span class="arrow">👇</span> First move: read the message, then buzz 🎣 Phish if it is a scam or ✅ Fine if it is safe. Fastest right answer wins!</p>' : '') +
+      '<div class="arena' + (first ? ' first' : '') + '">' + zone(0) +
       '<div class="q"><p class="muted small" data-testid="question-progress">' + heatName(x.round) + ' · snippet ' + (state.itemPos + 1) + ' of ' + x.items.length + '</p>' +
       snippetCard(item) +
       '<div class="timebar" aria-hidden="true"><span style="width:' + (100 * left / BUZZ_MS) + '%"></span></div>' +
@@ -590,13 +598,15 @@ function view() {
     h += '<section class="panel" data-testid="reveal"><h2 data-testid="reveal-result" class="' + (item.phish ? 'result-bad' : 'result-good') + '">' +
       (item.phish ? '🎣 Phish: unsafe' : '✅ Fine: safe') + '</h2>' +
       (r.timedOut ? '<p data-testid="reveal-timeout">⏱️ Time is up, nobody buzzed.</p>' : '') +
+      '<p class="what ' + (r.buzzes.some(b => b.correct) ? 'good' : 'bad') + '" data-testid="what-happened">💡 What just happened: ' + esc(whatHappened(r, item)) + '</p>' +
       r.buzzes.map(b => '<p data-testid="reveal-buzz">' + (b.correct ? '✅ ' : '❌ ') + esc(state.players[b.player].name) + ' said ' + b.choice +
         ' · ' + (b.points >= 0 ? '+' : '') + b.points + (b.correct && !b.steal && b.streak >= SCORE.streakAt ? ' (🔥 x' + SCORE.streakMultiplier + ' streak)' : '') + (b.steal ? ' (steal)' : '') + '</p>').join('') +
       snippetCard(item) +
       (Shield.mode !== 'off' ? '<div class="shield" data-testid="reveal-lesson"><div class="tag">🛡️ Shield explains · ' + esc(CATEGORIES[item.category].label) + ' · prototype, scripted agent</div>' +
         '<p><b>Red flag:</b> ' + esc(r.lesson.flag) + '</p><p><b>Safe habit:</b> ' + esc(r.lesson.habit) + '</p></div>' : '') +
       '<p class="small">' + esc(state.players[x.a].name) + ' ' + x.scores[0] + ' · ' + esc(state.players[x.b].name) + ' ' + x.scores[1] + '</p>' +
-      '<div class="row"><button class="primary" data-testid="btn-next" data-action="next">' + (lastItem ? 'End heat' : 'Next snippet') + '</button></div></section>';
+      '<div class="row"><button class="primary" data-testid="btn-next" data-action="next">' + (lastItem ? '🏁 End heat' : '➡️ Next snippet') + '</button></div>' +
+      '<p class="muted small">The next one starts by itself in a few seconds.</p></section>';
   } else if (state.phase === 'leaderboard') {
     h += '<section class="panel" data-testid="leaderboard">' + winnerBanner() + '<h2>🏆 Leaderboard</h2><ol class="board">' +
       leaderboard().map((r, i) => '<li data-testid="leaderboard-row" data-score="' + r.score + '"><span>' + (i + 1) + '. <span data-testid="leaderboard-name">' + esc(r.name) + '</span>' +
@@ -624,6 +634,18 @@ function view() {
       '<pre class="results" data-testid="results-text">' + esc(resultsText()) + '</pre></section>';
   }
   return h;
+}
+
+function whatHappened(r, item) {
+  const name = b => state.players[b.player].name;
+  const label = c => (c === 'phish' ? 'Phish' : 'Fine');
+  const answer = item.phish ? 'a phish' : 'fine';
+  const right = r.buzzes.find(b => b.correct), wrongs = r.buzzes.filter(b => !b.correct);
+  if (!r.buzzes.length) return 'Nobody buzzed in 6 seconds, so no points. It was ' + answer + '.';
+  if (right && !right.steal) return name(right) + ' buzzed ' + label(right.choice) + ' first and was right: +' + right.points + '.';
+  if (right) return name(wrongs[0]) + ' buzzed wrong (' + wrongs[0].points + '), so ' + name(right) + ' answered and stole +' + right.points + '.';
+  if (wrongs.length === 2) return 'Both players buzzed wrong (' + SCORE.wrong + ' each). It was ' + answer + '.';
+  return name(wrongs[0]) + ' buzzed wrong (' + wrongs[0].points + ') and the other player did not answer. It was ' + answer + '.';
 }
 
 function winnerBanner() {
@@ -678,6 +700,7 @@ app.addEventListener('click', e => {
   else if (a === 'buzz') dispatch({ type: 'buzz', slot: Number(btn.dataset.slot), choice: btn.dataset.choice, step: state.step });
   else if (a === 'next') dispatch({ type: 'next', step: state.step });
   else if (a === 'copy') copyResults();
+  else if (a === 'tutorial') { if (window.Tutorial) window.Tutorial.open(); }
   else dispatch({ type: a });
 });
 app.addEventListener('input', e => {
@@ -687,6 +710,7 @@ document.addEventListener('keydown', e => {
   if (state.phase !== 'question' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.target && e.target.matches && e.target.matches('textarea, input')) return;
   if (document.querySelector('.nbm-overlay:not([hidden])')) return; // menu open
+  if (window.Tutorial && window.Tutorial.isOpen()) return; // tutorial open
   const k = KEYS[String(e.key).toLowerCase()];
   if (!k) return;
   e.preventDefault();
