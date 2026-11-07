@@ -1,0 +1,11 @@
+.git
+node_modules
+tests
+test-results
+playwright-report
+playwright.config.js
+package.json
+package-lock.json
+SPEC.md
+README.md
+fly.toml
