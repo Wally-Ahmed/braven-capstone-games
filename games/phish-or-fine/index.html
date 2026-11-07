@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phish or Fine? Buzzer Battle</title>
+<link rel="stylesheet" href="/shared/menu.css">
+<script src="/shared/menu.js" defer></script>
+<style>
+  :root { --bg:#0f172a; --card:#1e293b; --line:#334155; --text:#f1f5f9; --muted:#94a3b8; --accent:#38bdf8;
+          --good:#22c55e; --bad:#ef4444; --warn:#f59e0b; --ink:#0f172a; --p1:#a855f7; --p2:#f97316; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; overflow-x:hidden; }
+  body { background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height:1.45; }
+  #app { max-width:1040px; margin:0 auto; padding:16px; }
+  h1, h2, h3 { margin:0 0 8px; line-height:1.2; }
+  h1 { font-size:1.5rem; } h2 { font-size:1.25rem; } h3 { font-size:1.05rem; }
+  p { margin:6px 0; }
+  .muted { color:var(--muted); }
+  .small { font-size:.85rem; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin:12px 0; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; }
+  .row > button { flex:1 1 140px; }
+  button { min-height:44px; padding:10px 16px; border-radius:10px; border:1px solid var(--line); background:#273449; color:var(--text);
+           font:inherit; font-weight:600; cursor:pointer; touch-action:manipulation; }
+  button:hover:not(:disabled) { filter:brightness(1.12); }
+  button:focus-visible, textarea:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .primary { background:var(--accent); color:var(--ink); border-color:transparent; }
+  textarea { width:100%; font:inherit; color:var(--text); background:#0b1222; border:1px solid var(--line); border-radius:10px; padding:10px; min-height:140px; resize:vertical; }
+  .error { color:#fca5a5; font-weight:600; }
+  .badge { display:inline-block; padding:2px 10px; border-radius:999px; border:1px solid var(--line); font-size:.8rem; color:var(--muted); }
+  .shield { background:#042f2e; border:1px solid #14b8a6; border-radius:12px; padding:12px; margin:12px 0; }
+  .shield .tag { font-size:.75rem; color:#99f6e4; }
+  .result-good { color:var(--good); } .result-bad { color:#fca5a5; }
+
+  /* bracket */
+  .bracket { list-style:none; padding:0; margin:0; display:grid; gap:8px; }
+  .bracket li { border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:#0b1222; overflow-wrap:anywhere; }
+  .bracket li[data-status="current"] { border-color:var(--accent); }
+  .bracket li[data-status="done"] { opacity:.85; }
+  .bracket .round { font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+  .champ { font-size:1.2rem; font-weight:800; color:#fde68a; }
+
+  /* countdown */
+  .count { font-size:5rem; font-weight:800; text-align:center; margin:24px 0; color:var(--accent); }
+
+  /* split-screen arena: top/bottom on a phone, left/right on a laptop */
+  .arena { display:grid; gap:10px; grid-template-columns:minmax(0,1fr); grid-template-areas:"p1" "q" "p2"; }
+  @media (min-width: 760px) { .arena { grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr); grid-template-areas:"p1 q p2"; align-items:stretch; } }
+  .zone { border-radius:14px; border:2px solid var(--line); padding:10px; display:flex; flex-direction:column; gap:8px; background:#0b1222; min-width:0; }
+  .zone.p1 { grid-area:p1; border-color:var(--p1); } .zone.p2 { grid-area:p2; border-color:var(--p2); }
+  .zone.locked { opacity:.55; }
+  .zone .who { display:flex; justify-content:space-between; gap:8px; font-weight:700; overflow-wrap:anywhere; }
+  .zone .btns { display:flex; gap:8px; }
+  .zone .btns button { flex:1 1 0; min-width:0; min-height:60px; font-size:1.05rem; padding:8px; }
+  .zone .phish { background:#b91c1c; border-color:transparent; }
+  .zone .fine { background:#15803d; border-color:transparent; }
+  .zone kbd { font-family:ui-monospace, Menlo, Consolas, monospace; font-size:.8rem; background:rgba(0,0,0,.3); border-radius:4px; padding:0 5px; }
+  .q { grid-area:q; min-width:0; }
+  .snip { background:#f8fafc; color:#0f172a; border-radius:12px; padding:14px; border:1px solid #cbd5e1; overflow-wrap:anywhere; }
+  .snip .ch { display:inline-block; font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; background:#e2e8f0; border-radius:999px; padding:2px 10px; }
+  .snip .from { font-family: ui-monospace, Menlo, Consolas, monospace; font-size:.85rem; margin-top:6px; }
+  .snip .body { margin-top:6px; }
+  .timebar { height:8px; border-radius:999px; background:#0b1222; border:1px solid var(--line); overflow:hidden; margin:8px 0 4px; }
+  .timebar span { display:block; height:100%; background:var(--warn); width:100%; }
+  .status { font-weight:600; min-height:1.4em; }
+
+  ol.board { padding-left:0; list-style:none; margin:0; }
+  ol.board li { display:flex; justify-content:space-between; gap:10px; padding:10px 12px; border-bottom:1px solid var(--line); overflow-wrap:anywhere; }
+  ol.board li:first-child { font-weight:700; }
+  .scores { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0; }
+  .scores span { font-size:.85rem; background:#0b1222; border:1px solid var(--line); border-radius:999px; padding:3px 10px; overflow-wrap:anywhere; }
+  .debrief-player { border-top:1px solid var(--line); padding-top:10px; margin-top:10px; }
+  .debrief-player ul { margin:6px 0; padding-left:18px; }
+  code { font-family:ui-monospace, Menlo, Consolas, monospace; font-size:.85em; background:#0b1222; border-radius:4px; padding:0 4px; }
+  pre.results { white-space:pre-wrap; background:#0b1222; border:1px solid var(--line); border-radius:10px; padding:10px; font-size:.8rem; overflow-wrap:anywhere; }
+</style>
+</head>
+<body>
+<main id="app" aria-live="polite"></main>
+<script>
+'use strict';
+
+/* ------------------------------------------------------------------ *
+ * Snippet bank: 24 fictional Northbridge Co. snippets, 3 per Shield category
+ * (2 phish + 1 fine each). "Phish" means unsafe, "Fine" means safe.
+ * ------------------------------------------------------------------ */
+const CATEGORIES = {
+  urgency:     { label: 'Urgency pressure',  tip: 'Pressure to act right now is a red flag. Slow down and verify through a channel you already trust.' },
+  lookalike:   { label: 'Look-alike domain', tip: 'Read the sender domain letter by letter, from the right; northbridge.co is the only real one.' },
+  credential:  { label: 'Credential ask',    tip: 'Never type your password from a link or give it to a caller. Open portals from your own bookmark.' },
+  giftcard:    { label: 'Gift card scam',    tip: 'Real managers never ask you to buy gift cards and send codes. Call them on a number you already have.' },
+  attachment:  { label: 'Risky attachment',  tip: 'Unexpected files, double extensions (.pdf.exe) and "enable macros" mean report, do not open.' },
+  mfa:         { label: 'MFA fatigue',       tip: 'Only approve an MFA prompt you just triggered yourself. Never read or text a code to anyone.' },
+  oversharing: { label: 'Oversharing',       tip: 'Badges, screens, org charts and travel plans help attackers. Keep them off public posts and strangers.' },
+  device:      { label: 'Device hygiene',    tip: 'Install only from the IT Software Center, never plug in found USB sticks, and lock your laptop.' }
+};
+
+const SNIPPETS = [
+  // urgency
+  { id:'u1', category:'urgency', phish:true, channel:'SMS', from:'+1 (555) 014-8820',
+    body:'Northbridge Security: your account will be DELETED in 30 minutes unless you verify now at nb-verify.co/now',
+    flag:'A 30-minute deadline plus a link that is not northbridge.co.', habit:'Slow down; check account notices in the IT portal yourself.' },
+  { id:'u2', category:'urgency', phish:true, channel:'Email', from:'cfo.office@northbridge-finance.net',
+    body:'Boarding in 10 min. Wire the vendor $7,200 before I land and do not loop anyone else in.',
+    flag:'Rush plus secrecy from an outside domain.', habit:'Confirm every payment request by calling the person on a known number.' },
+  { id:'u3', category:'urgency', phish:false, channel:'Chat', from:'Priya Shah (your team, northbridge.co)',
+    body:'Reminder: timesheets are due by 5 today. Submit them in the HR portal from your bookmark like usual.',
+    flag:'Fine: a normal internal deadline, no link, no ask for data.', habit:'Real deadlines point you to tools you already use.' },
+  // look-alike domain
+  { id:'d1', category:'lookalike', phish:true, channel:'Email', from:'it-help@northbrigde.co',
+    body:'Your mailbox is 99% full. Click here within 24 hours to keep your messages.',
+    flag:'Look-alike domain: northbrigde.co swaps two letters.', habit:'Read the domain letter by letter before you click.' },
+  { id:'d2', category:'lookalike', phish:true, channel:'Email', from:'payroll@northbridge.co.pay-portal.io',
+    body:'Your November pay stub is ready. Sign in to view it.',
+    flag:'The real owner is pay-portal.io; "northbridge.co" in front is decoration.', habit:'Read domains from the right; the last part is the owner.' },
+  { id:'d3', category:'lookalike', phish:false, channel:'Email', from:'facilities@northbridge.co',
+    body:'The 3rd floor kitchen is closed Friday for cleaning. Use the 2nd floor kitchen instead.',
+    flag:'Fine: the real northbridge.co domain, no link, no ask.', habit:'Even on real mail, still check before entering any data.' },
+  // credential ask
+  { id:'c1', category:'credential', phish:true, channel:'Email', from:'vpn@login-northbridge.help',
+    body:'Your VPN session expired. Re-enter your Northbridge username and password here to reconnect.',
+    flag:'A link asking for your password on a non-Northbridge site.', habit:'Reconnect from the VPN app itself, never from an email link.' },
+  { id:'c2', category:'credential', phish:true, channel:'Call', from:'"IT Helpdesk" (unknown number)',
+    body:'"Hi, I am finishing your laptop setup remotely. What is your password so I can log in as you?"',
+    flag:'IT never needs your password.', habit:'Hang up and call the helpdesk number on the intranet.' },
+  { id:'c3', category:'credential', phish:false, channel:'Browser', from:'portal.northbridge.co (opened from your bookmark)',
+    body:'You typed the portal address yourself. It asks you to sign in with single sign-on.',
+    flag:'Fine: you opened the real portal yourself.', habit:'Bookmarks are the safe way into every portal.' },
+  // gift card
+  { id:'g1', category:'giftcard', phish:true, channel:'SMS', from:'"Your manager" (new number)',
+    body:'Can you grab 4 gift cards for a client? Scratch them and text me photos of the codes. Will pay you back.',
+    flag:'Gift cards plus codes over text from an unknown number.', habit:'Call your manager on their known number first.' },
+  { id:'g2', category:'giftcard', phish:true, channel:'Email', from:'ceo.dana.ortiz@gmail.com',
+    body:'Buy $500 in gift cards for the team raffle. Keep it a surprise, reimbursement tomorrow.',
+    flag:'An executive on a personal email asking for gift cards, kept secret.', habit:'Real raffles go through the People team, never your card.' },
+  { id:'g3', category:'giftcard', phish:false, channel:'Email', from:'people-team@northbridge.co',
+    body:'Thanks for finishing onboarding! Your coffee reward is in the HR portal under Rewards. Nothing to buy.',
+    flag:'Fine: nothing to buy, no codes to send, real sender.', habit:'The scam is being asked to BUY cards and send codes.' },
+  // attachment
+  { id:'a1', category:'attachment', phish:true, channel:'Email', from:'scanner@northbridge-print.com',
+    body:'New scan from Floor 4 printer. Attachment: Scan_0042.pdf.exe',
+    flag:'Double extension: .pdf.exe is a program.', habit:'Report unexpected attachments; never run files from email.' },
+  { id:'a2', category:'attachment', phish:true, channel:'Email', from:'tracking@parcel-notify.net',
+    body:'Your package could not be delivered. Open Shipping_Label.docm and click "Enable macros" to view.',
+    flag:'"Enable macros" on a surprise document runs code.', habit:'Never enable macros on a file you did not expect.' },
+  { id:'a3', category:'attachment', phish:false, channel:'Chat', from:'Marco Lee (your manager, northbridge.co)',
+    body:'As promised in standup, I shared "Onboarding checklist" in our team folder on Northbridge Drive.',
+    flag:'Fine: an expected file in the drive you already use.', habit:'Expected + known sender + company drive = fine.' },
+  // MFA fatigue
+  { id:'m1', category:'mfa', phish:true, channel:'MFA prompt', from:'Northbridge Authenticator',
+    body:'2:14 AM. Approve sign-in? (12th request in 5 minutes) You are not signing in.',
+    flag:'A flood of prompts you did not start is an attacker with your password.', habit:'Deny, then tell IT and change your password.' },
+  { id:'m2', category:'mfa', phish:true, channel:'SMS', from:'+1 (555) 017-3301',
+    body:'Northbridge IT: reply with the 6-digit code we just sent to confirm your identity.',
+    flag:'Nobody legitimate asks you to send them your code.', habit:'Codes are typed by you, into the real site, only.' },
+  { id:'m3', category:'mfa', phish:false, channel:'MFA prompt', from:'Northbridge Authenticator',
+    body:'You just signed in on your laptop. Approve sign-in from "Your laptop, New York"? Number 42 matches your screen.',
+    flag:'Fine: you started it and the number matches.', habit:'Approve only prompts you just triggered.' },
+  // oversharing
+  { id:'o1', category:'oversharing', phish:true, channel:'Social post', from:'You (draft)',
+    body:'First day at Northbridge! 📸 Close-up of my new badge and my desk screen with the login page open. #NewHire',
+    flag:'A badge close-up and a screen shot help attackers copy or target you.', habit:'Share the news, never the badge or screen.' },
+  { id:'o2', category:'oversharing', phish:true, channel:'Social DM', from:'"Recruiter Jamie" (no mutual connections)',
+    body:'Love your profile! Who on your team approves vendor payments, and when is your manager traveling next?',
+    flag:'A stranger mapping who pays and when people are away.', habit:'Do not share org charts or travel plans with strangers.' },
+  { id:'o3', category:'oversharing', phish:false, channel:'Social post', from:'You (draft)',
+    body:'Excited to start as an analyst at Northbridge Co. this week! Grateful for the warm welcome.',
+    flag:'Fine: no badge, no screen, no dates or places.', habit:'Celebrate without the details attackers want.' },
+  // device hygiene
+  { id:'v1', category:'device', phish:true, channel:'Pop-up', from:'"Northbridge Defender" browser pop-up',
+    body:'VIRUS DETECTED! Your laptop is locked. Call 1-888-555-0199 now for Northbridge Support.',
+    flag:'Scary pop-ups with a phone number are fake support scams.', habit:'Close the tab and use the IT portal for real help.' },
+  { id:'v2', category:'device', phish:true, channel:'Lobby', from:'USB stick found by the elevators',
+    body:'Label: "Salary review 2026". You plug it into your laptop to find the owner.',
+    flag:'Found USB sticks are a classic way to plant malware.', habit:'Hand found devices to security; never plug them in.' },
+  { id:'v3', category:'device', phish:false, channel:'System tray', from:'Northbridge IT Software Center (installed app)',
+    body:'Security update ready. Restart tonight to finish installing.',
+    flag:'Fine: the real IT app, nothing to download from a link.', habit:'Install updates promptly; do not hit "later" forever.' }
+];
+const SNIP = Object.fromEntries(SNIPPETS.map(s => [s.id, s]));
+
+const SCORE = { correct: 100, streakMultiplier: 1.5, streakAt: 3, wrong: -50, steal: 50 };
+const BUZZ_MS = 6000, REVEAL_MS = 3500, COUNT_FROM = 3;
+const KEYS = { a: [0, 'phish'], s: [0, 'fine'], k: [1, 'phish'], l: [1, 'fine'] };
+
+/* ------------------------------------------------------------------ *
+ * URL params: ?shield=off|nudge|coach, ?seed=<number> (deterministic deck)
+ * ------------------------------------------------------------------ */
+const params = new URLSearchParams(location.search);
+const SHIELD_MODES = ['off', 'nudge', 'coach'];
+const initialShield = SHIELD_MODES.includes(params.get('shield')) ? params.get('shield') : 'nudge';
+const seedParam = params.get('seed');
+
+function rng(seed) { // mulberry32
+  let a = seed >>> 0;
+  return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+function shuffle(list, rand) {
+  const a = list.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+function now() { return Date.now(); }
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])); }
+
+/* ------------------------------------------------------------------ *
+ * Shield: the scripted agent assistant (spec section 4).
+ * Game C: no mid-race nudges (beforeAction always allows), an explain-why
+ * lesson after every reveal, and a full per-player debrief at the end.
+ * shieldLog is in memory only; nothing leaves the page.
+ * ------------------------------------------------------------------ */
+const Shield = {
+  mode: initialShield,
+  log: {},       // shieldLog: playerIndex -> [{item, category, action, outcome, warned, backedOut, seconds, correct, miss}]
+  stopped: {},   // playerIndex -> mistakes stopped (always 0 here: no mid-race nudges)
+  reset() { this.log = {}; this.stopped = {}; },
+  misses(player, category) {
+    return (this.log[player] || []).filter(e => e.miss && (!category || e.category === category)).length;
+  },
+  beforeAction(player, action, item) { // no mid-race nudges in a buzzer race
+    return { allow: true, warning: null };
+  },
+  afterAction(player, entry) {
+    (this.log[player] = this.log[player] || []).push(entry);
+    const item = SNIP[entry.item];
+    return { flag: item.flag, habit: item.habit, category: item.category };
+  },
+  // Coach mode personalises between heats (never mid-race): a tip on the category a player keeps losing on.
+  coachTip(player) {
+    if (this.mode !== 'coach') return null;
+    const d = this.debrief(player);
+    if (!d.lostOn.length) return null;
+    const c = d.lostOn[0];
+    return 'you lost on ' + CATEGORIES[c].label.toLowerCase() + ' before. ' + CATEGORIES[c].tip;
+  },
+  stats(entries) {
+    const stats = {};
+    Object.keys(CATEGORIES).forEach(c => { stats[c] = { seen: 0, misses: 0, correct: 0, seconds: 0 }; });
+    entries.forEach(e => { const s = stats[e.category]; s.seen++; if (e.miss) s.misses++; if (e.correct) s.correct++; s.seconds += e.seconds; });
+    return stats;
+  },
+  debrief(player) {
+    const entries = this.log[player] || [];
+    const stats = this.stats(entries);
+    const weight = c => { const s = stats[c]; return s.misses * 1000 - s.correct * 10 + (s.seen ? 1 : -100); };
+    const order = Object.keys(CATEGORIES).sort((a, b) => weight(b) - weight(a));
+    const lostOn = order.filter(c => stats[c].misses > 0);
+    const weakest = order.slice(0, 2).map(c => ({ category: c, label: CATEGORIES[c].label, tip: CATEGORIES[c].tip,
+      misses: stats[c].misses, seen: stats[c].seen }));
+    return { weakest, lostOn, stopped: this.stopped[player] || 0, decisions: entries.filter(e => e.action !== 'none').length,
+             correct: entries.filter(e => e.correct).length, misses: entries.filter(e => e.miss).length };
+  },
+  // Match-wide recap: the two most-missed red-flag kinds across every player.
+  recap() {
+    const all = [].concat(...Object.values(this.log));
+    const stats = this.stats(all);
+    return Object.keys(CATEGORIES).filter(c => stats[c].misses > 0)
+      .sort((a, b) => stats[b].misses - stats[a].misses).slice(0, 2)
+      .map(c => ({ category: c, label: CATEGORIES[c].label, misses: stats[c].misses }));
+  }
+};
+
+/* ------------------------------------------------------------------ *
+ * State + dispatch: every move goes through dispatch(move).
+ * Bracket: 2 players = one 12-snippet heat; 3 to 6 = 2-player heats of 4,
+ * winners advance (odd player out gets a bye), n-1 heats in total.
+ * ------------------------------------------------------------------ */
+function freshState() {
+  return { phase: 'setup', players: [], namesDraft: 'Player 1\nPlayer 2', error: null, deck: [], deckPos: 0,
+           perHeat: 0, rounds: [], heats: [], heat: -1, itemPos: 0, q: null, reveal: null, count: 0,
+           champion: null, lastHeat: null, step: 0, shieldMode: Shield.mode };
+}
+let state = freshState();
+
+function heatName(round) {
+  const r = state.rounds[round];
+  return r.heats.length === 1 && r.bye == null ? 'Final' : 'Round ' + (round + 1);
+}
+function buildRound(pool) {
+  const round = { heats: [], bye: null }, ri = state.rounds.length;
+  for (let i = 0; i + 1 < pool.length; i += 2) {
+    const items = state.deck.slice(state.deckPos, state.deckPos + state.perHeat);
+    state.deckPos += state.perHeat;
+    state.heats.push({ a: pool[i], b: pool[i + 1], round: ri, items, scores: [0, 0], wrong: [0, 0], winner: null, done: false });
+    round.heats.push(state.heats.length - 1);
+  }
+  if (pool.length % 2) round.bye = pool[pool.length - 1];
+  state.rounds.push(round);
+}
+function totalHeats() { return Math.max(0, state.players.length - 1); }
+function curHeat() { return state.heats[state.heat]; }
+function slotPlayer(h, slot) { return slot === 0 ? h.a : h.b; }
+
+function openQuestion() {
+  const h = curHeat();
+  state.q = { item: h.items[state.itemPos], startedAt: now(), deadline: now() + BUZZ_MS, locked: [], buzzes: [] };
+  state.phase = 'question';
+  state.step++;
+}
+
+function resolveQuestion(timedOut) {
+  const h = curHeat(), q = state.q, item = SNIP[q.item];
+  const correctBuzz = q.buzzes.find(b => b.correct);
+  const entries = [0, 1].map(slot => {
+    const b = q.buzzes.find(x => x.slot === slot);
+    let outcome;
+    if (b) outcome = b.correct ? 'correct' : 'wrong';
+    else if (correctBuzz) outcome = 'beaten';
+    else if (q.buzzes.length) outcome = 'pass';
+    else outcome = 'timeout';
+    const miss = outcome === 'wrong' || outcome === 'timeout';
+    if (outcome === 'timeout') state.players[slotPlayer(h, slot)].streak = 0;
+    return { slot, entry: { item: q.item, category: item.category, action: b ? b.choice : 'none', outcome,
+      warned: false, backedOut: false, seconds: b ? b.seconds : BUZZ_MS / 1000, correct: outcome === 'correct', miss } };
+  });
+  let lesson = null;
+  entries.forEach(({ slot, entry }) => { lesson = Shield.afterAction(slotPlayer(h, slot), entry); });
+  state.reveal = { item: q.item, buzzes: q.buzzes.slice(), timedOut: !!timedOut && !correctBuzz && q.buzzes.length === 0,
+                   outcomes: entries.map(e => e.entry.outcome), lesson };
+  state.phase = 'reveal';
+  state.step++;
+}
+
+function finishHeat() {
+  const h = curHeat();
+  const better = (h.scores[0] !== h.scores[1]) ? (h.scores[0] > h.scores[1] ? 0 : 1)
+               : (h.wrong[0] !== h.wrong[1]) ? (h.wrong[0] < h.wrong[1] ? 0 : 1) : 0;
+  h.winner = slotPlayer(h, better);
+  h.done = true;
+  state.lastHeat = state.heat;
+  const round = state.rounds[h.round];
+  if (round.heats.every(i => state.heats[i].done)) {
+    const pool = round.heats.map(i => state.heats[i].winner);
+    if (round.bye != null) pool.push(round.bye);
+    if (pool.length === 1) state.champion = pool[0];
+    else buildRound(pool);
+  }
+  state.heat = state.champion != null ? -1 : state.heats.findIndex(x => !x.done);
+  state.q = null;
+  state.phase = 'bracket';
+}
+
+function buzz(slot, choice) {
+  const q = state.q, h = curHeat();
+  if (state.phase !== 'question' || q.locked.includes(slot) || q.buzzes.some(b => b.correct)) return false;
+  const pi = slotPlayer(h, slot), p = state.players[pi], item = SNIP[q.item];
+  Shield.beforeAction(pi, 'buzz', item); // always allows: no mid-race nudges in Game C
+  const correct = (choice === 'phish') === item.phish;
+  const first = q.buzzes.length === 0;
+  let points;
+  if (correct) {
+    p.streak++;
+    points = first ? Math.round(SCORE.correct * (p.streak >= SCORE.streakAt ? SCORE.streakMultiplier : 1)) : SCORE.steal;
+  } else {
+    p.streak = 0; points = SCORE.wrong; h.wrong[slot]++;
+  }
+  p.score += points; h.scores[slot] += points;
+  q.buzzes.push({ slot, player: pi, choice, correct, points, steal: !first, streak: p.streak,
+                  seconds: Math.round((now() - q.startedAt) / 100) / 10 });
+  q.locked.push(slot);
+  if (correct || q.locked.length === 2) resolveQuestion(false);
+  return true;
+}
+
+function dispatch(move) {
+  switch (move.type) {
+    case 'draft': state.namesDraft = move.text; return; // typing; no re-render
+    case 'start': {
+      if (state.phase !== 'setup') return;
+      const names = String(move.names).split(/\n|,/).map(s => s.trim()).filter(Boolean);
+      state.namesDraft = move.names;
+      if (names.length < 2 || names.length > 6) { state.error = 'Enter 2 to 6 player names (you entered ' + names.length + ').'; break; }
+      if (new Set(names.map(n => n.toLowerCase())).size !== names.length) { state.error = 'Player names must be different.'; break; }
+      const rand = seedParam != null && seedParam !== '' ? rng(Number(seedParam) || 0) : Math.random;
+      state.error = null;
+      state.players = names.map(name => ({ name, score: 0, streak: 0 }));
+      state.deck = shuffle(SNIPPETS.map(s => s.id), rand);
+      state.deckPos = 0;
+      state.perHeat = names.length === 2 ? 12 : 4;
+      state.rounds = []; state.heats = []; state.champion = null; state.lastHeat = null;
+      Shield.reset();
+      buildRound(names.map((_, i) => i));
+      state.heat = 0;
+      state.phase = 'bracket';
+      break;
+    }
+    case 'startHeat':
+      if (state.phase !== 'bracket' || state.heat < 0) return;
+      state.itemPos = 0; state.count = COUNT_FROM; state.phase = 'countdown'; state.step++;
+      break;
+    case 'tick':
+      if (state.phase !== 'countdown' || move.step !== state.step) return;
+      state.count--;
+      if (state.count <= 0) openQuestion(); else state.step++;
+      break;
+    case 'buzz':
+      if (move.step != null && move.step !== state.step) return;
+      if (!buzz(Number(move.slot), move.choice === 'phish' ? 'phish' : 'fine')) return;
+      break;
+    case 'timeout':
+      if (state.phase !== 'question' || move.step !== state.step) return;
+      resolveQuestion(true);
+      break;
+    case 'next':
+      if (state.phase !== 'reveal' || (move.step != null && move.step !== state.step)) return;
+      state.itemPos++;
+      if (state.itemPos < curHeat().items.length) openQuestion(); else finishHeat();
+      break;
+    case 'results': if (state.phase === 'bracket' && state.champion != null) state.phase = 'leaderboard'; else return; break;
+    case 'debrief': if (state.phase === 'leaderboard') state.phase = 'debrief'; else return; break;
+    case 'leaderboard': if (state.phase === 'debrief') state.phase = 'leaderboard'; else return; break;
+    case 'restart': {
+      const draft = state.namesDraft, step = state.step;
+      state = freshState(); state.namesDraft = draft; state.step = step + 1; Shield.reset();
+      break;
+    }
+    case 'setShield':
+      Shield.mode = SHIELD_MODES.includes(move.mode) ? move.mode : 'nudge';
+      state.shieldMode = Shield.mode;
+      break;
+    default: return;
+  }
+  schedule();
+  render();
+}
+
+/* ------------------------------------------------------------------ *
+ * Timers live outside state; every timer move carries the step it was
+ * scheduled for, so a stale timer is ignored.
+ * ------------------------------------------------------------------ */
+let timer = null, ticker = null, scheduledStep = -1;
+function clearTimers() { clearTimeout(timer); clearInterval(ticker); timer = ticker = null; }
+function schedule() {
+  if (scheduledStep === state.step && timer) return;
+  clearTimers();
+  scheduledStep = state.step;
+  const step = state.step;
+  if (state.phase === 'countdown') timer = setTimeout(() => dispatch({ type: 'tick', step }), 1000);
+  else if (state.phase === 'question') {
+    timer = setTimeout(() => dispatch({ type: 'timeout', step }), Math.max(0, state.q.deadline - now()));
+    ticker = setInterval(updateTimer, 200);
+  } else if (state.phase === 'reveal') timer = setTimeout(() => dispatch({ type: 'next', step }), REVEAL_MS);
+}
+function updateTimer() {
+  if (state.phase !== 'question') return;
+  const left = Math.max(0, state.q.deadline - now());
+  const t = app.querySelector('[data-testid="timer"]'), bar = app.querySelector('.timebar span');
+  if (t) t.textContent = Math.ceil(left / 1000) + ' s';
+  if (bar) bar.style.width = (100 * left / BUZZ_MS) + '%';
+}
+
+/* ------------------------------------------------------------------ *
+ * Rendering (same approach as Inbox Showdown: esc() + DOMParser swap).
+ * ------------------------------------------------------------------ */
+const app = document.getElementById('app');
+
+function leaderboard() {
+  return state.players.map((p, i) => ({ name: p.name, score: p.score, index: i }))
+    .sort((a, b) => b.score - a.score || a.index - b.index);
+}
+function shieldBadge() {
+  return '<span class="badge" data-testid="shield-status">🛡️ Shield: ' + Shield.mode + ' · prototype, scripted agent</span>';
+}
+function scoreStrip() {
+  return '<div class="scores" data-testid="score-strip">' + state.players.map(p => '<span>' + esc(p.name) + ': ' + p.score + '</span>').join('') + '</div>';
+}
+function snippetCard(item) {
+  return '<div class="snip" data-testid="snippet-card" data-item-id="' + item.id + '" data-category="' + item.category + '">' +
+    '<span class="ch">' + esc(item.channel) + '</span>' +
+    '<div class="from">From: ' + esc(item.from) + '</div>' +
+    '<div class="body" data-testid="snippet-text">' + esc(item.body) + '</div></div>';
+}
+function zone(slot) {
+  const h = curHeat(), p = state.players[slotPlayer(h, slot)], n = slot + 1;
+  const locked = state.phase !== 'question' || state.q.locked.includes(slot);
+  const keys = slot === 0 ? ['A', 'S'] : ['K', 'L'];
+  const dis = locked ? ' disabled' : '';
+  return '<section class="zone p' + n + (locked && state.phase === 'question' ? ' locked' : '') + '" data-testid="p' + n + '-zone" aria-label="Buzz zone ' + n + '">' +
+    '<div class="who"><span data-testid="p' + n + '-name">' + (slot === 0 ? '🟣 ' : '🟠 ') + esc(p.name) + '</span>' +
+    '<span data-testid="p' + n + '-score">' + h.scores[slot] + '</span></div>' +
+    '<div class="btns"><button class="phish" data-testid="p' + n + '-phish" data-action="buzz" data-slot="' + slot + '" data-choice="phish"' + dis + '>🎣 Phish <kbd>' + keys[0] + '</kbd></button>' +
+    '<button class="fine" data-testid="p' + n + '-fine" data-action="buzz" data-slot="' + slot + '" data-choice="fine"' + dis + '>✅ Fine <kbd>' + keys[1] + '</kbd></button></div>' +
+    (p.streak >= SCORE.streakAt - 1 && p.streak > 0 ? '<span class="small muted">🔥 streak ' + p.streak + '</span>' : '') + '</section>';
+}
+
+function view() {
+  let h = '';
+  if (state.phase === 'setup') {
+    h += '<section data-testid="setup-screen"><h1>🎣 Phish or Fine? Buzzer Battle</h1>' +
+      '<p>Northbridge Co. pop quiz. Two players per heat race to call each snippet <b>Phish</b> (unsafe) or <b>Fine</b> (safe). With 3 to 6 players it runs as a bracket; every point counts on one leaderboard.</p>' +
+      '<div class="panel"><label for="player-names"><h2>Players (2 to 6, one per line)</h2></label>' +
+      '<textarea id="player-names" data-testid="player-names" aria-describedby="setup-help">' + esc(state.namesDraft) + '</textarea>' +
+      '<p id="setup-help" class="muted small">2 players: one 12-snippet heat. 3 to 6: 4 snippets per heat, winners advance. Keys A/S (left or top) and K/L (right or bottom), or tap.</p>' +
+      (state.error ? '<p class="error" role="alert" data-testid="setup-error">' + esc(state.error) + '</p>' : '') +
+      '<div class="row"><button class="primary" data-testid="btn-start" data-action="start">Start battle</button></div></div>' +
+      '<p>' + shieldBadge() + '</p></section>';
+  } else if (state.phase === 'bracket') {
+    const last = state.lastHeat != null ? state.heats[state.lastHeat] : null;
+    h += '<section class="panel" data-testid="bracket"><h2>🏁 Bracket</h2>' +
+      '<p class="muted small">Heat ' + Math.min(state.heats.filter(x => x.done).length + 1, totalHeats()) + ' of ' + totalHeats() + ' · ' + state.perHeat + ' snippets per heat</p>';
+    if (last) h += '<p data-testid="heat-result" class="result-good">' + esc(state.players[last.winner].name) + ' wins ' + heatName(last.round) +
+      ' (' + last.scores[0] + ' to ' + last.scores[1] + ')</p>';
+    h += '<ol class="bracket">' + state.heats.map((x, i) => {
+      const status = x.done ? 'done' : (i === state.heat ? 'current' : 'pending');
+      return '<li data-testid="bracket-heat" data-status="' + status + '"><div class="round">' + heatName(x.round) + '</div>' +
+        esc(state.players[x.a].name) + ' vs ' + esc(state.players[x.b].name) +
+        (x.done ? ' · 🏅 ' + esc(state.players[x.winner].name) + ' (' + x.scores[0] + ' to ' + x.scores[1] + ')' : status === 'current' ? ' · up next' : '') + '</li>';
+    }).join('') + state.rounds.filter(r => r.bye != null).map(r => '<li data-testid="bracket-bye" data-status="bye"><div class="round">' +
+      heatName(state.rounds.indexOf(r)) + '</div>' + esc(state.players[r.bye].name) + ' has a bye</li>').join('') + '</ol>';
+    if (state.champion != null) {
+      h += '<p class="champ" data-testid="champion">🏆 ' + esc(state.players[state.champion].name) + ' wins the battle</p>' +
+        '<div class="row" style="margin-top:12px"><button class="primary" data-testid="btn-results" data-action="results">See leaderboard</button></div>';
+    } else {
+      const x = curHeat();
+      const tips = Shield.mode === 'coach' ? [x.a, x.b].map(pi => ({ pi, tip: Shield.coachTip(pi) })).filter(t => t.tip) : [];
+      h += tips.map(t => '<div class="shield" data-testid="shield-coach-tip"><div class="tag">🛡️ Shield coach · prototype, scripted agent</div>' +
+        esc(state.players[t.pi].name) + ', ' + esc(t.tip) + '</div>').join('') +
+        '<p>Next: <b>' + esc(state.players[x.a].name) + '</b> (🟣 A/S) vs <b>' + esc(state.players[x.b].name) + '</b> (🟠 K/L)</p>' +
+        '<div class="row" style="margin-top:12px"><button class="primary" data-testid="btn-start-heat" data-action="startHeat">Start ' + heatName(x.round) + ' heat</button></div>';
+    }
+    h += scoreStrip() + '<p>' + shieldBadge() + '</p></section>';
+  } else if (state.phase === 'countdown') {
+    const x = curHeat();
+    h += '<section class="panel" data-testid="countdown-screen"><h2>' + esc(state.players[x.a].name) + ' vs ' + esc(state.players[x.b].name) + '</h2>' +
+      '<p class="muted">Fingers on A/S and K/L, or get ready to tap.</p>' +
+      '<div class="count" data-testid="countdown" aria-live="assertive">' + state.count + '</div></section>';
+  } else if (state.phase === 'question') {
+    const q = state.q, x = curHeat(), item = SNIP[q.item];
+    const wrong = q.buzzes.find(b => !b.correct);
+    const left = Math.max(0, q.deadline - now());
+    h += '<section data-testid="question-screen" data-item-id="' + item.id + '"><div class="arena">' + zone(0) +
+      '<div class="q"><p class="muted small" data-testid="question-progress">' + heatName(x.round) + ' · snippet ' + (state.itemPos + 1) + ' of ' + x.items.length + '</p>' +
+      snippetCard(item) +
+      '<div class="timebar" aria-hidden="true"><span style="width:' + (100 * left / BUZZ_MS) + '%"></span></div>' +
+      '<p class="small"><span data-testid="timer">' + Math.ceil(left / 1000) + ' s</span> to buzz</p>' +
+      '<p class="status" data-testid="buzz-status">' + (wrong ? '❌ ' + esc(state.players[wrong.player].name) + ' buzzed wrong (' + SCORE.wrong + '). ' +
+        esc(state.players[slotPlayer(x, 1 - wrong.slot)].name) + ' may answer for +' + SCORE.steal + '.' : 'Phish or fine? First correct buzz +' + SCORE.correct + '.') + '</p>' +
+      '</div>' + zone(1) + '</div></section>';
+  } else if (state.phase === 'reveal') {
+    const r = state.reveal, item = SNIP[r.item], x = curHeat();
+    const lastItem = state.itemPos + 1 >= x.items.length;
+    h += '<section class="panel" data-testid="reveal"><h2 data-testid="reveal-result" class="' + (item.phish ? 'result-bad' : 'result-good') + '">' +
+      (item.phish ? '🎣 Phish: unsafe' : '✅ Fine: safe') + '</h2>' +
+      (r.timedOut ? '<p data-testid="reveal-timeout">⏱️ Time is up, nobody buzzed.</p>' : '') +
+      r.buzzes.map(b => '<p data-testid="reveal-buzz">' + (b.correct ? '✅ ' : '❌ ') + esc(state.players[b.player].name) + ' said ' + b.choice +
+        ' · ' + (b.points >= 0 ? '+' : '') + b.points + (b.correct && !b.steal && b.streak >= SCORE.streakAt ? ' (🔥 x' + SCORE.streakMultiplier + ' streak)' : '') + (b.steal ? ' (steal)' : '') + '</p>').join('') +
+      snippetCard(item) +
+      (Shield.mode !== 'off' ? '<div class="shield" data-testid="reveal-lesson"><div class="tag">🛡️ Shield explains · ' + esc(CATEGORIES[item.category].label) + ' · prototype, scripted agent</div>' +
+        '<p><b>Red flag:</b> ' + esc(r.lesson.flag) + '</p><p><b>Safe habit:</b> ' + esc(r.lesson.habit) + '</p></div>' : '') +
+      '<p class="small">' + esc(state.players[x.a].name) + ' ' + x.scores[0] + ' · ' + esc(state.players[x.b].name) + ' ' + x.scores[1] + '</p>' +
+      '<div class="row"><button class="primary" data-testid="btn-next" data-action="next">' + (lastItem ? 'End heat' : 'Next snippet') + '</button></div></section>';
+  } else if (state.phase === 'leaderboard') {
+    h += '<section class="panel" data-testid="leaderboard"><h2>🏆 Leaderboard</h2><ol class="board">' +
+      leaderboard().map((r, i) => '<li data-testid="leaderboard-row" data-score="' + r.score + '"><span>' + (i + 1) + '. <span data-testid="leaderboard-name">' + esc(r.name) + '</span>' +
+        (r.index === state.champion ? ' 🏆' : '') + '</span><span data-testid="leaderboard-score">' + r.score + '</span></li>').join('') +
+      '</ol><div class="row" style="margin-top:12px"><button class="primary" data-testid="btn-debrief" data-action="debrief">🛡️ Shield debrief</button>' +
+      '<button data-testid="btn-play-again" data-action="restart">Play again</button></div></section>';
+  } else if (state.phase === 'debrief') {
+    const recap = Shield.recap();
+    const totalMiss = state.players.reduce((n, p, i) => n + Shield.debrief(i).misses, 0);
+    h += '<section class="panel" data-testid="debrief"><h2>🛡️ Shield debrief</h2>' +
+      '<p class="muted small">Prototype, scripted agent. Shield mode this match: ' + Shield.mode + '. No mid-race nudges in a buzzer battle; Shield explains after every snippet.</p>' +
+      '<p data-testid="shield-recap">' + (recap.length ? 'Most-missed red flags this match: ' + recap.map(c => '<b>' + esc(c.label) + '</b> <code>' + c.category + '</code> (' + c.misses + ')').join(' and ') + '.'
+        : 'No missed red flags this match.') + '</p>' +
+      '<p data-testid="shield-stopped-total">Shield stopped 0 mistakes mid-race (none attempted) and explained ' + totalMiss + ' miss' + (totalMiss === 1 ? '' : 'es') + '.</p>' +
+      state.players.map((p, i) => {
+        const d = Shield.debrief(i);
+        return '<div class="debrief-player" data-testid="p' + (i + 1) + '-debrief" data-player="' + esc(p.name) + '"><h3>' + esc(p.name) + ' · ' + p.score + ' pts · ' + d.correct + ' correct, ' + d.misses + ' missed</h3>' +
+          '<p class="small" data-testid="debrief-lost">Lost on: ' + (d.lostOn.length ? d.lostOn.map(c => '<code>' + c + '</code>').join(', ') : 'nothing') + '</p>' +
+          '<p class="small">Two weakest categories:</p><ul>' + d.weakest.map(w => '<li data-testid="debrief-weak" data-category="' + w.category + '"><b>' + esc(w.label) + '</b> <code>' + w.category + '</code>' +
+          (w.seen ? ' (' + w.misses + ' missed of ' + w.seen + ')' : ' (not seen this match)') + ': ' + esc(w.tip) + '</li>').join('') + '</ul></div>';
+      }).join('') +
+      '<div class="row" style="margin-top:12px"><button data-testid="btn-copy-results" data-action="copy">📋 Copy results</button>' +
+      '<button data-testid="btn-back-leaderboard" data-action="leaderboard">Back to leaderboard</button>' +
+      '<button class="primary" data-testid="btn-play-again" data-action="restart">Play again</button></div>' +
+      '<pre class="results" data-testid="results-text">' + esc(resultsText()) + '</pre></section>';
+  }
+  return h;
+}
+
+function render() {
+  const doc = new DOMParser().parseFromString('<body>' + view() + '</body>', 'text/html');
+  app.replaceChildren(...Array.from(doc.body.childNodes));
+  const focusTarget = app.querySelector('[data-testid="btn-start-heat"], [data-testid="btn-results"], [data-testid="btn-next"]');
+  if (focusTarget && !(document.activeElement && document.activeElement.closest('.nbm-panel'))) focusTarget.focus({ preventScroll: true });
+}
+
+function resultsText() {
+  const recap = Shield.recap();
+  const lines = ['Phish or Fine? Buzzer Battle results (Shield: ' + Shield.mode + ')'];
+  leaderboard().forEach((r, i) => {
+    const d = Shield.debrief(r.index);
+    lines.push((i + 1) + '. ' + r.name + ': ' + r.score + ' pts, ' + d.correct + ' correct, ' + d.misses + ' missed, lost on: ' +
+      (d.lostOn.length ? d.lostOn.map(c => CATEGORIES[c].label).join(', ') : 'nothing'));
+  });
+  lines.push('Most-missed red flags: ' + (recap.length ? recap.map(c => c.label + ' (' + c.misses + ')').join(', ') : 'none'));
+  return lines.join('\n');
+}
+
+function copyResults() {
+  const text = resultsText();
+  const done = () => { const b = app.querySelector('[data-testid="btn-copy-results"]'); if (b) b.textContent = '✅ Copied'; };
+  const fallback = () => {
+    const pre = app.querySelector('[data-testid="results-text"]');
+    if (!pre) return;
+    const range = document.createRange(); range.selectNodeContents(pre);
+    const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    try { document.execCommand('copy'); done(); } catch (e) { /* text stays selected for a manual copy */ }
+  };
+  try {
+    if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(done, fallback); return; }
+  } catch (e) { /* fall through */ }
+  fallback();
+}
+
+app.addEventListener('click', e => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn || btn.disabled) return;
+  const a = btn.dataset.action;
+  if (a === 'start') dispatch({ type: 'start', names: app.querySelector('[data-testid="player-names"]').value });
+  else if (a === 'buzz') dispatch({ type: 'buzz', slot: Number(btn.dataset.slot), choice: btn.dataset.choice, step: state.step });
+  else if (a === 'next') dispatch({ type: 'next', step: state.step });
+  else if (a === 'copy') copyResults();
+  else dispatch({ type: a });
+});
+app.addEventListener('input', e => {
+  if (e.target.matches('[data-testid="player-names"]')) dispatch({ type: 'draft', text: e.target.value });
+});
+document.addEventListener('keydown', e => {
+  if (state.phase !== 'question' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.target && e.target.matches && e.target.matches('textarea, input')) return;
+  if (document.querySelector('.nbm-overlay:not([hidden])')) return; // menu open
+  const k = KEYS[String(e.key).toLowerCase()];
+  if (!k) return;
+  e.preventDefault();
+  dispatch({ type: 'buzz', slot: k[0], choice: k[1], step: state.step });
+});
+
+const HOW_TO = [
+  'A Northbridge Co. pop quiz for 2 to 6 players on one screen (or a Zoom share).',
+  '- Each heat is two players: left or top zone uses keys A (Phish) and S (Fine); right or bottom uses K (Phish) and L (Fine). Tapping works too.',
+  '- Phish means unsafe, Fine means safe. You have 6 seconds per snippet; if nobody buzzes it reveals and moves on.',
+  '- Scoring: +100 for the first correct buzz, -50 for a wrong buzz, then the other player may answer for a +50 steal.',
+  '- 3 correct in a row (no wrong buzz or timeout) makes your first-buzz points x1.5.',
+  '- 2 players: one 12-snippet heat. 3 to 6 players: a bracket of 4-snippet heats, winners advance; every point counts on the leaderboard.',
+  'Shield is a prototype, scripted agent. It never interrupts the race; it explains every snippet and gives each player a debrief on the categories they lost on. Turn it off in this menu to compare.'
+].join('\n');
+
+render();
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.Menu) {
+    window.Menu.init({
+      name: '🎣 Phish or Fine?',
+      restart: () => dispatch({ type: 'restart' }),
+      setShield: on => dispatch({ type: 'setShield', mode: on ? (initialShield === 'coach' ? 'coach' : 'nudge') : 'off' }),
+      howTo: HOW_TO,
+      shield: Shield.mode !== 'off'
+    });
+  }
+});
+
+// Test / console hook (read-only view plus dispatch); used by the Playwright checks.
+window.PhishOrFine = { dispatch, get state() { return state; }, SNIPPETS, CATEGORIES, Shield };
+</script>
+</body>
+</html>
