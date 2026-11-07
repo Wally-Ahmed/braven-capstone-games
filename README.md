@@ -5,6 +5,7 @@ Braven Capstone: cyber-safety sample games (interactive, same-screen multiplayer
 | Game | Path | Players | Status |
 |---|---|---|---|
 | Inbox Showdown (phishing + social engineering) | `games/inbox-showdown/` | 2 to 6 teams | built (Goal A) |
+| First Week Hunt (passwords/MFA, device hygiene, oversharing): hot-seat hunt for 8 hidden risks in the Northbridge office | `games/first-week-hunt/` | 2 to 6 players | built (Goal B) |
 
 ## Open the hub locally
 
@@ -23,6 +24,16 @@ Use the local server rather than double-clicking `index.html`: the games load th
 - `?shield=off|nudge|coach` sets the Shield assistant (default `nudge`). `coach` also gives a personalised tip on categories a team has already missed. Play a match with `off` and one with `nudge` to get a before/after error count; the menu toggle does the same.
 - `?seed=<number>` makes the message order repeatable.
 
+### How to play First Week Hunt
+
+Enter 2 to 6 player names and press **Start hunt**. The office grid hides 8 risks (password sticky note, unlocked laptop, lobby USB stick, QR flyer, tailgater, oversharing phone post, ignored update banner, an MFA prompt you did not start) among safe look-alikes. On your turn tap a spot: a real risk scores +150 and you keep the turn; a decoy passes the turn; two decoys in a row and you got hacked, your score resets to 0. Each player gets one **Shield hint** (-50) that highlights a hidden risk, and Shield warns you after a first wrong tap. Every tap shows a one-line lesson. The hunt ends when all 8 are found or the 120 s clock runs out (it pauses while a lesson is open), then the leaderboard and Shield's per-player debrief.
+
+### URL options (First Week Hunt)
+
+- `?shield=off|nudge|coach` as above (off: no hints, no warnings).
+- `?fast=1` sets the clock to 3 s for a quick demo or test.
+- `?seed=<number>` makes the tile layout repeatable.
+
 ## Run the checks
 
 Needs Node 18+ and Python 3.
@@ -37,7 +48,8 @@ npx playwright test
 
 - `tests/hub.spec.js` covers the hub and shared menu checklist (SPEC.md section 7).
 - `tests/inbox-showdown.spec.js` covers the Game A checklist (section 6).
-- Both also check the section 3 rules: zero console errors, no requests outside the site, no horizontal scroll at 375x667 and 360x640, buttons at least 44 px.
+- `tests/first-week-hunt.spec.js` covers the Game B checklist (section 6), its hub card and the shared menu inside it.
+- All of them also check the section 3 rules: zero console errors, no requests outside the site, no horizontal scroll at 375x667 and 360x640, buttons at least 44 px.
 
 ## Layout
 
@@ -45,6 +57,7 @@ npx playwright test
 index.html                         game selection hub (GAMES array: one entry per game)
 shared/menu.js, shared/menu.css    shared top bar + menu, loaded by every game
 games/inbox-showdown/index.html    Game A, self-contained
+games/first-week-hunt/index.html   Game B, self-contained
 tests/                             Playwright checks
 Dockerfile, deploy/nginx.conf      nginx:alpine static site on port 8080
 fly.toml, .dockerignore            Fly.io config (not deployed yet)
