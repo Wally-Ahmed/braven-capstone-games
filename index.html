@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Northbridge Cyber Games</title>
+<style>
+  :root { --bg:#0f172a; --card:#1e293b; --text:#f1f5f9; --muted:#94a3b8; --accent:#38bdf8; --accent-text:#0f172a; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; overflow-x:hidden; }
+  body { background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height:1.45; }
+  header { padding:28px 16px 8px; max-width:960px; margin:0 auto; }
+  h1 { margin:0 0 6px; font-size:1.7rem; }
+  header p { margin:0; color:var(--muted); }
+  .note { font-size:.85rem; color:var(--muted); margin-top:8px; }
+  main { max-width:960px; margin:0 auto; padding:16px; display:grid; gap:16px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .game-card { background:var(--card); border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:10px; border:1px solid #334155; }
+  .game-card .icon { font-size:2rem; }
+  .game-card h2 { margin:0; font-size:1.25rem; }
+  .game-card .pitch { margin:0; color:#cbd5e1; }
+  .meta { display:flex; gap:8px; flex-wrap:wrap; font-size:.85rem; }
+  .meta span { background:#0b1222; border:1px solid #334155; border-radius:999px; padding:4px 10px; color:var(--muted); }
+  .play-btn { margin-top:auto; min-height:44px; border:0; border-radius:10px; background:var(--accent); color:var(--accent-text); font-weight:700; font-size:1rem; cursor:pointer; text-decoration:none; display:flex; align-items:center; justify-content:center; }
+  .play-btn:focus-visible { outline:3px solid #fff; outline-offset:2px; }
+  @media (max-width: 400px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>🛡️ Northbridge Cyber Games</h1>
+  <p>Pick a game. Same-screen multiplayer cyber-safety practice with Shield, a scripted assistant that steps in before a mistake.</p>
+  <p class="note">Braven Capstone prototype. Fictional company "Northbridge Co.". Shield is a prototype, scripted agent.</p>
+</header>
+<main id="games" data-testid="game-list" aria-label="Games"></main>
+<script>
+  // Register a game by adding one entry here.
+  const GAMES = [
+    {
+      slug: 'inbox-showdown',
+      name: 'Inbox Showdown',
+      icon: '📥',
+      pitch: 'Teams triage a shared Northbridge inbox; Shield warns before a risky click.',
+      players: '2 to 6',
+      minutes: 'about 3'
+    }
+  ];
+
+  const list = document.getElementById('games');
+  for (const g of GAMES) {
+    const card = document.createElement('article');
+    card.className = 'game-card';
+    card.setAttribute('data-testid', 'game-card');
+    card.setAttribute('data-slug', g.slug);
+    card.innerHTML = `
+      <div class="icon" aria-hidden="true">${g.icon}</div>
+      <h2 data-testid="game-name">${g.name}</h2>
+      <p class="pitch" data-testid="game-pitch">${g.pitch}</p>
+      <div class="meta">
+        <span data-testid="game-players">👥 ${g.players} players</span>
+        <span data-testid="game-minutes">⏱️ ${g.minutes} minutes</span>
+      </div>
+      <a class="play-btn" data-testid="play-btn" href="games/${g.slug}/">Play ${g.name}</a>`;
+    list.appendChild(card);
+  }
+</script>
+</body>
+</html>
