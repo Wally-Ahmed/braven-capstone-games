@@ -1,0 +1,21 @@
+{
+  "slug": "inbox-showdown",
+  "voice": "warm coach",
+  "steps": [
+    { "art": ["👥", "📱", "👥"], "anim": "bounce", "chips": ["2 to 6 teams"],
+      "title": "Share one inbox",
+      "text": "Hey team! You'll take turns on one shared inbox, one message per turn." },
+    { "art": ["📂", "🚩", "🛡️"], "anim": "pop", "chips": ["📂 Open = safe", "🚩 Report = scam"],
+      "title": "Open, Report, or Ask",
+      "text": "Read who sent it, then tap Open if it looks safe, Report if it's a scam, or Ask Shield for a hint." },
+    { "art": ["⚔️", "💰"], "anim": "swing", "chips": ["+50 steal"],
+      "title": "Challenge to steal",
+      "text": "Think another team got it wrong? Hit Challenge, and if you're right, you steal fifty points." },
+    { "art": ["🛡️", "✋"], "anim": "shake", "chips": ["Shield pauses you"],
+      "title": "Shield has your back",
+      "text": "Try to open something risky and Shield steps in first, so you can back out." },
+    { "art": ["🏆", "🎉"], "anim": "pulse", "chips": ["+100 right", "-50 opened a phish"],
+      "title": "Most points wins",
+      "text": "Each team gets three messages. Right calls earn a hundred points. Ready? Let's play!" }
+  ]
+}
