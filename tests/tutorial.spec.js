@@ -21,6 +21,15 @@ async function spySpeech(page) {
   });
 }
 const spoken = page => page.evaluate(() => window.__spoken.slice());
+const sayOf = st => st.say || (st.title + '. ' + st.text);
+/** Serves script.json without its MP3s, so narration takes the speech-synthesis path. */
+async function noMp3(page, slug) {
+  await page.route('**/shared/narration/' + slug + '/script.json', async route => {
+    const data = script(slug);
+    data.steps.forEach(s => { delete s.audio; });
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(data) });
+  });
+}
 const overlay = page => page.getByTestId('tutorial-overlay');
 
 for (const slug of SLUGS) {
@@ -28,13 +37,18 @@ for (const slug of SLUGS) {
   const steps = script(slug).steps;
 
   test.describe(slug + ' tutorial', () => {
-    test('shows on first load with 3 to 5 illustrated, captioned steps; Next/Back and dots work', async ({ page, baseURL }) => {
+    test('shows on first load: story intro, "what this game is", then 3 to 5 how-to steps; Next/Back and dots work', async ({ page, baseURL }) => {
       const issues = watch(page, baseURL);
       await spySpeech(page);
       await page.goto(GAME);
       await expect(overlay(page)).toBeVisible();
-      expect(steps.length).toBeGreaterThanOrEqual(3);
-      expect(steps.length).toBeLessThanOrEqual(5);
+      expect(steps[0].intro).toBe(true);
+      expect(steps[1].id).toBe('about');
+      expect(steps.length - 2).toBeGreaterThanOrEqual(3);
+      expect(steps.length - 2).toBeLessThanOrEqual(5);
+      await expect(page.getByTestId('tutorial-step')).toHaveAttribute('data-kind', 'intro');
+      // the story never mentions where it comes from
+      for (const st of steps.slice(0, 2)) expect(st.text).not.toMatch(/project|class|braven|capstone|cognizant|assignment/i);
       await expect(page.getByTestId('tutorial-next')).toBeFocused();
       for (let i = 0; i < steps.length; i++) {
         await expect(page.getByTestId('tutorial-progress')).toHaveText('Step ' + (i + 1) + ' of ' + steps.length);
@@ -57,12 +71,31 @@ for (const slug of SLUGS) {
       expectClean(issues);
     });
 
+    test('every step has a committed ElevenLabs MP3 and the overlay plays them in order, intro first', async ({ page, baseURL }) => {
+      const issues = watch(page, baseURL);
+      for (const st of steps) {
+        expect(st.audio, st.title).toBeTruthy();
+        expect(fs.statSync(path.join(__dirname, '..', 'shared', 'narration', slug, st.audio)).size).toBeGreaterThan(10000);
+      }
+      const mp3s = [];
+      page.on('request', r => { if (r.url().endsWith('.mp3')) mp3s.push(r.url().split('/').pop()); });
+      await page.goto(GAME);
+      await expect(overlay(page)).toBeVisible();
+      await expect.poll(() => mp3s.includes(steps[0].audio)).toBe(true);
+      await page.getByTestId('tutorial-next').click();
+      await expect.poll(() => mp3s.includes(steps[1].audio)).toBe(true);
+      await page.getByTestId('tutorial-skip').click();
+      await expect(overlay(page)).toBeHidden();
+      expectClean(issues);
+    });
+
     test('narration reads every step (speech synthesis fallback, no MP3 listed) and the mute toggle silences it', async ({ page, baseURL }) => {
       const issues = watch(page, baseURL);
       await spySpeech(page);
+      await noMp3(page, slug);
       await page.goto(GAME);
       await expect(overlay(page)).toBeVisible();
-      await expect.poll(() => spoken(page)).toEqual([steps[0].title + '. ' + steps[0].text]);
+      await expect.poll(() => spoken(page)).toEqual([sayOf(steps[0])]);
       await page.getByTestId('tutorial-next').click();
       await expect.poll(async () => (await spoken(page)).length).toBe(2);
       expect((await spoken(page))[1]).toContain(steps[1].text);
@@ -80,7 +113,7 @@ for (const slug of SLUGS) {
       await expect(page.getByTestId('tutorial-mute')).toHaveAttribute('aria-pressed', 'true');
       expect(await spoken(page)).toEqual([]);
       await page.getByTestId('tutorial-mute').click();
-      await expect.poll(() => spoken(page)).toEqual([steps[0].title + '. ' + steps[0].text]);
+      await expect.poll(() => spoken(page)).toEqual([sayOf(steps[0])]);
       expectClean(issues);
     });
 

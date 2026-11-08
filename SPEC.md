@@ -181,6 +181,7 @@ _Sat 11/7/2026. Wally's DM, 6:28 PM: "The games are unintuitive hard to understa
 - [x] Narration reads each caption (speech fallback when no MP3; a broken MP3 also falls back), the mute toggle silences it and persists, and nothing logs a console error with autoplay blocked.
 - [x] Every earlier game, hub and menu check still passes; zero console errors, no outside requests, no horizontal scroll at 360 px, buttons at least 44 px.
 
+**Follow-up (his 7:24 PM DMs):** the tutorial now opens with a narrated storytelling intro (step 0: Northbridge, a new hire's first week, the one quiet click, Shield the sidekick, a hook to play; no mention of where the games come from) and a "What is this game?" step (premise, players, rounds, how to win, length) before the how-to steps. All 20 steps are ElevenLabs MP3s; Skip and "skip next time" cover the whole tutorial.
+
 **Still to do**
-- Add ElevenLabs credits, run `tools/generate-narration.sh`, commit the MP3s.
 - Playtest with the team on a Zoom share and tune the wording of the hints.
