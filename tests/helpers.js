@@ -33,4 +33,43 @@ async function expectTapTargets(page, selector = 'button, a.play-btn') {
   expect(small, 'buttons under 44 px').toEqual([]);
 }
 
-module.exports = { watch, expectClean, expectNoHorizontalScroll, expectTapTargets };
+/** Sets up the teams or players with the setup screen's picker (shared/roster.js): count chip, then tap-to-rename. */
+async function setNames(page, names) {
+  if (names.length < 2 || names.length > 6) throw new Error('the picker only offers 2 to 6');
+  await page.getByTestId('roster-count-' + names.length).click();
+  await expect(page.getByTestId('roster-card')).toHaveCount(names.length);
+  for (let i = 0; i < names.length; i++) {
+    await page.getByTestId('roster-rename').nth(i).click();
+    const input = page.getByTestId('roster-name-input');
+    await input.fill(names[i]);
+    await input.press('Enter');
+    await expect(input).toHaveCount(0);
+  }
+}
+
+/** The picker only allows 2 to 6 (no 1 or 7), and duplicate names are refused at Start. */
+async function expectRosterBounds(page) {
+  await expect(page.getByTestId('roster-count-1')).toHaveCount(0);
+  await expect(page.getByTestId('roster-count-7')).toHaveCount(0);
+  await page.getByTestId('roster-count-2').click();
+  await expect(page.getByTestId('roster-minus')).toBeDisabled();
+  await expect(page.getByTestId('roster-card')).toHaveCount(2);
+  await page.getByTestId('roster-count-6').click();
+  await expect(page.getByTestId('roster-plus')).toBeDisabled();
+  await expect(page.getByTestId('roster-card')).toHaveCount(6);
+  await page.getByTestId('roster-minus').click();
+  await expect(page.getByTestId('roster-card')).toHaveCount(5);
+  // tapping an avatar changes it, and every card keeps a distinct one
+  const av = page.getByTestId('roster-avatar').first();
+  const before = await av.textContent();
+  await av.click();
+  await expect(page.getByTestId('roster-avatar').first()).not.toHaveText(before);
+  const all = await page.getByTestId('roster-avatar').allTextContents();
+  expect(new Set(all).size).toBe(all.length);
+  await setNames(page, ['Same', 'same']);
+  await page.getByTestId('btn-start').click();
+  await expect(page.getByTestId('setup-error')).toBeVisible();
+  await expect(page.getByTestId('setup-screen')).toBeVisible();
+}
+
+module.exports = { watch, expectClean, expectNoHorizontalScroll, expectTapTargets, setNames, expectRosterBounds };

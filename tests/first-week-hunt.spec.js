@@ -1,13 +1,13 @@
 // Game B "First Week Hunt" acceptance (SPEC.md section 6), its hub card and shared menu (section 7),
 // plus the section 3 shared checks.
 const { test, expect } = require('@playwright/test');
-const { watch, expectClean, expectNoHorizontalScroll, expectTapTargets } = require('./helpers');
+const { watch, expectClean, expectNoHorizontalScroll, expectTapTargets, setNames, expectRosterBounds } = require('./helpers');
 
 const GAME = '/games/first-week-hunt/';
 const SLUG = 'first-week-hunt';
 
 async function start(page, names) {
-  await page.getByTestId('player-names').fill(names.join('\n'));
+  await setNames(page, names);
   await page.getByTestId('btn-start').click();
 }
 
@@ -55,10 +55,7 @@ test('office has 8 data-risk="true" and at least 6 data-risk="false" tiles, Nort
 test('setup accepts 2 to 6 names and rejects 1 or 7', async ({ page, baseURL }) => {
   const issues = watch(page, baseURL);
   await page.goto(GAME);
-  await start(page, ['Solo']);
-  await expect(page.getByTestId('setup-error')).toBeVisible();
-  await start(page, ['A', 'B', 'C', 'D', 'E', 'F', 'G']);
-  await expect(page.getByTestId('setup-error')).toBeVisible();
+  await expectRosterBounds(page);
   await expect(page.getByTestId('setup-screen')).toBeVisible();
   await start(page, ['A', 'B', 'C', 'D', 'E', 'F']);
   await expect(banner(page)).toContainText("A's turn");

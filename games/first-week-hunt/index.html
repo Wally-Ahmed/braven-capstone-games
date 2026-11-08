@@ -10,6 +10,7 @@
 <script src="../../shared/menu.js" defer></script>
 <script src="../../shared/tutorial.js" defer></script>
 <script src="../../shared/narrate.js" defer></script>
+<script src="../../shared/roster.js"></script>
 <style>
   :root { --bg:#0f172a; --card:#1e293b; --line:#334155; --text:#f1f5f9; --muted:#94a3b8; --accent:#38bdf8;
           --good:#22c55e; --bad:#ef4444; --warn:#f59e0b; --ink:#0f172a; --floor:#1a2438; }
@@ -189,7 +190,8 @@ function narrationLines() {
   const add = (id, text, priority) => { L[id] = { text, priority }; };
   add('setup', 'First Week Hunt. Your first week at Northbridge, and the office hides 8 security risks among safe look-alikes. ' +
     'Take turns tapping spots. A real risk scores 150 and you go again. A safe spot passes the turn. Two safe spots in a row and you get hacked: your score resets to zero. ' +
-    'Each player gets one Shield hint. Type the player names, then press Start hunt.', 1);
+    'Each player gets one Shield hint.', 1);
+  add('setup-go', 'Pick how many players, tap a card to rename it, then press Start.', 1);
   add('turn', 'Tap any spot in the office that looks like a security risk.', 1);
   add('office', 'Here are the spots in the office.', 1);
   add('hint', 'Look at the highlighted spot. Think:', 1);
@@ -435,6 +437,9 @@ function feedback(prev) {
  * Rendering (same approach as Inbox Showdown: escaped strings, DOMParser swap).
  * ------------------------------------------------------------------ */
 const app = document.getElementById('app');
+/* Setup: a tap-to-pick team list instead of a text box (shared/roster.js). It survives Restart. */
+const roster = Roster.create({ kind: 'Player', names: ['Alex', 'Sam', 'Jordan'], pool: ['Alex', 'Sam', 'Jordan', 'Riley', 'Casey', 'Morgan'] });
+Roster.bind(app, roster, () => render());
 
 function leaderboard() {
   return state.players.map((p, i) => ({ name: p.name, score: p.score, found: p.found, index: i }))
@@ -500,13 +505,12 @@ function view() {
   let h = '';
   if (state.phase === 'setup') {
     h += '<section data-testid="setup-screen"><h1>🔎 First Week Hunt</h1>' +
-      '<div class="nr-intro" data-testid="setup-intro"' + nar('setup', { label: 'how this game works' }) + '>' +
+      '<div class="nr-intro" data-testid="setup-intro"' + nar('setup setup-go', { label: 'how this game works' }) + '>' +
       '<p class="goal" data-testid="game-goal">🎯 Goal: find the ' + RISK_COUNT + ' hidden security risks in the office before the clock runs out.</p>' +
       '<div class="how-row" aria-label="Quick rules"><span>👆 Tap risky spots</span><span>✅ Risk = +150, go again</span><span>😬 Safe spot = next player</span><span>💀 2 wrong in a row = hacked</span><span>🛡️ 1 hint each</span></div>' +
       '<div class="row"><button class="tutorial-btn" data-testid="btn-tutorial" data-action="tutorial">🎬 How to play (30 s, with voice)</button></div>' +
       '<p>Your first week at Northbridge Co. The office hides <b>' + RISK_COUNT + ' security risks</b> among safe look-alikes. Take turns tapping spots: a find keeps your turn, a decoy passes it, and two decoys in a row means you got hacked.</p></div>' +
-      '<div class="panel"><label for="player-names"><h2>Players (2 to 6, one per line)</h2></label>' +
-      '<textarea id="player-names" data-testid="player-names" aria-describedby="setup-help">' + esc(state.namesDraft) + '</textarea>' +
+      '<div class="panel"><h2>Players (2 to 6)</h2>' + Roster.view(roster) +
       '<p id="setup-help" class="muted small">' + ROUND_SECONDS + ' seconds on the clock for the whole group. Pass the device (or share your screen) when the turn changes.</p>' +
       (state.error ? '<p class="error" role="alert" data-testid="setup-error"' + nar('_', { say: state.error, now: true }) + '>' + esc(state.error) + '</p>' : '') +
       '<div class="row"><button class="primary" data-testid="btn-start" data-action="start">🚀 Start hunt</button></div></div>' +
@@ -619,7 +623,7 @@ app.addEventListener('click', e => {
   const btn = e.target.closest('[data-action]');
   if (!btn || btn.disabled) return;
   const a = btn.dataset.action;
-  if (a === 'start') dispatch({ type: 'start', names: app.querySelector('[data-testid="player-names"]').value });
+  if (a === 'start') dispatch({ type: 'start', names: Roster.names(roster).join('\n') });
   else if (a === 'tap') dispatch({ type: 'tap', id: btn.dataset.tileId });
   else if (a === 'copy') copyResults();
   else if (a === 'tutorial') { if (window.Tutorial) window.Tutorial.open(); }

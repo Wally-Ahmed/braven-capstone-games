@@ -2,7 +2,12 @@
   "slug": "inbox-showdown",
   "lines": {
     "setup": {
-      "text": "Inbox Showdown. Your goal: open the safe messages, report the scams, and score the most points. Teams take turns on one shared inbox. On your turn, open the message, report it, or ask Shield for a hint. Other teams can challenge to steal points. Type your team names, one per line, then press Start match.",
+      "text": "Inbox Showdown. Your goal: open the safe messages, report the scams, and score the most points. Teams take turns on one shared inbox. On your turn, open the message, report it, or ask Shield for a hint. Other teams can challenge to steal points.",
+      "priority": 1,
+      "audio": true
+    },
+    "setup-go": {
+      "text": "Pick how many teams, tap a card to rename it, then press Start.",
       "priority": 1,
       "audio": true
     },

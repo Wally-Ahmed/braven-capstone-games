@@ -2,7 +2,12 @@
   "slug": "phish-or-fine",
   "lines": {
     "setup": {
-      "text": "Phish or Fine? Buzzer Battle. Two players per heat race to call each message Phish, a scam, or Fine, safe. Left player: A for phish, S for fine. Right player: K for phish, L for fine. Or just tap. First right answer scores 100, a wrong buzz costs 50, and three in a row multiplies your points. Type the player names, then press Start battle.",
+      "text": "Phish or Fine? Buzzer Battle. Two players per heat race to call each message Phish, a scam, or Fine, safe. Left player: A for phish, S for fine. Right player: K for phish, L for fine. Or just tap. First right answer scores 100, a wrong buzz costs 50, and three in a row multiplies your points.",
+      "priority": 1,
+      "audio": true
+    },
+    "setup-go": {
+      "text": "Pick how many players, tap a card to rename it, then press Start.",
       "priority": 1,
       "audio": true
     },

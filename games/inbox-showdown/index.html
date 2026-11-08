@@ -10,6 +10,7 @@
 <script src="../../shared/menu.js" defer></script>
 <script src="../../shared/tutorial.js" defer></script>
 <script src="../../shared/narrate.js" defer></script>
+<script src="../../shared/roster.js"></script>
 <style>
   :root { --bg:#0f172a; --card:#1e293b; --line:#334155; --text:#f1f5f9; --muted:#94a3b8; --accent:#38bdf8;
           --good:#22c55e; --bad:#ef4444; --warn:#f59e0b; --ink:#0f172a; }
@@ -205,7 +206,8 @@ function narrationLines() {
   const L = {};
   const add = (id, text, priority) => { L[id] = { text, priority }; };
   add('setup', 'Inbox Showdown. Your goal: open the safe messages, report the scams, and score the most points. Teams take turns on one shared inbox. ' +
-    'On your turn, open the message, report it, or ask Shield for a hint. Other teams can challenge to steal points. Type your team names, one per line, then press Start match.', 1);
+    'On your turn, open the message, report it, or ask Shield for a hint. Other teams can challenge to steal points.', 1);
+  add('setup-go', 'Pick how many teams, tap a card to rename it, then press Start.', 1);
   add('pass', 'Hand them the screen. Everyone else, no peeking! Tap Ready when you have it.', 1);
   add('first', 'First move: read who sent it. Then tap Open if it is safe, or Report if it is a scam. Not sure? Ask Shield.', 1);
   add('warn-hold', 'Hold on.', 1);
@@ -423,6 +425,9 @@ function feedback(prev) {
  * with DOMParser (scripts in parsed markup never run) and swapped in.
  * ------------------------------------------------------------------ */
 const app = document.getElementById('app');
+/* Setup: a tap-to-pick team list instead of a text box (shared/roster.js). It survives Restart. */
+const roster = Roster.create({ kind: 'Team', names: ['Red Team', 'Blue Team'], pool: ['Red Team', 'Blue Team', 'Green Team', 'Gold Team', 'Purple Team', 'Orange Team'] });
+Roster.bind(app, roster, () => render());
 
 function leaderboard() {
   return state.teams.map((t, i) => ({ name: t.name, score: t.score, index: i }))
@@ -447,13 +452,12 @@ function view() {
   let h = '';
   if (state.phase === 'setup') {
     h += '<section data-testid="setup-screen"><h1>📥 Inbox Showdown</h1>' +
-      '<div class="nr-intro" data-testid="setup-intro"' + nar('setup', { label: 'how this game works' }) + '>' +
+      '<div class="nr-intro" data-testid="setup-intro"' + nar('setup setup-go', { label: 'how this game works' }) + '>' +
       '<p class="goal" data-testid="game-goal">🎯 Goal: open the safe messages, report the scams, and score the most points.</p>' +
       '<div class="how-row" aria-label="Quick rules"><span>📂 Open = safe</span><span>🚩 Report = scam</span><span>🛡️ Ask Shield = hint</span><span>⚔️ Challenge = steal +50</span></div>' +
       '<p>Day one at Northbridge Co. Teams take turns on one shared inbox: <b>Open</b> it, <b>Report</b> it, or <b>Ask Shield</b>. Other teams can <b>Challenge</b> to steal points.</p></div>' +
       '<div class="row"><button class="tutorial-btn" data-testid="btn-tutorial" data-action="tutorial">🎬 How to play (30 s, with voice)</button></div>' +
-      '<div class="panel"><label for="team-names"><h2>Teams (2 to 6, one per line)</h2></label>' +
-      '<textarea id="team-names" data-testid="team-names" aria-describedby="setup-help">' + esc(state.namesDraft) + '</textarea>' +
+      '<div class="panel"><h2>Teams (2 to 6)</h2>' + Roster.view(roster) +
       '<p id="setup-help" class="muted small">Each team gets ' + PER_TEAM + ' messages. Pass the device (or share your screen) between turns.</p>' +
       (state.error ? '<p class="error" role="alert" data-testid="setup-error"' + nar('_', { say: state.error, now: true }) + '>' + esc(state.error) + '</p>' : '') +
       '<div class="row"><button class="primary" data-testid="btn-start" data-action="start">🚀 Start match</button></div></div>' +
@@ -595,7 +599,7 @@ app.addEventListener('click', e => {
   const btn = e.target.closest('[data-action]');
   if (!btn || btn.disabled) return;
   const a = btn.dataset.action;
-  if (a === 'start') dispatch({ type: 'start', names: app.querySelector('[data-testid="team-names"]').value });
+  if (a === 'start') dispatch({ type: 'start', names: Roster.names(roster).join('\n') });
   else if (a === 'challenge') dispatch({ type: 'challenge', by: app.querySelector('[data-testid="challenge-team"]').value });
   else if (a === 'copy') copyResults();
   else if (a === 'tutorial') { if (window.Tutorial) window.Tutorial.open(); }

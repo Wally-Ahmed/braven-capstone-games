@@ -1,11 +1,11 @@
 // Game A "Inbox Showdown" acceptance (SPEC.md section 6) plus the section 3 shared checks.
 const { test, expect } = require('@playwright/test');
-const { watch, expectClean, expectNoHorizontalScroll, expectTapTargets } = require('./helpers');
+const { watch, expectClean, expectNoHorizontalScroll, expectTapTargets, setNames, expectRosterBounds } = require('./helpers');
 
 const GAME = '/games/inbox-showdown/';
 
 async function start(page, names) {
-  await page.getByTestId('team-names').fill(names.join('\n'));
+  await setNames(page, names);
   await page.getByTestId('btn-start').click();
 }
 
@@ -58,11 +58,7 @@ async function boardRows(page) {
 test('setup accepts 2 to 6 names and rejects 1 or 7', async ({ page, baseURL }) => {
   const issues = watch(page, baseURL);
   await page.goto(GAME);
-  await start(page, ['Solo']);
-  await expect(page.getByTestId('setup-error')).toBeVisible();
-  await expect(page.getByTestId('setup-screen')).toBeVisible();
-  await start(page, ['A', 'B', 'C', 'D', 'E', 'F', 'G']);
-  await expect(page.getByTestId('setup-error')).toBeVisible();
+  await expectRosterBounds(page);
   await expect(page.getByTestId('setup-screen')).toBeVisible();
   await start(page, ['A', 'B']);
   await expect(page.getByTestId('pass-screen')).toBeVisible();

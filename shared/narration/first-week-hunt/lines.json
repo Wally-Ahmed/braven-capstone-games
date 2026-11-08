@@ -2,7 +2,12 @@
   "slug": "first-week-hunt",
   "lines": {
     "setup": {
-      "text": "First Week Hunt. Your first week at Northbridge, and the office hides 8 security risks among safe look-alikes. Take turns tapping spots. A real risk scores 150 and you go again. A safe spot passes the turn. Two safe spots in a row and you get hacked: your score resets to zero. Each player gets one Shield hint. Type the player names, then press Start hunt.",
+      "text": "First Week Hunt. Your first week at Northbridge, and the office hides 8 security risks among safe look-alikes. Take turns tapping spots. A real risk scores 150 and you go again. A safe spot passes the turn. Two safe spots in a row and you get hacked: your score resets to zero. Each player gets one Shield hint.",
+      "priority": 1,
+      "audio": true
+    },
+    "setup-go": {
+      "text": "Pick how many players, tap a card to rename it, then press Start.",
       "priority": 1,
       "audio": true
     },

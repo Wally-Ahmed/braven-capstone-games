@@ -4,7 +4,7 @@
 const { test, expect } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
-const { watch, expectClean, expectTapTargets, expectNoHorizontalScroll } = require('./helpers');
+const { watch, expectClean, expectTapTargets, expectNoHorizontalScroll, setNames } = require('./helpers');
 
 const NARR = path.join(__dirname, '..', 'shared', 'narration');
 const manifest = slug => JSON.parse(fs.readFileSync(path.join(NARR, slug, 'lines.json'), 'utf8')).lines;
@@ -19,7 +19,7 @@ const log = page => page.evaluate(() => (window.Narrate ? window.Narrate.log.sli
 const slowSpeech = page => page.addInitScript(() => { window.__narrateSimMs = 4000; });
 
 async function startGame(page, p) {
-  await page.getByTestId(p.names).fill(p.start.join('\n'));
+  await setNames(page, p.start);
   await page.getByTestId('btn-start').click();
   await expect(page.getByTestId(p.first)).toBeVisible();
 }
@@ -97,7 +97,7 @@ for (const p of PAGES) {
 test('inbox: the message, Shield warning and reveal are each read; the warning interrupts', async ({ page, baseURL }) => {
   const issues = watch(page, baseURL);
   await page.goto('/games/inbox-showdown/?seed=3&shield=nudge');
-  await page.getByTestId('team-names').fill('Red\nBlue');
+  await setNames(page, ['Red', 'Blue']);
   await page.getByTestId('btn-start').click();
   await page.getByTestId('btn-ready').click();
   const card = page.getByTestId('message-card');
@@ -131,6 +131,7 @@ test('hub: focusing or tapping a card reads its pitch; every card has Replay', a
     await page.setViewportSize(vp);
     await expectNoHorizontalScroll(page);
   }
+  await page.waitForTimeout(400); // let the resize settle before measuring
   await expectTapTargets(page);
   expectClean(issues);
 });

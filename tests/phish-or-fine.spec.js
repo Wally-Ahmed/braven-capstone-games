@@ -1,7 +1,7 @@
 // Game C "Phish or Fine? Buzzer Battle" acceptance (SPEC.md section 6), its hub card and shared menu
 // checks (section 7), plus the section 3 shared checks. Timers run on Playwright's clock.
 const { test, expect } = require('@playwright/test');
-const { watch, expectClean, expectNoHorizontalScroll, expectTapTargets } = require('./helpers');
+const { watch, expectClean, expectNoHorizontalScroll, expectTapTargets, setNames, expectRosterBounds } = require('./helpers');
 
 const SLUG = 'phish-or-fine';
 const GAME = '/games/' + SLUG + '/';
@@ -16,7 +16,7 @@ async function openGame(page, query = '') {
 }
 
 async function start(page, names) {
-  await page.getByTestId('player-names').fill(names.join('\n'));
+  await setNames(page, names);
   await page.getByTestId('btn-start').click();
 }
 
@@ -270,11 +270,7 @@ test('scoring: +100 first correct buzz, -50 wrong buzz then the other may answer
 test('setup accepts 2 to 6 names and rejects 1 or 7', async ({ page, baseURL }) => {
   const issues = watch(page, baseURL);
   await openGame(page);
-  for (const bad of [['Solo'], ['A', 'B', 'C', 'D', 'E', 'F', 'G']]) {
-    await start(page, bad);
-    await expect(page.getByTestId('setup-error')).toBeVisible();
-    await expect(page.getByTestId('setup-screen')).toBeVisible();
-  }
+  await expectRosterBounds(page);
   for (let n = 2; n <= 6; n++) {
     await page.goto(GAME);
     await start(page, ['P1', 'P2', 'P3', 'P4', 'P5', 'P6'].slice(0, n));

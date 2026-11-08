@@ -10,6 +10,7 @@
 <script src="../../shared/menu.js" defer></script>
 <script src="../../shared/tutorial.js" defer></script>
 <script src="../../shared/narrate.js" defer></script>
+<script src="../../shared/roster.js"></script>
 <style>
   :root { --bg:#0f172a; --card:#1e293b; --line:#334155; --text:#f1f5f9; --muted:#94a3b8; --accent:#38bdf8;
           --good:#22c55e; --bad:#ef4444; --warn:#f59e0b; --ink:#0f172a; --p1:#a855f7; --p2:#f97316; }
@@ -240,7 +241,8 @@ function narrationLines() {
   const add = (id, text, priority) => { L[id] = { text, priority }; };
   add('setup', 'Phish or Fine? Buzzer Battle. Two players per heat race to call each message Phish, a scam, or Fine, safe. ' +
     'Left player: A for phish, S for fine. Right player: K for phish, L for fine. Or just tap. ' +
-    'First right answer scores 100, a wrong buzz costs 50, and three in a row multiplies your points. Type the player names, then press Start battle.', 1);
+    'First right answer scores 100, a wrong buzz costs 50, and three in a row multiplies your points.', 1);
+  add('setup-go', 'Pick how many players, tap a card to rename it, then press Start.', 1);
   add('next-heat', 'Get ready: left player uses A and S, right player uses K and L. Tap Start heat when you are both set.', 1);
   add('champ', 'Tap See leaderboard for the final scores.', 1);
   add('coach', 'Shield coach tip:', 1);
@@ -541,6 +543,9 @@ function updateTimer() {
  * Rendering (same approach as Inbox Showdown: esc() + DOMParser swap).
  * ------------------------------------------------------------------ */
 const app = document.getElementById('app');
+/* Setup: a tap-to-pick team list instead of a text box (shared/roster.js). It survives Restart. */
+const roster = Roster.create({ kind: 'Player', names: ['Player 1', 'Player 2'], pool: ['Player 1', 'Player 2', 'Player 3', 'Player 4', 'Player 5', 'Player 6'] });
+Roster.bind(app, roster, () => render());
 
 function leaderboard() {
   return state.players.map((p, i) => ({ name: p.name, score: p.score, index: i }))
@@ -576,13 +581,12 @@ function view() {
   let h = '';
   if (state.phase === 'setup') {
     h += '<section data-testid="setup-screen"><h1>🎣 Phish or Fine? Buzzer Battle</h1>' +
-      '<div class="nr-intro" data-testid="setup-intro"' + nar('setup', { label: 'how this game works' }) + '>' +
+      '<div class="nr-intro" data-testid="setup-intro"' + nar('setup setup-go', { label: 'how this game works' }) + '>' +
       '<p class="goal" data-testid="game-goal">🎯 Goal: be the first to call each message 🎣 Phish (a scam) or ✅ Fine (safe).</p>' +
       '<div class="how-row" aria-label="Quick rules"><span>🟣 A = Phish · S = Fine</span><span>🟠 K = Phish · L = Fine</span><span>⏱️ 6 s per message</span><span>💯 +100 first right</span><span>🔥 3 in a row = x1.5</span></div>' +
       '<div class="row"><button class="tutorial-btn" data-testid="btn-tutorial" data-action="tutorial">🎬 How to play (30 s, with voice)</button></div>' +
       '<p>Northbridge Co. pop quiz. Two players per heat race to call each snippet <b>Phish</b> (unsafe) or <b>Fine</b> (safe). With 3 to 6 players it runs as a bracket; every point counts on one leaderboard.</p></div>' +
-      '<div class="panel"><label for="player-names"><h2>Players (2 to 6, one per line)</h2></label>' +
-      '<textarea id="player-names" data-testid="player-names" aria-describedby="setup-help">' + esc(state.namesDraft) + '</textarea>' +
+      '<div class="panel"><h2>Players (2 to 6)</h2>' + Roster.view(roster) +
       '<p id="setup-help" class="muted small">2 players: one 12-snippet heat. 3 to 6: 4 snippets per heat, winners advance. Keys A/S (left or top) and K/L (right or bottom), or tap.</p>' +
       (state.error ? '<p class="error" role="alert" data-testid="setup-error"' + nar('_', { say: state.error, now: true }) + '>' + esc(state.error) + '</p>' : '') +
       '<div class="row"><button class="primary" data-testid="btn-start" data-action="start">🚀 Start battle</button></div></div>' +
@@ -745,7 +749,7 @@ app.addEventListener('click', e => {
   const btn = e.target.closest('[data-action]');
   if (!btn || btn.disabled) return;
   const a = btn.dataset.action;
-  if (a === 'start') dispatch({ type: 'start', names: app.querySelector('[data-testid="player-names"]').value });
+  if (a === 'start') dispatch({ type: 'start', names: Roster.names(roster).join('\n') });
   else if (a === 'buzz') dispatch({ type: 'buzz', slot: Number(btn.dataset.slot), choice: btn.dataset.choice, step: state.step });
   else if (a === 'next') dispatch({ type: 'next', step: state.step });
   else if (a === 'copy') copyResults();
