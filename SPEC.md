@@ -45,9 +45,9 @@ One `index.html` per game, its own CSS/JS inline, plus the shared menu (section 
 
 **Standalone prototype ("Shield Check", a later hub card).** The chat sidekick or browser extension an employee would have: paste a message (or click "Check with Shield") and get a traffic light (safe / careful / stop), the reasons (look-alike domain, urgency, credential or payment ask, short link, risky attachment) and "Report to IT". Rule-based in the prototype; a real model slots in at one point: `Shield.assess(text)` calls a language model (plus company allowlists and threat feeds) instead of the rules. Labelled a demo, not a security tool.
 
-## 5. Real-time rooms later
+## 5. Real-time rooms (built 11/7, v6)
 
-All play runs through `dispatch(move)` on one serializable `state`, so a later version only adds a transport: the host makes a room code, phones join, moves travel over a small relay (Firebase Realtime Database, a tiny WebSocket server, or WebRTC via PeerJS), the host applies them and broadcasts `state`. Same-screen stays as the fallback.
+All play runs through `dispatch(move)` on one serializable `state`, so room mode only adds a transport. Built as a tiny WebSocket relay (`server/index.js`, Node + `ws`, same port as the static site, in memory, rooms expire after 2 h idle). The host screen creates a room (4-letter code + QR), phones join at `games/<slug>/?room=CODE` with a name and an icon and get a stable player id and seat; the host stays authoritative: phone moves are relayed to the host, checked against the buttons on that player's current view (`roomView(seat)` in each game), run through `dispatch`, and the host sends every phone its own view after each dispatch. Phones show only their status, prompt echo, Shield warning and controls; late joiners spectate; reconnect by player id; host disconnect is shown on the phones. Same-screen stays the default and the only mode on GitHub Pages or any plain static server (the button is hidden when the `HEAD` probe has no `X-Rooms: 1`).
 
 ## 6. The three games
 
@@ -195,3 +195,13 @@ _Sat 11/7/2026. Wally's DM, 6:28 PM: "The games are unintuitive hard to understa
 - Playtest with the team on a Zoom share and tune the wording of the hints.
 - Voice the remaining 111 lines when ElevenLabs credits allow (`STEPS=0 MAX_CHARS=... tools/generate-narration.sh`).
 - Phish or Fine reveals auto-advance after 3.5 s, which cuts Shield's spoken lesson short; Replay is on the screen only until then.
+
+**v6 (his 11/7 session asks, 8:12 to 8:40 PM):** "Can we add server logic so each screen knows who's playing" / "You could host a server locally if that's possible" / "This is only a demo anyways"; "also when someone gets something wrong or incorrect there should be a full screen animation with sound affects, there should be a varity of animation that could play and should be selected randomly"; "also full screen punch in selcetion animations whe a user make a selection with a sound affect".
+- [x] Room mode (section 5): `server/index.js` (static + `/ws` + `/healthz`), `shared/net.js` (host lobby with inline QR, phone player view, move validation, reconnect), "📱 Play on phones" on every setup screen; live on this Mac at port 8080 behind the Cloudflare quick tunnel.
+- [x] `FX.wrongFull()`: six random full-screen wrong-answer animations, each with its own WebAudio sound, on every wrong outcome in all three games; lighter on the responsible phone; tap to dismiss, never blocks input, reduced-motion still card.
+- [x] `FX.selectPunch()`: every selection punches in full screen with a whoosh + thud; host and (lighter) phone in room mode.
+- [x] Tests: `tests/rooms.spec.js` (5) and `tests/wrong-fx.spec.js` (5); 115 checks green.
+
+**Still to do (v6)**
+- The room code lives only as long as the server process; restarting it ends every room.
+- No per-player hidden information yet (every phone could be shown the same echo); Phish or Fine phones sit idle while they are not in the current heat.

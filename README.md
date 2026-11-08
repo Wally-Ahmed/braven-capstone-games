@@ -13,10 +13,26 @@ Braven Capstone: cyber-safety sample games (interactive, same-screen multiplayer
 From the repo root:
 
 ```sh
-python3 -m http.server 8080
+npm install        # once: Playwright and the ws package for the room server
+npm run serve      # node server/index.js: the site + room mode on http://127.0.0.1:8080
 ```
 
-then open <http://localhost:8080/>. Pick a game card and press **Play**, or **Watch the 30-second tutorial** first. Every game has a **Menu** button (top right) with Game selection, Restart, Shield on/off and How to play, plus a 🔊/🔇 sound button next to it.
+then open <http://localhost:8080/>. Pick a game card and press **Play**, or **Watch the 30-second tutorial** first. Every game has a **Menu** button (top right) with Game selection, Restart, Shield on/off and How to play, plus a 🔊/🔇 sound button next to it. `npm run serve:static` (`python3 -m http.server 8080`) still serves the single-screen version, the same as GitHub Pages.
+
+## Room mode: play on phones (v6, his 11/7 8:12 PM ask)
+
+"Can we add server logic so each screen knows who's playing" / "You could host a server locally" / "This is only a demo anyways".
+
+- **Run it:** `npm run serve` (or `PORT=8080 PUBLIC_ORIGIN=https://<tunnel>.trycloudflare.com node server/index.js`). One small Node process serves the static site and a WebSocket room relay at `/ws` on the same port; health at `/healthz`. Rooms live in memory only (no persistence) and expire after 2 hours idle; it logs to stdout. `PUBLIC_ORIGIN` makes the join link and QR point at the public tunnel even when the big screen is opened on `localhost`.
+- **Host (big screen):** on the setup screen press **📱 Play on phones** next to the usual Start. The lobby shows a 4-letter room code, a QR code (generated in the page, no library or network) and the link `<site>/games/<slug>/?room=CODE`, plus every phone that has joined (name and icon). **Start with N phones** (2 to 6) begins the match with those names; the big screen then shows the board, leaderboard, Shield and narration as usual, with a 📱 Room badge (tap it for the code again). **Cancel** goes back to one screen. Play again returns to the lobby with the same phones.
+- **Phones:** open the link or scan the QR, type a name, pick an icon, **Join**. Each phone shows its own name, icon and score, a big "Your turn" / "Wait" status, a short echo of the current message or prompt, Shield's warning when it is for that player, and only its own controls: Ready / Open / Report / Ask Shield / Back out / Open anyway / Challenge (Inbox Showdown), the office spots and the Shield hint (First Week Hunt), Start heat and the 🎣 Phish / ✅ Fine buzzers (Phish or Fine). Phones that join after the start watch.
+- **How it works:** the host is authoritative. A phone sends a move; the server relays it to the host; the host accepts it only if that exact button is on that player's current view, then runs it through the game's own `dispatch(move)`; after every dispatch it sends each phone its view (`roomView(seat)` in each game). Phones reconnect by player id; if the big screen drops, phones show a notice until it reconnects. Without the server (GitHub Pages, `python3 -m http.server`) the button is simply not shown: the page sends one `HEAD` request for the site root and only `server/index.js` answers with `X-Rooms: 1`.
+- **Protocol** (JSON over `/ws`): `create` / `created {code, hostKey}`, `resume`, `join {code, name, avatar, playerId?}` / `welcome {playerId, seat}`, `players` (to the host), `move` (phone to host), `state {for?, view}` (host to one phone or all), `lock` / `unlock` (seating), `close`, `host-left` / `host-back`, `error`. Full list at the top of `server/index.js`.
+
+## Wrong answers and selections (v6, his 8:30 and 8:40 PM asks)
+
+- **Full-screen wrong-answer moment** (`FX.wrongFull()` in `shared/fx.js`): on every wrong outcome (a wrong call in Inbox Showdown, a decoy tap in First Week Hunt, a wrong buzz in Phish or Fine) one of six animations plays at random, each with its own synthesized sound (`Sfx.wrongVariant`): red alarm flash with shake (buzzer), cracked glass (glass crack), ACCESS DENIED stamp (slam), hacker glitch with falling green characters (glitch burst), a bouncing 🚫 that bursts into particles (boing-pop) and a padlock snapping shut (lock click). About 1.4 s, never takes clicks, a tap dismisses it, reduced motion gets a still card plus the sound. In room mode the big screen plays it and the phone that got it wrong plays a lighter version.
+- **Selection punch-in** (`FX.selectPunch(el, label)`): every choice (Open / Report / Ask Shield / Back out / Open anyway / Challenge / reveal, office spot taps and hints, buzzes by tap or key, team count chips and icons) zooms from where it was tapped to the centre with an overshoot and a flash in its colour, with a whoosh + thud (`Sfx.punch`), then shrinks back (0.7 s, never blocks input). The wrong-answer moment waits for it. Phones play a lighter one; the big screen punches the phone's choice in too.
 
 ## Tutorial, sound and mute (v4)
 
@@ -63,7 +79,7 @@ Enter 2 to 6 player names and press **Start hunt**. The office grid hides 8 risk
 
 ## Run the checks
 
-Needs Node 18+ and Python 3.
+Needs Node 18+ and Python 3 (the single-screen specs run against `python3 -m http.server`; `tests/rooms.spec.js` starts `server/index.js` on a free port itself).
 
 ```sh
 npm install
@@ -79,6 +95,8 @@ npx playwright test
 - All of them also check the section 3 rules: zero console errors, no requests outside the site, no horizontal scroll at 375x667 and 360x640, buttons at least 44 px.
 - `tests/phish-or-fine.spec.js` covers the Game C checklist (section 6) plus its hub card and menu checks; timers run on Playwright's clock.
 - `tests/tutorial.spec.js` covers the v4 tutorial for all three games (shows on first load, captions and dots, Next/Back, narration through the speech fallback, mute, Skip, "skip next time" persisting, Menu > How to play, keyboard, 360 px), a broken-MP3 fallback, the hub's tutorial links, the top-bar sound toggle and the goal / first-move / "What just happened" lines. `tests/tutorial-autoplay.spec.js` reruns the tutorial with Chromium's autoplay policy set to require a gesture and checks for zero console errors.
+- `tests/rooms.spec.js` covers room mode: `/healthz`, static serving (index, HEAD, directory redirect, 404, no path traversal, no `node_modules`), the button hidden on a plain static server, and for each game a host plus two 360 px phones in separate browser contexts (join by URL, the host lists them, phone moves change host state, host state reaches the phones, turn/wait per phone, a late joiner spectates, punch-in and wrong-answer effects on host and phone).
+- `tests/wrong-fx.spec.js` forces each of the 6 wrong-answer variants (`Fx.wrongFull({variant: i})`) and checks it appears and clears, at 360 px, never blocks clicks, honours reduced motion and fires in each game; plus the selection punch-in.
 - The other specs start with every tutorial skipped (`storageState` in `playwright.config.js`), so they test the games themselves.
 - Both also check the section 3 rules: zero console errors, no requests outside the site, no horizontal scroll at 375x667 and 360x640, buttons at least 44 px.
 
@@ -93,6 +111,8 @@ shared/fx.js, shared/theme.css     confetti/pop/shake effects and the colorful t
 shared/narration/<slug>/           script.json (tutorial) + lines.json and lines/<id>.mp3 (in-game narration); hub/ for the hub
 shared/narrate.js                  in-game narration queue, 🔊 indicator and Replay buttons
 shared/roster.js                   setup screen team / player picker
+shared/net.js                      room mode client: host lobby + QR, phone player view, move checks
+server/index.js                    Node server: static site + WebSocket room relay at /ws, /healthz
 tools/extract-lines.js             writes lines.json from each page's narrationLines()
 tools/generate-narration.sh        ElevenLabs MP3 generator for the tutorial steps and lines.json
 games/inbox-showdown/index.html    Game A, self-contained
