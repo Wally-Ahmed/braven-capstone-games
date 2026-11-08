@@ -2,20 +2,72 @@
   "slug": "first-week-hunt",
   "voice": "warm coach",
   "steps": [
-    { "art": ["🏢", "🔎"], "anim": "float", "chips": ["8 hidden risks"],
+    {
+      "art": [
+        "🏢",
+        "🔎"
+      ],
+      "anim": "float",
+      "chips": [
+        "8 hidden risks"
+      ],
       "title": "Hunt the office",
-      "text": "Welcome to your first week! Eight security risks are hiding in this office, mixed in with safe look-alikes." },
-    { "art": ["👆", "✅"], "anim": "bounce", "chips": ["+150 per risk", "keep your turn"],
+      "text": "Welcome to your first week! Eight security risks are hiding in this office, mixed in with safe look-alikes.",
+      "audio": "step1.mp3"
+    },
+    {
+      "art": [
+        "👆",
+        "✅"
+      ],
+      "anim": "bounce",
+      "chips": [
+        "+150 per risk",
+        "keep your turn"
+      ],
       "title": "Tap a risky spot",
-      "text": "On your turn, tap anything that looks risky. Find a real one, score points, and keep going." },
-    { "art": ["😬", "💀"], "anim": "shake", "chips": ["2 wrong in a row = hacked"],
+      "text": "On your turn, tap anything that looks risky. Find a real one, score points, and keep going.",
+      "audio": "step2.mp3"
+    },
+    {
+      "art": [
+        "😬",
+        "💀"
+      ],
+      "anim": "shake",
+      "chips": [
+        "2 wrong in a row = hacked"
+      ],
       "title": "Watch out for decoys",
-      "text": "A safe spot passes the turn. Two wrong taps in a row and you get hacked, back to zero!" },
-    { "art": ["🛡️", "💡"], "anim": "pulse", "chips": ["1 hint each", "-50"],
+      "text": "A safe spot passes the turn. Two wrong taps in a row and you get hacked, back to zero!",
+      "audio": "step3.mp3"
+    },
+    {
+      "art": [
+        "🛡️",
+        "💡"
+      ],
+      "anim": "pulse",
+      "chips": [
+        "1 hint each",
+        "-50"
+      ],
       "title": "One Shield hint each",
-      "text": "Stuck? Your one Shield hint lights up a hidden risk, for a small cost." },
-    { "art": ["⏱️", "🏆"], "anim": "swing", "chips": ["2 minutes"],
+      "text": "Stuck? Your one Shield hint lights up a hidden risk, for a small cost.",
+      "audio": "step4.mp3"
+    },
+    {
+      "art": [
+        "⏱️",
+        "🏆"
+      ],
+      "anim": "swing",
+      "chips": [
+        "2 minutes"
+      ],
       "title": "Beat the clock",
-      "text": "You have two minutes together. Highest score wins. Happy hunting!" }
+      "text": "You have two minutes together. Highest score wins. Happy hunting!",
+      "audio": "step5.mp3"
+    }
   ]
 }

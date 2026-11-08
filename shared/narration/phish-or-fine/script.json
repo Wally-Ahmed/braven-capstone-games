@@ -2,17 +2,62 @@
   "slug": "phish-or-fine",
   "voice": "warm coach",
   "steps": [
-    { "art": ["🟣", "⚡", "🟠"], "anim": "bounce", "chips": ["A / S", "K / L"],
+    {
+      "art": [
+        "🟣",
+        "⚡",
+        "🟠"
+      ],
+      "anim": "bounce",
+      "chips": [
+        "A / S",
+        "K / L"
+      ],
       "title": "Two buzzers, one race",
-      "text": "Two players face off. One side buzzes with A and S, the other with K and L, or just tap your buttons." },
-    { "art": ["🎣", "✅"], "anim": "pop", "chips": ["🎣 Phish = scam", "✅ Fine = safe"],
+      "text": "Two players face off. One side buzzes with A and S, the other with K and L, or just tap your buttons.",
+      "audio": "step1.mp3"
+    },
+    {
+      "art": [
+        "🎣",
+        "✅"
+      ],
+      "anim": "pop",
+      "chips": [
+        "🎣 Phish = scam",
+        "✅ Fine = safe"
+      ],
       "title": "Phish or fine?",
-      "text": "Read the message. Buzz Phish if it's a scam, or Fine if it's safe." },
-    { "art": ["⏱️", "💯"], "anim": "swing", "chips": ["6 seconds", "+100 first right", "-50 wrong"],
+      "text": "Read the message. Buzz Phish if it's a scam, or Fine if it's safe.",
+      "audio": "step2.mp3"
+    },
+    {
+      "art": [
+        "⏱️",
+        "💯"
+      ],
+      "anim": "swing",
+      "chips": [
+        "6 seconds",
+        "+100 first right",
+        "-50 wrong"
+      ],
       "title": "Fast and right",
-      "text": "You get six seconds. First right answer scores a hundred. A wrong buzz costs fifty and hands your rival a shot." },
-    { "art": ["🔥", "🛡️"], "anim": "pulse", "chips": ["3 in a row = x1.5"],
+      "text": "You get six seconds. First right answer scores a hundred. A wrong buzz costs fifty and hands your rival a shot.",
+      "audio": "step3.mp3"
+    },
+    {
+      "art": [
+        "🔥",
+        "🛡️"
+      ],
+      "anim": "pulse",
+      "chips": [
+        "3 in a row = x1.5"
+      ],
       "title": "Streaks and lessons",
-      "text": "Three in a row earns a bonus, and Shield explains every answer so you learn the red flags. Let's battle!" }
+      "text": "Three in a row earns a bonus, and Shield explains every answer so you learn the red flags. Let's battle!",
+      "audio": "step4.mp3"
+    }
   ]
 }
