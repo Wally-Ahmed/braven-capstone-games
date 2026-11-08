@@ -183,5 +183,15 @@ _Sat 11/7/2026. Wally's DM, 6:28 PM: "The games are unintuitive hard to understa
 
 **Follow-up (his 7:24 PM DMs):** the tutorial now opens with a narrated storytelling intro (step 0: Northbridge, a new hire's first week, the one quiet click, Shield the sidekick, a hook to play; no mention of where the games come from) and a "What is this game?" step (premise, players, rounds, how to win, length) before the how-to steps. All 20 steps are ElevenLabs MP3s; Skip and "skip next time" cover the whole tutorial.
 
+**v5 (his 11/7 DMs and session asks, 7:33 to 7:55 PM):** "The entire game should be narrated anything that the user is supposed to read to play ... It should be intuitive when the narration plays and an intuitive replay button if you hear it again." / "games should be forced full page" / "the create teams field should be a gui experience not a text box" / Pages project site.
+- [x] `shared/narrate.js`: every block a player reads is narrated (messages, office spots, snippets, turn prompts, Shield hints, warnings, coach tips, results and lessons, leaderboards, debriefs, hub card pitches on tap/focus); one queue, warnings and results interrupt, a block leaving the screen stops; pulsing 🔊 badge and outline on the block being read; a 🔁 Replay button on every narrated block; shares the mute; waits for the tutorial.
+- [x] Lines per page in `shared/narration/<slug>/lines.json`, extracted from each page's `narrationLines()` (tests fail if they drift); 163 of 274 lines voiced with ElevenLabs (14,983 characters, under the 15,000 budget), the rest on the browser voice (tips, safe-habit lines, most Phish or Fine lessons).
+- [x] Full page: viewport-filling layout (100dvh), no page scroll, type scales up on desktop, safe areas; fullscreen requested on Start, Menu > Fullscreen on/off.
+- [x] Team / player picker (`shared/roster.js`): −/+ and 2..6 chips, avatar cards, tap-to-rename; no text box.
+- [x] Relative paths throughout; `tests/subpath.spec.js` serves the repo under `/braven-capstone-games/` with no 404s.
+- [x] Tests: `tests/narration.spec.js` (indicator, Replay, mute, manifest sync and files, hub focus/tap, full-page size at 360x640 and 1280x800, Menu Fullscreen item); test browsers run with `--mute-audio` and simulated speech so nothing is heard during a run.
+
 **Still to do**
 - Playtest with the team on a Zoom share and tune the wording of the hints.
+- Voice the remaining 111 lines when ElevenLabs credits allow (`STEPS=0 MAX_CHARS=... tools/generate-narration.sh`).
+- Phish or Fine reveals auto-advance after 3.5 s, which cuts Shield's spoken lesson short; Replay is on the screen only until then.

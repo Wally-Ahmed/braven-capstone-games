@@ -27,7 +27,17 @@ then open <http://localhost:8080/>. Pick a game card and press **Play**, or **Wa
 - **Look and feel** (`shared/theme.css`, `shared/fx.js`): bright gradient theme with pink, sunshine, aqua, lime and violet accents, rounded cards, bigger type, screen fades, a green pulse and confetti burst on a right answer, a red shake on a wrong one, an amber glow on Shield warnings, animated 3-2-1 and last-seconds ticks, and a winner banner on the results screen. Motion is skipped for players who prefer reduced motion.
 - **Easier to follow:** every setup screen has a one-line goal, colored quick-rule chips and a How to play button; the first move of a match is highlighted with a pulsing hint; and a "What just happened" line explains each move's result.
 
-Use the local server rather than double-clicking `index.html`: the games load the shared menu from `/shared/menu.js`, an absolute path that only resolves over http. (The hub itself does open straight from the file, but its Play links then land on a game without its menu.)
+## In-game narration, full page and team picker (v5, his 11/7 7:33 to 7:55 PM asks)
+
+- **Everything you have to read is narrated** (`shared/narrate.js`): setup intros, each message, office spot and snippet as it appears, turn prompts ("Red Team, your turn"), Shield's hints, warnings and coach tips, results with Shield's lesson, leaderboards and debriefs, and on the hub each card's pitch when it is tapped or one of its buttons gets keyboard focus. One queue, so nothing overlaps; a warning or a result interrupts what is playing; a block that leaves the screen stops.
+- **Intuitive cues:** the block being read gets a yellow outline and a pulsing 🔊 badge, and every narrated block has a **🔁 Replay** button (44 px, keyboard reachable) that reads it again from the start. If the browser blocks sound before the first tap, the Replay button pulses and the first tap anywhere starts the reading. The 🔊 mute in the top bar silences narration too; pressing Replay while muted turns sound back on.
+- **Lines:** each page builds its lines in `narrationLines()` from the same data it shows. `node tools/extract-lines.js` writes them to `shared/narration/<slug>/lines.json` (hub, inbox-showdown, first-week-hunt, phish-or-fine); a line whose text changes loses its MP3 so it can be re-voiced. Pages mark blocks with `data-narrate="id1 id2 _"` (line ids) plus `data-narrate-say` for names and scores, which the browser voice reads.
+- **Voices:** `tools/generate-narration.sh` (same ElevenLabs voice and model as the tutorial) voices `lines.json` into `lines/<id>.mp3` in priority order (1 prompts and items, 2 hints and lessons, 3 tips and habits) under `MAX_CHARS` (default 14800) and sets `"audio": true` per line. **Status 11/7:** 163 of 274 lines are ElevenLabs MP3s (every priority-1 line in all four pages, all Inbox Showdown hints and lessons, 10 of 16 First Week Hunt lessons, 1 of 24 Phish or Fine lessons); the other 111 (category tips, "safe habit" lines, most Phish or Fine and some First Week Hunt lessons) use the browser voice until more credits are spent: `ENV_FILE=~/.accountability-secrets.env STEPS=0 MAX_CHARS=8000 tools/generate-narration.sh`.
+- **Full page:** every page fills the viewport (`100dvh`, `100vh` fallback); the page never scrolls, the body scrolls inside if a screen is taller; type scales up on big screens; phones get safe-area padding (`viewport-fit=cover`). Start asks the browser for fullscreen on that first tap (ignored where unsupported, such as iPhone Safari), and **Menu > Fullscreen** turns it on or off and shows the real state.
+- **Team / player picker** (`shared/roster.js`): no text box. Pick 2 to 6 with the −/+ buttons or the number chips; each team is a card with a default name, a tappable emoji avatar (each tap moves to the next free icon and colour) and tap-to-rename inline (Enter or ✓ to finish). Duplicate names are refused at Start.
+- **Relative paths:** the games load `../../shared/...` and the shared scripts work out the site root from their own URL, so the site runs at a domain root (`python3 -m http.server`) and under a project path such as GitHub Pages' `/braven-capstone-games/` (checked by `tests/subpath.spec.js`).
+
+Use the local server rather than double-clicking `index.html`: the narration manifests and tutorial scripts are fetched over http.
 
 ### URL options (Inbox Showdown)
 
@@ -80,18 +90,21 @@ shared/menu.js, shared/menu.css    shared top bar + menu (with the sound toggle)
 shared/tutorial.js, tutorial.css   How to play overlay with narration
 shared/audio.js                    WebAudio sound effects + the global mute
 shared/fx.js, shared/theme.css     confetti/pop/shake effects and the colorful theme
-shared/narration/<slug>/           script.json per game (+ step<N>.mp3 once generated)
-tools/generate-narration.sh        ElevenLabs MP3 generator for the narration
+shared/narration/<slug>/           script.json (tutorial) + lines.json and lines/<id>.mp3 (in-game narration); hub/ for the hub
+shared/narrate.js                  in-game narration queue, 🔊 indicator and Replay buttons
+shared/roster.js                   setup screen team / player picker
+tools/extract-lines.js             writes lines.json from each page's narrationLines()
+tools/generate-narration.sh        ElevenLabs MP3 generator for the tutorial steps and lines.json
 games/inbox-showdown/index.html    Game A, self-contained
 games/first-week-hunt/index.html   Game B, self-contained
 games/phish-or-fine/index.html     Game C, self-contained
 tests/                             Playwright checks
 Dockerfile, deploy/nginx.conf      nginx:alpine static site on port 8080
-fly.toml, .dockerignore            Fly.io config (not deployed yet)
+fly.toml, .dockerignore            Fly.io config (kept, no longer the deploy target)
 ```
 
-To add a game: put it at `games/<slug>/index.html`, include `/shared/menu.css`, then after its own `<style>` `/shared/theme.css` and `/shared/tutorial.css`, and the scripts `/shared/audio.js`, `/shared/fx.js`, `/shared/menu.js`, `/shared/tutorial.js` (all `defer`, in that order). On `DOMContentLoaded` call `Menu.init({ name, restart, setShield, howTo, shield })` and `Tutorial.init({ slug, name })`, write `shared/narration/<slug>/script.json`, and add one entry (with a `goal`) to `GAMES` in `index.html`.
+To add a game: put it at `games/<slug>/index.html`, include `../../shared/menu.css`, then after its own `<style>` `../../shared/theme.css` and `../../shared/tutorial.css`, the scripts `audio.js`, `fx.js`, `menu.js`, `tutorial.js`, `narrate.js` from `../../shared/` (all `defer`, in that order) and `../../shared/roster.js` without `defer`. On `DOMContentLoaded` call `Menu.init({ name, restart, setShield, howTo, shield })`, `Tutorial.init({ slug, name })` and `Narrate.init({ slug })`; expose `narrationLines()` on the page's test hook and add it to `tools/extract-lines.js`; write `shared/narration/<slug>/script.json`, and add one entry (with a `goal`) to `GAMES` in `index.html`.
 
 ## Deploy (later, not done yet)
 
-Wally runs `fly auth login` himself, then `fly launch --no-deploy --name braven-capstone-games --copy-config` and `fly deploy`. The repo stays private and GitHub Pages stays off.
+The planned target is GitHub Pages as a project site, https://wally-ahmed.github.io/braven-capstone-games/ (all paths are relative, so it works under that sub-path). Turning Pages on is Wally's call. The Fly files stay in the repo but are no longer the target.
