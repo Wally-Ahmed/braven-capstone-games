@@ -63,6 +63,9 @@ html.tut-open, html.tut-open body { overflow: hidden; }
 .tut-remember { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; font-size: .95rem; color: #e6defc; cursor: pointer; }
 .tut-remember input { width: 22px; height: 22px; accent-color: #ff4fa3; }
 
+/* the story intro reads as a short paragraph */
+.tut-card[data-kind="intro"] .tut-caption p { text-align: left; font-size: 1.05rem; }
+.tut-card[data-kind="intro"] .tut-caption h2 { font-size: 1.7rem; }
 @keyframes tut-card-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
 @keyframes tut-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 @keyframes tut-bounce { 0%, 100% { transform: translateY(0) scale(1); } 40% { transform: translateY(-18px) scale(1.05); } 60% { transform: translateY(0) scale(.95, 1.05); } }

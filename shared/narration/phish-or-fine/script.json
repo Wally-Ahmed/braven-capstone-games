@@ -3,6 +3,40 @@
   "voice": "warm coach",
   "steps": [
     {
+      "id": "step0",
+      "intro": true,
+      "art": [
+        "🏢",
+        "📱",
+        "🛡️"
+      ],
+      "anim": "float",
+      "chips": [
+        "📖 The story"
+      ],
+      "title": "Welcome to Northbridge",
+      "text": "Welcome to Northbridge, where messages land on your screen all day and most of them are harmless. A few are traps dressed up to look urgent, friendly, or official, and you get only seconds to decide. Shield, your sidekick, explains every one so you learn the tricks. Now it's head to head: who can tell a phish from fine the fastest?",
+      "say": "Welcome to Northbridge, where messages land on your screen all day and most of them are harmless. A few are traps dressed up to look urgent, friendly, or official, and you get only seconds to decide. Shield, your sidekick, explains every one so you learn the tricks. Now it's head to head: who can tell a phish from fine the fastest?",
+      "audio": "step0.mp3"
+    },
+    {
+      "id": "about",
+      "art": [
+        "🎣",
+        "⚡",
+        "🏆"
+      ],
+      "anim": "pop",
+      "chips": [
+        "👥 2 to 6 players",
+        "⏱️ about 3 min"
+      ],
+      "title": "What is Phish or Fine?",
+      "text": "Phish or Fine is a buzzer quiz for 2 to 6 players. Two players face off at a time, racing to judge each message on the screen. With more players, it becomes a bracket where winners move on. Every point counts on one leaderboard, and a full battle takes about three minutes.",
+      "say": "Phish or Fine is a buzzer quiz for 2 to 6 players. Two players face off at a time, racing to judge each message on the screen. With more players, it becomes a bracket where winners move on. Every point counts on one leaderboard, and a full battle takes about three minutes.",
+      "audio": "about.mp3"
+    },
+    {
       "art": [
         "🟣",
         "⚡",

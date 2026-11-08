@@ -3,6 +3,40 @@
   "voice": "warm coach",
   "steps": [
     {
+      "id": "step0",
+      "intro": true,
+      "art": [
+        "🏢",
+        "📬",
+        "🛡️"
+      ],
+      "anim": "float",
+      "chips": [
+        "📖 The story"
+      ],
+      "title": "Welcome to Northbridge",
+      "text": "Welcome to Northbridge, where it's your first week and your inbox is already filling up. Somewhere in there is one message built to fool you, because most break-ins start with a single quiet click. Luckily you have Shield, a sidekick who taps your shoulder before that click. Today your team decides what's safe and what's a trap, so let's see who can outsmart the inbox!",
+      "say": "Welcome to Northbridge, where it's your first week and your inbox is already filling up. Somewhere in there is one message built to fool you, because most break-ins start with a single quiet click. Luckily you have Shield, a sidekick who taps your shoulder before that click. Today your team decides what's safe and what's a trap, so let's see who can outsmart the inbox!",
+      "audio": "step0.mp3"
+    },
+    {
+      "id": "about",
+      "art": [
+        "📥",
+        "👥",
+        "🏆"
+      ],
+      "anim": "pop",
+      "chips": [
+        "👥 2 to 6 teams",
+        "⏱️ about 3 min"
+      ],
+      "title": "What is Inbox Showdown?",
+      "text": "Inbox Showdown is a party game for 2 to 6 teams sharing one screen. Each round, a team gets one message, like an email, a text, or a phone call, and decides if it's safe or a scam. Every team plays three messages, and the most points wins. A match takes about three minutes.",
+      "say": "Inbox Showdown is a party game for 2 to 6 teams sharing one screen. Each round, a team gets one message, like an email, a text, or a phone call, and decides if it's safe or a scam. Every team plays three messages, and the most points wins. A match takes about three minutes.",
+      "audio": "about.mp3"
+    },
+    {
       "art": [
         "👥",
         "📱",

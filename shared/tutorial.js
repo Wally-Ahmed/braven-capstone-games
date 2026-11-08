@@ -107,6 +107,7 @@
   function renderStep() {
     var s = steps[idx];
     els.card.setAttribute('data-step', String(idx));
+    els.card.setAttribute('data-kind', s.intro ? 'intro' : s.id === 'about' ? 'about' : 'howto');
     els.card.style.setProperty('--tut-hue', HUES[idx % HUES.length]);
     els.art.textContent = '';
     els.art.className = 'tut-art anim-' + (s.anim || 'float');

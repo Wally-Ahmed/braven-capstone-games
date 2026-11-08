@@ -3,6 +3,40 @@
   "voice": "warm coach",
   "steps": [
     {
+      "id": "step0",
+      "intro": true,
+      "art": [
+        "🏢",
+        "🪪",
+        "🛡️"
+      ],
+      "anim": "float",
+      "chips": [
+        "📖 The story"
+      ],
+      "title": "Welcome to Northbridge",
+      "text": "Welcome to Northbridge, where it's your first week: new badge, new desk, new faces everywhere. But this office hides small slip-ups that attackers love, like a password on a sticky note or a laptop left unlocked. Shield, your sidekick, is here to help you spot them. Your mission is to find every risk before someone else does, so let the hunt begin!",
+      "say": "Welcome to Northbridge, where it's your first week: new badge, new desk, new faces everywhere. But this office hides small slip-ups that attackers love, like a password on a sticky note or a laptop left unlocked. Shield, your sidekick, is here to help you spot them. Your mission is to find every risk before someone else does, so let the hunt begin!",
+      "audio": "step0.mp3"
+    },
+    {
+      "id": "about",
+      "art": [
+        "🗺️",
+        "🔎",
+        "🏆"
+      ],
+      "anim": "pop",
+      "chips": [
+        "👥 2 to 6 players",
+        "⏱️ 2 min clock"
+      ],
+      "title": "What is First Week Hunt?",
+      "text": "First Week Hunt is a hidden-object game for 2 to 6 players on one screen. You're looking at an office full of spots to tap. Players take turns hunting for eight real security risks hidden among safe look-alikes. Most points when every risk is found, or the two-minute clock runs out, wins.",
+      "say": "First Week Hunt is a hidden-object game for 2 to 6 players on one screen. You're looking at an office full of spots to tap. Players take turns hunting for eight real security risks hidden among safe look-alikes. Most points when every risk is found, or the two-minute clock runs out, wins.",
+      "audio": "about.mp3"
+    },
+    {
       "art": [
         "🏢",
         "🔎"
