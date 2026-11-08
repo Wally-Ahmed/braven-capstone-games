@@ -51,7 +51,7 @@
             border:1px solid var(--line); border-radius:16px; padding:10px;
             background-image: linear-gradient(#ffffff08 1px, transparent 1px), linear-gradient(90deg, #ffffff08 1px, transparent 1px);
             background-size: 24px 24px; }
-  @media (max-width: 560px) { .office { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 560px), (min-width: 601px) { .office { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .tile { transition: transform .12s ease, box-shadow .15s ease; }
   .tile { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:4px; min-height:96px; padding:8px 6px;
           background:#fff; color:#1b1446; border:3px solid #c4b5fd; border-radius:16px; font-weight:700; font-size:.8rem;

@@ -51,9 +51,8 @@
   /* countdown */
   .count { font-size:5rem; font-weight:800; text-align:center; margin:24px 0; color:var(--accent); }
 
-  /* split-screen arena: top/bottom on a phone, left/right on a laptop */
+  /* split-screen arena: top/bottom (desktop shows the same phone layout inside the portrait frame, shared/theme.css) */
   .arena { display:grid; gap:10px; grid-template-columns:minmax(0,1fr); grid-template-areas:"p1" "q" "p2"; }
-  @media (min-width: 760px) { .arena { grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr); grid-template-areas:"p1 q p2"; align-items:stretch; } }
   .zone { border-radius:14px; border:2px solid var(--line); padding:10px; display:flex; flex-direction:column; gap:8px; background:#0b1222; min-width:0; }
   .zone.p1 { grid-area:p1; border-color:var(--p1); } .zone.p2 { grid-area:p2; border-color:var(--p2); }
   .zone.locked { opacity:.55; }

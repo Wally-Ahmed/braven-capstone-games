@@ -19,8 +19,8 @@ body { margin: 0; height: 100vh; height: 100dvh; overflow-x: hidden; overflow-y:
   padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
 body > .nbm-bar { flex: 0 0 auto; padding-top: max(6px, env(safe-area-inset-top)); }
 #app { flex: 1 0 auto; width: 100%; max-width: none !important; margin: 0 !important; box-sizing: border-box;
-  padding: clamp(12px, 2.4vw, 40px) clamp(16px, 3.2vw, 56px) !important; }
-body > header, body > main#games { width: 100%; max-width: none !important; box-sizing: border-box; padding-left: clamp(16px, 3.2vw, 56px); padding-right: clamp(16px, 3.2vw, 56px); }
+  padding: clamp(12px, calc(2.4 * var(--vw, 1vw)), 40px) clamp(16px, calc(3.2 * var(--vw, 1vw)), 56px) !important; }
+body > header, body > main#games { width: 100%; max-width: none !important; box-sizing: border-box; padding-left: clamp(16px, calc(3.2 * var(--vw, 1vw)), 56px); padding-right: clamp(16px, calc(3.2 * var(--vw, 1vw)), 56px); }
 body > main#games { flex: 1 0 auto; align-content: start; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)) !important; }
 /* the gradient is painted once on html+body (no fixed attachment, no backdrop blur: both repaint every frame) */
 body {
@@ -166,4 +166,26 @@ button.nr-replay { min-height: 44px !important; min-width: 44px; padding: 6px 14
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+}
+
+/* Portrait phone frame on desktop (his 11/7 9:00 PM ask, "for desktop we should lock it to mobile portait view"):
+   wider than 600 px, the page (body) is a centred 430 px portrait column, full height (100dvh, 100vh fallback),
+   with the phone layout inside it. --vw stands in for 1vw (4.3px = 1% of the frame), --pf-gap is the backdrop on
+   each side, and every full-screen overlay is inset by it so it stays inside the frame. Phones (<= 600 px) unchanged. */
+:root { --vw: 1vw; --pf-gap: 0px; }
+@media (min-width: 601px) {
+  :root { --vw: 4.3px; --pf-gap: max(0px, calc((100vw - 430px) / 2)); }
+  html { font-size: 16px;
+    background:
+      radial-gradient(ellipse 55% 70% at 18% 20%, rgba(255, 79, 163, .45), transparent 70%),
+      radial-gradient(ellipse 50% 65% at 85% 30%, rgba(34, 211, 238, .35), transparent 70%),
+      radial-gradient(ellipse 60% 60% at 60% 95%, rgba(255, 210, 63, .28), transparent 70%),
+      radial-gradient(ellipse 45% 55% at 30% 85%, rgba(167, 139, 250, .35), transparent 70%),
+      linear-gradient(150deg, #1a0d4d 0%, #2e1065 50%, #4a0d2e 100%); }
+  body { width: 100%; max-width: 430px; margin: 0 auto; border-radius: 28px;
+    box-shadow: 0 30px 80px rgba(5, 0, 25, .6), 0 0 0 1px rgba(255, 255, 255, .14); }
+  html .fx-layer, html .fxw, html .fxp, html .tut-overlay, html .nbm-overlay, html .nr-ov, html #net-player, html .pop-overlay {
+    left: var(--pf-gap); right: var(--pf-gap); border-radius: 28px; }
+  html .nbm-overlay { overflow: hidden; }
+  html button.nr-badge { left: calc(var(--pf-gap) + 10px); }
 }
