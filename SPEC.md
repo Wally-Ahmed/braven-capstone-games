@@ -164,3 +164,23 @@ Run A first, then B and C. Offline, a run builds, tests and commits, then report
 3. Do teammates need accounts or a password on the site, or is an unlisted public URL fine?
 4. Is Rose's "game prototype" a game wrapping the AI agent, or a separate idea (Kahoot, scavenger hunt)?
 5. Build Shield Check (section 4) too, as a fourth card in the hub?
+
+## 11. v4 polish (his 6:28 PM feedback)
+
+_Sat 11/7/2026. Wally's DM, 6:28 PM: "The games are unintuitive hard to understand and boring and there's no clear way to find how to play use 11 labs to make an audio tutorial guide when loading the game that could be optionally skipped make it visually appealing and fun making interactive at Voice and sound effects use colorful colors and fun animations"._
+
+**What changed**
+- **Audio tutorial on load, skippable.** `shared/tutorial.js` opens a full-screen How to play overlay on every game: 4 to 5 illustrated steps, captions always visible, progress dots, Back/Next, a big Skip button, a "skip next time" box remembered per game, Esc/arrow keys, re-openable from Menu > How to play, from a How to play button on each setup screen and from the hub ("Watch the 30-second tutorial", `?tutorial=1`).
+- **Voice.** A warm coach reads every step. Scripts: `shared/narration/<slug>/script.json` (no company names). ElevenLabs generation is scripted in `tools/generate-narration.sh` (same voice and model as the walkthrough tooling) but the account was out of credits on 11/7 (0 of 32,373 characters left, `quota_exceeded`), so the tutorial currently uses the browser's speech-synthesis voice with the same captions. MP3s take over automatically once generated (about 1,500 characters for all three games).
+- **Sound effects.** `shared/audio.js`: WebAudio tap, correct, wrong, Shield warning, countdown tick, go, win fanfare; one global mute for effects and voice (top-bar 🔊 button, tutorial Voice on/off).
+- **Colorful and fun.** `shared/theme.css` + `shared/fx.js`: gradient background, five vivid accents, rounded cards, bigger type, screen fades, correct = green pulse + confetti, wrong = red shake, Shield warning = amber glow, animated countdown and last-seconds ticks, a celebratory winner banner and podium-style leaderboard. Reduced-motion users get no animation.
+- **Intuitive.** One-line goal and quick-rule chips under each title, a pulsing first-move hint on the first turn, icon buttons with plain labels ("📂 Open (safe)", "🚩 Report (scam)"), a "What just happened" line after each move, and hub cards with a goal line, players, minutes and the tutorial link.
+
+**Acceptance (all automated, `npx playwright test`)**
+- [x] Tutorial shows on first load, Skip hides it, "skip next time" persists across reloads, Menu > How to play re-opens it, `?tutorial=1` forces it.
+- [x] Narration reads each caption (speech fallback when no MP3; a broken MP3 also falls back), the mute toggle silences it and persists, and nothing logs a console error with autoplay blocked.
+- [x] Every earlier game, hub and menu check still passes; zero console errors, no outside requests, no horizontal scroll at 360 px, buttons at least 44 px.
+
+**Still to do**
+- Add ElevenLabs credits, run `tools/generate-narration.sh`, commit the MP3s.
+- Playtest with the team on a Zoom share and tune the wording of the hints.
