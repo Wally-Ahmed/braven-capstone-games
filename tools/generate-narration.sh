@@ -2,8 +2,10 @@
 # Generates the tutorial narration MP3s with ElevenLabs from shared/narration/<slug>/script.json.
 # Usage: ENV_FILE=/path/to/file-with-ELEVENLABS_API_KEY tools/generate-narration.sh [slug ...]
 #   (default ENV_FILE is ./.env, which is gitignored). The key is only read into this shell.
-# Writes shared/narration/<slug>/step<N>.mp3 and adds "audio": "step<N>.mp3" to that step in
+# Writes shared/narration/<slug>/<id>.mp3 (a step's "id", else step<N> by position; the story intro is
+# step0) and adds "audio": "<id>.mp3" to that step in
 # script.json only when the file came back as real audio, so the games never request a missing file.
+# Steps whose audio file already exists are skipped unless FORCE=1.
 # Voice and model match the walkthrough tooling: voice DbwWo4rVEd5NrejHYUnm, eleven_multilingual_v2.
 set -u
 cd "$(dirname "$0")/.."
@@ -22,14 +24,17 @@ for slug in "${SLUGS[@]}"; do
   dir="shared/narration/$slug"; json="$dir/script.json"
   n=$(python3 -c "import json; print(len(json.load(open('$json'))['steps']))")
   for ((i=0; i<n; i++)); do
+    name=$(python3 -c "import json; s=json.load(open('$json'))['steps'][$i]; print(s.get('id') or 'step$((i+1))')")
+    have=$(python3 -c "import json; s=json.load(open('$json'))['steps'][$i]; print(s.get('audio') or '')")
+    if [ -z "${FORCE:-}" ] && [ -n "$have" ] && [ -f "$dir/$have" ]; then echo "skip $dir/$have (already generated; FORCE=1 to redo)"; continue; fi
     text=$(python3 -c "import json; s=json.load(open('$json'))['steps'][$i]; print(s.get('say') or (s['title']+'. '+s['text']))")
     body=$(python3 -c 'import json,sys; print(json.dumps({"text": sys.argv[1], "model_id": sys.argv[2], "voice_settings": {"stability": 0.45, "similarity_boost": 0.8, "style": 0.35}}))' "$text" "$MODEL")
-    out="$dir/step$((i+1)).mp3"; tmp="$out.part"
+    out="$dir/$name.mp3"; tmp="$out.part"
     code=$(curl -s -o "$tmp" -w '%{http_code}' -X POST "https://api.elevenlabs.io/v1/text-to-speech/$VOICE?output_format=mp3_44100_128" \
       -H "xi-api-key: $ELEVENLABS_API_KEY" -H "Content-Type: application/json" -d "$body")
     if [ "$code" = "200" ] && file "$tmp" | grep -qiE 'audio|mpeg|ID3'; then
       mv "$tmp" "$out"
-      python3 - "$json" "$i" "step$((i+1)).mp3" <<'PY'
+      python3 - "$json" "$i" "$name.mp3" <<'PY'
 import json, sys
 p, i, name = sys.argv[1], int(sys.argv[2]), sys.argv[3]
 d = json.load(open(p)); d['steps'][i]['audio'] = name
