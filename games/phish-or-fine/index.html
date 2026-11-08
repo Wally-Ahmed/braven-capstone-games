@@ -750,6 +750,16 @@ function copyResults() {
   fallback();
 }
 
+/* Selection punch-in (shared/fx.js FX.selectPunch): the chosen option zooms in full screen with a whoosh + thud.
+ * Capture phase, so the button is measured before the move re-renders it. Team picks (count chips, icons) too. */
+const PUNCH_ACTIONS = ['buzz'];
+function punch(el, label) { try { if (window.FX && window.FX.selectPunch) window.FX.selectPunch(el, label); } catch (e) { /* effects are optional */ } }
+app.addEventListener('click', e => {
+  const btn = e.target.closest && e.target.closest('[data-action]');
+  if (!btn || btn.disabled) return;
+  const a = btn.dataset.action;
+  if (PUNCH_ACTIONS.includes(a) || (a === 'roster' && (btn.dataset.op === 'count' || btn.dataset.op === 'avatar'))) punch(btn);
+}, true);
 app.addEventListener('click', e => {
   const btn = e.target.closest('[data-action]');
   if (!btn || btn.disabled) return;
@@ -773,6 +783,8 @@ document.addEventListener('keydown', e => {
   const k = KEYS[String(e.key).toLowerCase()];
   if (!k) return;
   e.preventDefault();
+  const zoneBtn = app.querySelector('[data-action="buzz"][data-slot="' + k[0] + '"][data-choice="' + k[1] + '"]');
+  if (zoneBtn && !zoneBtn.disabled) punch(zoneBtn);
   dispatch({ type: 'buzz', slot: k[0], choice: k[1], step: state.step });
 });
 

@@ -338,7 +338,11 @@
     if (!p) return;
     var v = viewFor(p), want = JSON.stringify(m.move);
     var ok = (v.buttons || []).some(function (b) { return JSON.stringify(b.move) === want; });
-    if (ok) cfg.dispatch(m.move);
+    if (ok) {
+      var chosen = v.buttons.find(function (b) { return JSON.stringify(b.move) === want; });
+      try { if (window.FX && window.FX.selectPunch) window.FX.selectPunch(null, (p.avatar ? p.avatar + ' ' : '') + chosen.label); } catch (x) { /* optional */ }
+      cfg.dispatch(m.move);
+    }
     H.lastSent[p.id] = null; // the phone disabled its buttons after the tap: always send it a fresh view
     changed();
   }
@@ -443,6 +447,7 @@
       var btn = P.view.buttons[Number(b.getAttribute('data-i'))];
       if (!btn) return;
       try { if (navigator.vibrate) navigator.vibrate(30); } catch (x) { /* optional */ }
+      try { if (window.FX && window.FX.selectPunch) window.FX.selectPunch(b, btn.label, { lite: true }); } catch (x) { /* optional */ }
       P.conn.send({ t: 'move', move: btn.move });
       P.sentMove = true; drawPlayer();
     }

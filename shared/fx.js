@@ -2,6 +2,7 @@
  *   FX.confetti(target?, count?)  burst of colored particles from an element (or the screen centre)
  *   FX.pop(el)    score pop      FX.shake(el)  red shake      FX.pulse(el)  green pulse
  *   FX.glow(el)   amber glow (Shield warning)
+ *   FX.selectPunch(el, label?, {lite?})  the chosen option punches in full screen (0.7 s) with a whoosh + thud
  *   FX.wrongFull({variant?, lite?})  full-screen wrong-answer animation + sound (6 variants, random by default)
  * Every effect is skipped when the player prefers reduced motion. Particles never take clicks.
  */
@@ -159,6 +160,57 @@
     current = me;
     return name;
   }
+
+  /* Selection punch-in: the chosen option's label zooms from where it was tapped to the centre with an
+     overshoot and a radial flash in its colour, then shrinks back (0.7 s; lite 0.5 s on phones), with a
+     whoosh + thud (Sfx.punch). pointer-events: none, so it never blocks input. Reduced motion: a quick fade. */
+  var PUNCH_CSS = '' +
+    '.fxp{position:fixed;inset:0;z-index:9700;pointer-events:none;overflow:hidden;animation:fxp-flash var(--fxp-ms,700ms) ease-out forwards;background:radial-gradient(circle at 50% 50%,var(--fxp-c,#22d3ee) 0,transparent 65%)}' +
+    '@keyframes fxp-flash{0%{opacity:0}25%{opacity:.55}60%{opacity:.25}100%{opacity:0}}' +
+    '.fxp-label{position:absolute;left:50%;top:50%;max-width:88vw;box-sizing:border-box;padding:.25em .6em;border-radius:.5em;background:var(--fxp-c,#22d3ee);color:var(--fxp-t,#0f172a);font:900 clamp(1.6rem,9vw,4.2rem)/1.1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;text-align:center;overflow-wrap:anywhere;box-shadow:0 10px 40px rgba(0,0,0,.45);animation:fxp-zoom var(--fxp-ms,700ms) cubic-bezier(.2,1.3,.4,1) forwards}' +
+    '.fxp.lite .fxp-label{font-size:clamp(1.3rem,7vw,2.4rem)}' +
+    '@keyframes fxp-zoom{0%{transform:translate(-50%,-50%) translate(var(--sx),var(--sy)) scale(var(--sc))}35%{transform:translate(-50%,-50%) scale(1.15)}50%{transform:translate(-50%,-50%) scale(1)}75%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(-50%,-50%) translate(var(--sx),var(--sy)) scale(var(--sc));opacity:0}}' +
+    '@media (prefers-reduced-motion:reduce){.fxp{animation:fxp-fade var(--fxp-ms,700ms) linear forwards;background:none}.fxp-label{animation:fxp-fade var(--fxp-ms,700ms) linear forwards;transform:translate(-50%,-50%)}}' +
+    '@keyframes fxp-fade{0%{opacity:0}20%,70%{opacity:1}100%{opacity:0}}';
+  var punch = null, wrongQueue = null;
+  function clearPunch() {
+    if (!punch) return;
+    clearTimeout(punch.timer);
+    if (punch.el.parentNode) punch.el.parentNode.removeChild(punch.el);
+    punch = null;
+    if (wrongQueue) { var w = wrongQueue; wrongQueue = null; wrongFull(w); } // the wrong-answer moment follows the punch
+  }
+  function solid(c) { return c && !/rgba\([^)]*,\s*0\)|transparent/.test(c) ? c : null; }
+  function selectPunch(el, label, opts) {
+    opts = opts || {};
+    if (!document.body) return null;
+    if (!document.getElementById('fxp-css')) { var st = document.createElement('style'); st.id = 'fxp-css'; st.textContent = PUNCH_CSS; document.head.appendChild(st); }
+    if (punch) { var q = wrongQueue; wrongQueue = null; clearPunch(); wrongQueue = q; }
+    var text = String(label != null ? label : (el && el.textContent) || '').replace(/\s+/g, ' ').trim().slice(0, 48);
+    if (!text) return null;
+    var ms = opts.lite ? 500 : 700, cs = el && el.getBoundingClientRect ? getComputedStyle(el) : null;
+    var color = opts.color || (cs && (solid(cs.backgroundColor) || solid(cs.borderColor))) || '#22d3ee';
+    var ov = document.createElement('div');
+    ov.className = 'fxp' + (opts.lite ? ' lite' : ''); ov.setAttribute('aria-hidden', 'true'); ov.setAttribute('data-testid', 'fx-punch');
+    ov.style.setProperty('--fxp-ms', ms + 'ms'); ov.style.setProperty('--fxp-c', color);
+    if (cs && cs.color) ov.style.setProperty('--fxp-t', cs.color);
+    var lb = document.createElement('div'); lb.className = 'fxp-label'; lb.textContent = text;
+    ov.appendChild(lb); document.body.appendChild(ov);
+    var sx = 0, sy = 0, sc = 0.4;
+    if (el && el.getBoundingClientRect) {
+      var r = el.getBoundingClientRect(), me = lb.getBoundingClientRect();
+      if (r.width && me.width) { sx = r.left + r.width / 2 - window.innerWidth / 2; sy = r.top + r.height / 2 - window.innerHeight / 2; sc = Math.max(0.2, Math.min(1, r.width / me.width)); }
+    }
+    lb.style.setProperty('--sx', Math.round(sx) + 'px'); lb.style.setProperty('--sy', Math.round(sy) + 'px'); lb.style.setProperty('--sc', sc.toFixed(3));
+    try { if (window.Sfx && window.Sfx.punch) window.Sfx.punch(); } catch (e) { /* audio is optional */ }
+    var mine = { el: ov, timer: setTimeout(function () { if (punch === mine) clearPunch(); }, ms) };
+    ov.addEventListener('animationend', function (e) { if (e.target === ov && punch === mine) clearPunch(); });
+    punch = mine;
+    return text;
+  }
+  FX.selectPunch = function (el, label, opts) { return selectPunch(el, label, opts); };
+  var wrongNow = FX.wrongFull;
+  FX.wrongFull = function (opts) { opts = opts || {}; if (punch && opts.variant == null) { wrongQueue = opts; return 'queued'; } return wrongNow(opts); };
   window.FX = FX;
   window.Fx = FX;
 })();

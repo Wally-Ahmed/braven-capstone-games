@@ -600,6 +600,16 @@ function copyResults() {
   fallback();
 }
 
+/* Selection punch-in (shared/fx.js FX.selectPunch): the chosen option zooms in full screen with a whoosh + thud.
+ * Capture phase, so the button is measured before the move re-renders it. Team picks (count chips, icons) too. */
+const PUNCH_ACTIONS = ['open', 'report', 'ask', 'openAnyway', 'backOut', 'challenge', 'noChallenge'];
+function punch(el, label) { try { if (window.FX && window.FX.selectPunch) window.FX.selectPunch(el, label); } catch (e) { /* effects are optional */ } }
+app.addEventListener('click', e => {
+  const btn = e.target.closest && e.target.closest('[data-action]');
+  if (!btn || btn.disabled) return;
+  const a = btn.dataset.action;
+  if (PUNCH_ACTIONS.includes(a) || (a === 'roster' && (btn.dataset.op === 'count' || btn.dataset.op === 'avatar'))) punch(btn);
+}, true);
 app.addEventListener('click', e => {
   const btn = e.target.closest('[data-action]');
   if (!btn || btn.disabled) return;

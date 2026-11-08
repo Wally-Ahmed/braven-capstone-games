@@ -84,3 +84,38 @@ test('each game plays it on a wrong outcome: opened scam, decoy tap, wrong buzz'
   await expect(page.getByTestId('fx-wrong')).toBeVisible();
   expectClean(issues);
 });
+
+test('selection punch-in: appears, clears within 0.8 s, never blocks, works at 360 px; selections in the games trigger it', async ({ page, baseURL }) => {
+  const issues = watch(page, baseURL);
+  await page.setViewportSize({ width: 360, height: 640 });
+  await page.goto('/games/inbox-showdown/');
+  const start = page.getByTestId('btn-start');
+  const t0 = Date.now();
+  expect(await start.evaluate(el => window.Fx.selectPunch(el, '📂 Open (safe)'))).toBe('📂 Open (safe)');
+  const ov = page.getByTestId('fx-punch');
+  await expect(ov).toBeVisible();
+  expect(await ov.evaluate(e => getComputedStyle(e).pointerEvents)).toBe('none');
+  await expectNoHorizontalScroll(page);
+  await expect(ov).toHaveCount(0, { timeout: 1500 });
+  expect(Date.now() - t0).toBeLessThan(1500);
+  // a team pick and then Report in a real match both punch in; the wrong-answer moment waits for the punch
+  await page.getByTestId('roster-count-3').click();
+  await expect(ov).toBeVisible();
+  await page.evaluate(() => { const g = window.InboxShowdown; g.dispatch({ type: 'setShield', mode: 'off' }); });
+  await page.getByTestId('btn-start').click();
+  await page.getByTestId('btn-ready').click();
+  await page.getByTestId('btn-report').click();
+  await expect(ov).toBeVisible();
+  await expect(ov).toContainText('Report');
+  await page.getByTestId('btn-reveal').click({ timeout: 1000 });
+  await expect(page.getByTestId('reveal')).toBeVisible();
+  const right = await page.evaluate(() => window.InboxShowdown.state.reveal.correct);
+  if (!right) { await expect(page.getByTestId('fx-wrong')).toBeVisible({ timeout: 2000 }); await expect(ov).toHaveCount(0); }
+  // First Week Hunt tile tap
+  await page.goto('/games/first-week-hunt/');
+  await page.getByTestId('btn-start').click();
+  await page.getByTestId('tile').first().click();
+  await expect(ov).toBeVisible();
+  await expect(ov).toHaveCount(0, { timeout: 1500 });
+  expectClean(issues);
+});

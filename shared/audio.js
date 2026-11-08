@@ -1,5 +1,6 @@
 /* Shared sound effects for every Northbridge game: WebAudio synth, no audio files.
  *   Sfx.tap() Sfx.correct() Sfx.wrong() Sfx.warning() Sfx.tick() Sfx.go() Sfx.win()
+ *   Sfx.punch()            whoosh + thud for a selection punch-in
  *   Sfx.wrongVariant(name)  the sound for one full-screen wrong-answer variant (alarm glass stamp glitch nope lock)
  *   Sfx.muted()            true when the global mute is on (localStorage "nb-muted")
  *   Sfx.setMuted(bool)     set the global mute (sound effects AND tutorial narration)
@@ -72,6 +73,10 @@
   };
 
   var Sfx = {
+    punch: function () { // whoosh then thud: a selection punching in (shared/fx.js FX.selectPunch)
+      noise(0, 0.16, 0.22, 900, 'bandpass'); note('sine', 300, 0, 0.16, { vol: 0.12, to: 900 });
+      note('sine', 120, 0.16, 0.18, { vol: 0.4, to: 55 }); noise(0.16, 0.06, 0.25, 500, 'lowpass');
+    },
     wrongVariant: function (name) { (WRONG_SOUNDS[name] || Sfx.wrong)(); },
     tap: function () { note('triangle', 660, 0, 0.07, { vol: 0.15 }); },
     correct: function () { note('sine', 660, 0, 0.12, { vol: 0.3 }); note('sine', 880, 0.1, 0.12, { vol: 0.3 }); note('sine', 1320, 0.2, 0.22, { vol: 0.25 }); },

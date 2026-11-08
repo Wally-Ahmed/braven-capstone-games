@@ -140,6 +140,8 @@ test('Inbox Showdown: phones join, Ready/Report from a phone drive the host, Cha
   await expectTapTargets(r.a.page);
   await r.a.page.getByTestId('player-btn').filter({ hasText: 'Report' }).click();
   await expect.poll(async () => (await S()).phase).toBe('challenge');
+  await expect(r.host.page.getByTestId('fx-punch')).toContainText('Report'); // the choice punches in on the big screen...
+  await expect(r.a.page.getByTestId('fx-punch')).toHaveClass(/lite/); // ...and, lighter, on the phone that chose
   await expect(r.b.page.getByTestId('player-btn').filter({ hasText: 'Challenge' })).toBeVisible();
   await expect(r.a.page.getByTestId('player-btn')).toHaveCount(0);
   await r.b.page.getByTestId('player-btn').filter({ hasText: 'Agree' }).click();
