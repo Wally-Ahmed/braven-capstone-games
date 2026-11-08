@@ -485,6 +485,8 @@ test('menu buttons are >= 44 px tall and reachable by keyboard (Tab, Enter)', as
   await page.keyboard.press('Enter');
   await expect(page.getByTestId('menu-shield')).toHaveText(/Shield: off/);
   await page.keyboard.press('Tab');
+  await expect(page.getByTestId('menu-fullscreen')).toBeFocused();
+  await page.keyboard.press('Tab');
   await expect(page.getByTestId('menu-howto')).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.getByTestId('menu-howto-text')).toBeVisible();

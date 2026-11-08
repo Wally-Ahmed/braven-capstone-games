@@ -133,7 +133,7 @@ test.describe('shared menu', () => {
     await expect(page.getByTestId('menu-btn')).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page.getByTestId('menu-panel')).toBeVisible();
-    for (const id of ['menu-game-selection', 'menu-restart', 'menu-shield', 'menu-howto', 'menu-close']) {
+    for (const id of ['menu-game-selection', 'menu-restart', 'menu-shield', 'menu-fullscreen', 'menu-howto', 'menu-close']) {
       const box = await page.getByTestId(id).boundingBox();
       expect(box.height, id).toBeGreaterThanOrEqual(44);
     }
@@ -144,6 +144,8 @@ test.describe('shared menu', () => {
     await expect(page.getByTestId('menu-shield')).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page.getByTestId('menu-shield')).toHaveText(/Shield: off/);
+    await page.keyboard.press('Tab');
+    await expect(page.getByTestId('menu-fullscreen')).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(page.getByTestId('menu-howto')).toBeFocused();
     await page.keyboard.press('Enter');

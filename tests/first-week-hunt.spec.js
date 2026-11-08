@@ -349,6 +349,8 @@ test.describe('hub card and shared menu for First Week Hunt', () => {
     await page.keyboard.press('Enter');
     await expect(page.getByTestId('menu-shield')).toHaveText(/Shield: off/);
     await page.keyboard.press('Tab');
+    await expect(page.getByTestId('menu-fullscreen')).toBeFocused();
+    await page.keyboard.press('Tab');
     await expect(page.getByTestId('menu-howto')).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page.getByTestId('menu-howto-text')).toBeVisible();

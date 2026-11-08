@@ -59,6 +59,43 @@
     soundBtn.setAttribute('data-state', m ? 'muted' : 'on');
   }
 
+  /* Fullscreen: the Start button asks for it on the first tap (where the browser allows it; iPhone Safari does
+     not, and automated test browsers are left alone), and the Menu has an on/off item that shows the real state. */
+  var fsBtn = null;
+  function fsElement() { return document.fullscreenElement || document.webkitFullscreenElement || null; }
+  function fsSupported() {
+    var d = document.documentElement;
+    return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled) && !!(d.requestFullscreen || d.webkitRequestFullscreen);
+  }
+  function enterFullscreen() {
+    try {
+      var d = document.documentElement, req = d.requestFullscreen || d.webkitRequestFullscreen;
+      if (!req || fsElement()) return;
+      var p = req.call(d, { navigationUI: 'hide' });
+      if (p && p.catch) p.catch(function () { /* refused: stay in the page */ });
+    } catch (e) { /* unsupported */ }
+  }
+  function exitFullscreen() {
+    try {
+      var ex = document.exitFullscreen || document.webkitExitFullscreen;
+      if (ex && fsElement()) { var p = ex.call(document); if (p && p.catch) p.catch(function () {}); }
+    } catch (e) { /* ignore */ }
+  }
+  function updateFsLabel() {
+    if (!fsBtn) return;
+    var on = !!fsElement(), ok = fsSupported();
+    fsBtn.textContent = '⛶ Fullscreen: ' + (ok ? (on ? 'on' : 'off') : 'not available here');
+    fsBtn.disabled = !ok;
+    fsBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    fsBtn.setAttribute('data-state', on ? 'on' : 'off');
+  }
+  document.addEventListener('fullscreenchange', updateFsLabel);
+  document.addEventListener('webkitfullscreenchange', updateFsLabel);
+  document.addEventListener('click', function (e) {
+    var b = e.target && e.target.closest ? e.target.closest('[data-testid="btn-start"]') : null;
+    if (b && !navigator.webdriver && fsSupported()) enterFullscreen();
+  }, true);
+
   function open() {
     lastFocus = document.activeElement;
     overlay.hidden = false;
@@ -101,16 +138,19 @@
     var sel = el('button', { 'class': 'nbm-btn', type: 'button', 'data-testid': 'menu-game-selection' }, '🏠 Game selection');
     var rst = el('button', { 'class': 'nbm-btn', type: 'button', 'data-testid': 'menu-restart' }, '🔄 Restart');
     shieldBtn = el('button', { 'class': 'nbm-btn', type: 'button', 'data-testid': 'menu-shield' });
+    fsBtn = el('button', { 'class': 'nbm-btn', type: 'button', 'data-testid': 'menu-fullscreen' });
     var how = el('button', { 'class': 'nbm-btn', type: 'button', 'data-testid': 'menu-howto', 'aria-expanded': 'false' }, '❓ How to play');
     howtoBox = el('div', { 'class': 'nbm-howto', 'data-testid': 'menu-howto-text' });
     howtoBox.hidden = true;
     var closeBtn = el('button', { 'class': 'nbm-btn', type: 'button', 'data-testid': 'menu-close' }, '✕ Close');
     var note = el('p', { 'class': 'nbm-small' }, 'Shield is a prototype, scripted agent. Press Esc to close.');
-    [sel, rst, shieldBtn, how, howtoBox, closeBtn, note].forEach(function (n) { panel.appendChild(n); });
+    [sel, rst, shieldBtn, fsBtn, how, howtoBox, closeBtn, note].forEach(function (n) { panel.appendChild(n); });
     overlay.appendChild(panel);
 
     renderHowTo(cfg.howTo);
     updateShieldLabel();
+    updateFsLabel();
+    fsBtn.addEventListener('click', function () { if (fsElement()) exitFullscreen(); else enterFullscreen(); });
 
     menuBtn.addEventListener('click', function () { overlay.hidden ? open() : close(); });
     closeBtn.addEventListener('click', close);

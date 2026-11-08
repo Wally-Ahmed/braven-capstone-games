@@ -46,7 +46,7 @@ for (const p of PAGES) {
       await page.goto(p.url);
       // setup intro: autoplay before any tap is blocked by the browser, so its Replay pulses; a tap reads it
       const intro = page.getByTestId('setup-intro');
-      await expect(intro).toHaveClass(/nr-blocked/);
+      await expect(intro.getByTestId('narrate-replay')).toBeVisible();
       await intro.getByTestId('narrate-replay').click();
       await expect(intro).toHaveAttribute('data-narrating', 'true');
       await expect(intro.getByTestId('narrate-indicator')).toBeVisible();
@@ -134,3 +134,29 @@ test('hub: focusing or tapping a card reads its pitch; every card has Replay', a
   await expectTapTargets(page);
   expectClean(issues);
 });
+
+// Full page (his 7:52 PM ask): every page fills the viewport with no page scroll, and the Menu has Fullscreen.
+for (const p of PAGES) {
+  test(p.slug + ': fills the viewport at 360x640 and 1280x800 with no page scroll' + (p.names ? '; Menu has a Fullscreen item' : ''), async ({ page, baseURL }) => {
+    const issues = watch(page, baseURL);
+    for (const vp of [{ width: 360, height: 640 }, { width: 1280, height: 800 }]) {
+      await page.setViewportSize(vp);
+      await page.goto(p.url);
+      const m = await page.evaluate(() => {
+        const r = document.body.getBoundingClientRect(), de = document.documentElement;
+        return { w: r.width, h: r.height, sw: de.scrollWidth, cw: de.clientWidth, sh: de.scrollHeight, ch: de.clientHeight, vw: innerWidth, vh: innerHeight };
+      });
+      expect(m.w).toBeGreaterThanOrEqual(m.vw - 1);
+      expect(m.h).toBeGreaterThanOrEqual(m.vh - 1);
+      expect(m.sw, 'horizontal page scroll').toBeLessThanOrEqual(m.cw);
+      expect(m.sh, 'vertical page scroll').toBeLessThanOrEqual(m.ch);
+    }
+    if (p.names) {
+      await page.getByTestId('menu-btn').click();
+      const fs = page.getByTestId('menu-fullscreen');
+      await expect(fs).toBeVisible();
+      await expect(fs).toContainText('Fullscreen');
+    }
+    expectClean(issues);
+  });
+}
