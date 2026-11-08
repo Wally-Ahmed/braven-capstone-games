@@ -170,6 +170,9 @@ test('First Week Hunt: the turn player taps office spots on the phone; the lesso
   await expect.poll(async () => { const s = await S(); return s.popover && s.popover.tile; }).toBe(id);
   await expect(r.host.page.getByTestId('lesson-popover')).toBeVisible();
   await expect(r.a.page.getByTestId('player-warning')).toContainText('decoy');
+  await expect(r.host.page.getByTestId('fx-wrong')).toHaveCount(1); // host plays the full animation...
+  await expect(r.a.page.getByTestId('fx-wrong')).toHaveClass(/lite/); // ...and the phone that tapped plays the lighter one
+  await expect(r.b.page.getByTestId('fx-wrong')).toHaveCount(0);
   await r.a.page.getByTestId('player-btn').filter({ hasText: 'Pass to Ben' }).click();
   await expect.poll(async () => (await S()).current).toBe(1);
   await expect(r.b.page.getByTestId('player-status')).toHaveAttribute('data-status', 'turn');

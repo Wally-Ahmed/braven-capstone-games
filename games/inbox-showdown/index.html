@@ -192,6 +192,8 @@ function now() { return Date.now(); }
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])); }
 /* Shared sound + visual feedback (shared/audio.js, shared/fx.js); optional, never throws. */
 function sfx(name) { try { if (window.Sfx) window.Sfx[name](); } catch (e) { /* audio is optional */ } }
+/* Full-screen wrong-answer animation with its own sound (shared/fx.js FX.wrongFull); falls back to the plain buzz. */
+function wrongFull() { try { if (window.FX && window.FX.wrongFull) window.FX.wrongFull(); else sfx('wrong'); } catch (e) { /* effects are optional */ } }
 function fx(name, sel, arg) {
   try { const node = typeof sel === 'string' ? document.querySelector(sel) : sel; if (window.FX && (node || name === 'confetti')) window.FX[name](node, arg); } catch (e) { /* effects are optional */ }
 }
@@ -417,7 +419,7 @@ function feedback(prev) {
     if (state.reveal.correct) {
       sfx('correct'); fx('pulse', '[data-testid="reveal"]'); fx('pop', '[data-testid="reveal-delta"]');
       fx('confetti', '[data-testid="reveal-result"]', 22);
-    } else { sfx('wrong'); fx('shake', '[data-testid="reveal"]'); }
+    } else { wrongFull(); fx('shake', '[data-testid="reveal"]'); }
   }
   if (state.phase === 'leaderboard' && prev.phase === 'reveal') { sfx('win'); fx('confetti', '[data-testid="winner-banner"]', 80); }
 }
@@ -680,6 +682,7 @@ function roomView(seat) {
       buttons: [{ label: '⚔️ Challenge', move: { type: 'challenge', by: seat }, kind: 'bad' }, { label: '👀 Agree, reveal', move: { type: 'noChallenge' }, kind: 'primary' }] });
   } else if (state.phase === 'reveal') {
     const r = state.reveal, last = state.turn + 1 >= totalTurns();
+    if (seat === r.team && !r.correct) v.wrongKey = 'rv:' + state.turn;
     Object.assign(v, { title: r.correct ? '✅ Right call' : '❌ Not quite', prompt: r.what, note: 'Red flag: ' + r.lesson.flag });
     if (seat === r.team) { v.status = 'turn'; v.buttons = [{ label: last ? '🏆 See leaderboard' : '➡️ Next team', move: { type: 'next' }, kind: 'primary' }]; }
   } else if (state.phase === 'leaderboard' || state.phase === 'debrief') roomOver(v, seat);

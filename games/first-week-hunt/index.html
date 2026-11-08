@@ -177,6 +177,8 @@ function now() { return Date.now(); }
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])); }
 /* Shared sound + visual feedback (shared/audio.js, shared/fx.js); optional, never throws. */
 function sfx(name) { try { if (window.Sfx) window.Sfx[name](); } catch (e) { /* audio is optional */ } }
+/* Full-screen wrong-answer animation with its own sound (shared/fx.js FX.wrongFull); falls back to the plain buzz. */
+function wrongFull() { try { if (window.FX && window.FX.wrongFull) window.FX.wrongFull(); else sfx('wrong'); } catch (e) { /* effects are optional */ } }
 function fx(name, sel, arg) {
   try { const node = typeof sel === 'string' ? document.querySelector(sel) : sel; if (window.FX && (node || name === 'confetti')) window.FX[name](node, arg); } catch (e) { /* effects are optional */ }
 }
@@ -424,7 +426,7 @@ function feedback(prev) {
     if (pop.correct) {
       sfx('correct'); fx('pop', '[data-testid="lesson-result"]'); fx('confetti', '[data-testid="lesson-result"]', 26);
     } else {
-      sfx('wrong'); fx('shake', '[data-testid="lesson-popover"]');
+      wrongFull(); fx('shake', '[data-testid="lesson-popover"]');
     }
     if (pop.lesson.warning) setTimeout(() => { sfx('warning'); fx('glow', '[data-testid="shield-warning"]'); }, 450);
   }
@@ -685,6 +687,7 @@ function roomView(seat) {
     if (state.popover) {
       const pop = state.popover, done = state.found.length >= RISK_COUNT;
       const next = state.players[(pop.player + 1) % state.players.length];
+      if (seat === pop.player && !pop.correct) v.wrongKey = 'pop:' + pop.tile;
       if (seat === pop.player) Object.assign(v, { status: 'turn', title: pop.hacked ? '💀 You got hacked!' : pop.correct ? '✅ Risk found! +' + SCORE.find : '😬 Decoy, that one is safe',
         prompt: state.what, note: 'Shield: ' + pop.lesson.flag, warning: pop.lesson.warning || null,
         buttons: [{ label: done ? '🏆 See leaderboard' : pop.passes ? '👉 Pass to ' + next.name : '🔎 Keep hunting', move: { type: 'closeLesson' }, kind: 'primary' }] });

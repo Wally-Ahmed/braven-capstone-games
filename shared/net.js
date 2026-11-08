@@ -10,7 +10,8 @@
  *
  *   Net.init({ slug, name, kind, phase(), view(seat), start(players), dispatch(move), render() })
  *     view(seat) -> { status: 'turn'|'wait'|'spectate'|'over', title, prompt, warning, note, score,
- *                     buttons: [{ label, move, kind }] }      seat null = spectator
+ *                     wrongKey, buttons: [{ label, move, kind }] }   seat null = spectator; a new wrongKey plays
+ *                     the lighter FX.wrongFull on that phone
  *   Net.available()   true once the server answered the probe
  *   Net.isPlayer()    true on a phone page (?room=CODE)
  *   Net.host()        open a room from the setup screen
@@ -377,7 +378,11 @@
       c.send({ t: 'join', code: ROOM_PARAM, name: P.pendingName || store('local', 'nb-room-name') || 'Player', avatar: P.avatar, playerId: id });
     }, function (m) {
       if (m.t === 'welcome') { P.me = m; P.joined = true; P.hostGone = !m.hostOnline; P.offline = false; store('session', playerKey(), m.playerId); drawPlayer(); }
-      else if (m.t === 'state') { P.view = m.view; P.sentMove = false; drawPlayer(); }
+      else if (m.t === 'state') {
+        P.view = m.view; P.sentMove = false; drawPlayer();
+        var wk = m.view && m.view.wrongKey; // this phone's own wrong answer: a lighter full-screen animation
+        if (wk && wk !== P.lastWrong) { P.lastWrong = wk; try { if (window.FX && window.FX.wrongFull) window.FX.wrongFull({ lite: true }); } catch (x) { /* optional */ } }
+      }
       else if (m.t === 'host-left') { P.hostGone = true; drawPlayer(); }
       else if (m.t === 'host-back') { P.hostGone = false; drawPlayer(); }
       else if (m.t === 'closed') { P.conn.close(); P.conn = null; P.joined = false; P.view = null; P.ended = true; P.error = 'The host ended the room. Thanks for playing!'; drawPlayer(); }

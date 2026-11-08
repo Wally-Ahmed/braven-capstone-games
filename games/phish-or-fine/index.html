@@ -224,6 +224,8 @@ function now() { return Date.now(); }
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])); }
 /* Shared sound + visual feedback (shared/audio.js, shared/fx.js); optional, never throws. */
 function sfx(name) { try { if (window.Sfx) window.Sfx[name](); } catch (e) { /* audio is optional */ } }
+/* Full-screen wrong-answer animation with its own sound (shared/fx.js FX.wrongFull); falls back to the plain buzz. */
+function wrongFull() { try { if (window.FX && window.FX.wrongFull) window.FX.wrongFull(); else sfx('wrong'); } catch (e) { /* effects are optional */ } }
 function fx(name, sel, arg) {
   try { const node = typeof sel === 'string' ? document.querySelector(sel) : sel; if (window.FX && (node || name === 'confetti')) window.FX[name](node, arg); } catch (e) { /* effects are optional */ }
 }
@@ -497,12 +499,12 @@ function feedback(prev) {
   if (state.phase === 'question' && prev.phase === 'countdown') sfx('go');
   if (state.phase === 'question' && state.q && state.q.buzzes.length > prev.buzzes) {
     const b = state.q.buzzes[state.q.buzzes.length - 1];
-    if (!b.correct) { sfx('wrong'); fx('shake', '[data-testid="p' + (b.slot + 1) + '-zone"]'); }
+    if (!b.correct) { wrongFull(); fx('shake', '[data-testid="p' + (b.slot + 1) + '-zone"]'); }
   }
   if (state.phase === 'reveal' && prev.phase === 'question') {
     const win = state.reveal.buzzes.find(b => b.correct);
     if (win) { sfx('correct'); fx('pop', '[data-testid="reveal-result"]'); fx('confetti', '[data-testid="reveal-result"]', 24); }
-    else { sfx('wrong'); fx('shake', '[data-testid="reveal"]'); }
+    else { if (state.reveal.buzzes.length) wrongFull(); else sfx('wrong'); fx('shake', '[data-testid="reveal"]'); }
   }
   if (state.phase === 'bracket' && prev.phase === 'reveal') {
     if (state.champion != null) { sfx('win'); fx('confetti', '[data-testid="champion"]', 80); }
@@ -818,6 +820,8 @@ function roomView(seat) {
   const x = state.heat >= 0 ? curHeat() : null;
   const slot = x ? (x.a === seat ? 0 : x.b === seat ? 1 : -1) : -1;
   const vs = x ? state.players[x.a].name + ' vs ' + state.players[x.b].name : '';
+  const mine = (state.phase === 'question' || state.phase === 'reveal') && (state.phase === 'question' ? state.q.buzzes : state.reveal.buzzes).find(b => !b.correct && b.player === seat);
+  if (mine) v.wrongKey = 'buzz:' + state.heat + ':' + state.itemPos;
   if (state.phase === 'bracket') {
     if (state.champion != null) {
       Object.assign(v, { status: seat === state.champion ? 'over' : 'wait', title: state.players[state.champion].name + ' wins the battle!', prompt: 'The leaderboard is next on the big screen.' });
