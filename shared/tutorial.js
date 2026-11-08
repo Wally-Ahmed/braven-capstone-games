@@ -13,6 +13,12 @@
  */
 (function () {
   'use strict';
+  /* Site root, worked out from this script's own URL (shared/<file>.js), so the site works at a domain
+     root and under a sub-path such as GitHub Pages' /braven-capstone-games/. */
+  var ROOT = (function () {
+    try { var src = document.currentScript && document.currentScript.src; if (src) return src.replace(/shared\/[^\/]*$/, ''); } catch (e) { /* ignore */ }
+    return '/';
+  })();
   var cfg = null, steps = [], idx = 0, overlay = null, lastFocus = null, audioEl = null;
   var els = {}, localMute = false, speaking = false, loaded = false, pendingOpen = false;
   var HUES = ['#ff4fa3', '#22d3ee', '#ffd23f', '#84f06b', '#a78bfa'];
@@ -82,7 +88,7 @@
         audioEl.addEventListener('ended', function () { speaking = false; syncTalking(); });
       }
       audioEl.onerror = function () { speakTTS(text); }; // file missing or undecodable: read it out instead
-      audioEl.src = '/shared/narration/' + cfg.slug + '/' + s.audio;
+      audioEl.src = ROOT + 'shared/narration/' + cfg.slug + '/' + s.audio;
       var p;
       try { p = audioEl.play(); } catch (e) { p = null; }
       if (p && p.catch) p.catch(function (err) {
@@ -237,7 +243,7 @@
       emit('nb-tutorial-ready');
     };
     if (!window.fetch) { done(null); return; }
-    window.fetch('/shared/narration/' + cfg.slug + '/script.json', { cache: 'no-cache' })
+    window.fetch(ROOT + 'shared/narration/' + cfg.slug + '/script.json', { cache: 'no-cache' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(done, function () { done(null); });
   }

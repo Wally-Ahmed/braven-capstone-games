@@ -27,6 +27,12 @@
  */
 (function () {
   'use strict';
+  /* Site root, worked out from this script's own URL (shared/<file>.js), so the site works at a domain
+     root and under a sub-path such as GitHub Pages' /braven-capstone-games/. */
+  var ROOT = (function () {
+    try { var src = document.currentScript && document.currentScript.src; if (src) return src.replace(/shared\/[^\/]*$/, ''); } catch (e) { /* ignore */ }
+    return '/';
+  })();
   var cfg = null, lines = {}, ready = false, holdForTutorial = false;
   var present = new Map();      // key -> element currently on screen
   var queue = [];               // [{ key, el, parts }]
@@ -171,7 +177,7 @@
       if (!audioEl) { audioEl = new Audio(); audioEl.preload = 'auto'; }
       audioEl.onended = function () { nextPart(g); };
       audioEl.onerror = function () { if (g === gen) speak(p, item, g); };
-      try { audioEl.src = '/shared/narration/' + cfg.slug + '/lines/' + p.id + '.mp3'; audioEl.currentTime = 0; } catch (e) { /* ignore */ }
+      try { audioEl.src = ROOT + 'shared/narration/' + cfg.slug + '/lines/' + p.id + '.mp3'; audioEl.currentTime = 0; } catch (e) { /* ignore */ }
       log.push({ key: item.key, id: p.id, via: 'audio', text: p.text });
       var pr;
       try { pr = audioEl.play(); } catch (e) { pr = null; }
@@ -261,7 +267,7 @@
         requestScan();
       };
       if (window.fetch) {
-        window.fetch('/shared/narration/' + cfg.slug + '/lines.json', { cache: 'no-cache' })
+        window.fetch(ROOT + 'shared/narration/' + cfg.slug + '/lines.json', { cache: 'no-cache' })
           .then(function (r) { return r.ok ? r.json() : null; })
           .then(done, function () { done(null); });
       } else done(null);

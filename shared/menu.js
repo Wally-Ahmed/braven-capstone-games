@@ -8,6 +8,12 @@
  */
 (function () {
   'use strict';
+  /* Site root, worked out from this script's own URL (shared/<file>.js), so the site works at a domain
+     root and under a sub-path such as GitHub Pages' /braven-capstone-games/. */
+  var ROOT = (function () {
+    try { var src = document.currentScript && document.currentScript.src; if (src) return src.replace(/shared\/[^\/]*$/, ''); } catch (e) { /* ignore */ }
+    return '/';
+  })();
   var cfg = null, bar, overlay, panel, menuBtn, shieldBtn, howtoBox, soundBtn = null, shieldOn = true, lastFocus = null;
 
   function el(tag, attrs, text) {
@@ -109,7 +115,7 @@
     menuBtn.addEventListener('click', function () { overlay.hidden ? open() : close(); });
     closeBtn.addEventListener('click', close);
     overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
-    sel.addEventListener('click', function () { window.location.href = '/'; });
+    sel.addEventListener('click', function () { window.location.href = ROOT; });
     rst.addEventListener('click', function () { close(); if (typeof cfg.restart === 'function') cfg.restart(); });
     shieldBtn.addEventListener('click', function () {
       shieldOn = !shieldOn;
