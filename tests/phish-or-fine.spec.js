@@ -314,7 +314,7 @@ test('coach mode: between heats Shield tips a player on the category they lost o
   expectClean(issues);
 });
 
-test('split-screen: zones top/bottom at 360 px, left/right at 1280 px', async ({ page, baseURL }) => {
+test('split-screen: zones top/bottom at 360 px and inside the 1280 px portrait frame', async ({ page, baseURL }) => {
   const issues = watch(page, baseURL);
   await openGame(page, '?seed=1');
   await start(page, ['Ana', 'Ben']);
@@ -324,8 +324,7 @@ test('split-screen: zones top/bottom at 360 px, left/right at 1280 px', async ({
   expect(b.y).toBeGreaterThan(a.y + a.height - 1);
   await page.setViewportSize({ width: 1280, height: 800 });
   a = await page.getByTestId('p1-zone').boundingBox(); b = await page.getByTestId('p2-zone').boundingBox();
-  expect(b.x).toBeGreaterThan(a.x + a.width - 1);
-  expect(Math.abs(a.y - b.y)).toBeLessThan(2);
+  expect(b.y).toBeGreaterThan(a.y + a.height - 1); // desktop is locked to the phone layout (portrait frame)
   expectClean(issues);
 });
 

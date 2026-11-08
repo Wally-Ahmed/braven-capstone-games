@@ -147,7 +147,7 @@ for (const p of PAGES) {
         const r = document.body.getBoundingClientRect(), de = document.documentElement;
         return { w: r.width, h: r.height, sw: de.scrollWidth, cw: de.clientWidth, sh: de.scrollHeight, ch: de.clientHeight, vw: innerWidth, vh: innerHeight };
       });
-      expect(m.w).toBeGreaterThanOrEqual(m.vw - 1);
+      if (m.vw > 600) expect(m.w).toBeLessThanOrEqual(430); else expect(m.w).toBeGreaterThanOrEqual(m.vw - 1); // portrait frame on desktop
       expect(m.h).toBeGreaterThanOrEqual(m.vh - 1);
       expect(m.sw, 'horizontal page scroll').toBeLessThanOrEqual(m.cw);
       expect(m.sh, 'vertical page scroll').toBeLessThanOrEqual(m.ch);

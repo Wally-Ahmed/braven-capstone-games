@@ -201,6 +201,7 @@ _Sat 11/7/2026. Wally's DM, 6:28 PM: "The games are unintuitive hard to understa
 - [x] `FX.wrongFull()`: six random full-screen wrong-answer animations, each with its own WebAudio sound, on every wrong outcome in all three games; lighter on the responsible phone; tap to dismiss, never blocks input, reduced-motion still card.
 - [x] `FX.selectPunch()`: every selection punches in full screen with a whoosh + thud; host and (lighter) phone in room mode.
 - [x] Tests: `tests/rooms.spec.js` (5) and `tests/wrong-fx.spec.js` (5); 115 checks green.
+- [x] Desktop portrait frame (his 9:00 PM ask): wider than 600 px every page, host screen included, is a centred 430 px full-height phone column on a blurred theme backdrop with the phone layout and every overlay inside it (`--vw`/`--pf-gap` in shared/theme.css); phones unchanged; `tests/portrait-frame.spec.js` (9), 124 checks green.
 
 **Still to do (v6)**
 - The room code lives only as long as the server process; restarting it ends every room.
