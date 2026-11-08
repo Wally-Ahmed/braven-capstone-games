@@ -11,6 +11,7 @@
 <script src="../../shared/tutorial.js" defer></script>
 <script src="../../shared/narrate.js" defer></script>
 <script src="../../shared/roster.js"></script>
+<script src="../../shared/net.js"></script>
 <style>
   :root { --bg:#0f172a; --card:#1e293b; --line:#334155; --text:#f1f5f9; --muted:#94a3b8; --accent:#38bdf8;
           --good:#22c55e; --bad:#ef4444; --warn:#f59e0b; --ink:#0f172a; --floor:#1a2438; }
@@ -413,6 +414,7 @@ function dispatch(move) {
   }
   render();
   feedback(prev);
+  if (window.Net) window.Net.changed();
 }
 
 /* Sounds and effects after a move (never change state). */
@@ -513,7 +515,7 @@ function view() {
       '<div class="panel"><h2>Players (2 to 6)</h2>' + Roster.view(roster) +
       '<p id="setup-help" class="muted small">' + ROUND_SECONDS + ' seconds on the clock for the whole group. Pass the device (or share your screen) when the turn changes.</p>' +
       (state.error ? '<p class="error" role="alert" data-testid="setup-error"' + nar('_', { say: state.error, now: true }) + '>' + esc(state.error) + '</p>' : '') +
-      '<div class="row"><button class="primary" data-testid="btn-start" data-action="start">🚀 Start hunt</button></div></div>' +
+      '<div class="row"><button class="primary" data-testid="btn-start" data-action="start">🚀 Start hunt</button>' + (window.Net ? window.Net.button() : '') + '</div></div>' +
       '<p>' + shieldBadge() + '</p></section>';
   } else if (state.phase === 'scene') {
     const p = state.players[state.current];
@@ -585,6 +587,7 @@ function winnerBanner() {
 
 let lastPhase = null;
 function render() {
+  if (window.Net && window.Net.isPlayer()) return; // a phone in room mode shows only its player view
   const doc = new DOMParser().parseFromString('<body>' + view() + '</body>', 'text/html');
   app.replaceChildren(...Array.from(doc.body.childNodes));
   if (state.phase !== lastPhase && app.firstElementChild) app.firstElementChild.classList.add('screen-in');
@@ -627,6 +630,7 @@ app.addEventListener('click', e => {
   else if (a === 'tap') dispatch({ type: 'tap', id: btn.dataset.tileId });
   else if (a === 'copy') copyResults();
   else if (a === 'tutorial') { if (window.Tutorial) window.Tutorial.open(); }
+  else if (a === 'rooms') { if (window.Net) window.Net.host(); }
   else dispatch({ type: a });
 });
 app.addEventListener('input', e => {
@@ -646,6 +650,7 @@ const HOW_TO = [
 
 render();
 document.addEventListener('DOMContentLoaded', () => {
+  if (window.Net && window.Net.isPlayer()) return; // phones get no menu, tutorial or narration
   if (window.Menu) {
     window.Menu.init({
       name: '🔎 First Week Hunt',
@@ -659,8 +664,52 @@ document.addEventListener('DOMContentLoaded', () => {
   if (window.Narrate) window.Narrate.init({ slug: 'first-week-hunt' });
 });
 
+/* ------------------------------------------------------------------ *
+ * Room mode ("Play on phones", shared/net.js): what each phone sees and may tap.
+ * The host checks every phone move against these buttons, then runs it through dispatch.
+ * ------------------------------------------------------------------ */
+function roomOver(v, seat) {
+  const board = leaderboard(), tie = board.length > 1 && board[0].score === board[1].score;
+  const rank = board.findIndex(r => r.index === seat);
+  v.status = 'over'; v.title = tie ? 'It\'s a tie at the top!' : board[0].name + ' wins!';
+  v.prompt = rank >= 0 ? 'You finished #' + (rank + 1) + ' of ' + board.length + ' with ' + board[rank].score + ' points. Shield\'s debrief is on the big screen.'
+    : board.map((r, i) => (i + 1) + '. ' + r.name + ': ' + r.score).join('\n');
+  return v;
+}
+function roomView(seat) {
+  const me = seat != null ? state.players[seat] : null;
+  const v = { status: 'wait', score: me ? me.score : null, buttons: [] };
+  if (state.phase === 'scene') {
+    const cur = state.current, p = state.players[cur];
+    const progress = 'Risks found: ' + state.found.length + '/' + RISK_COUNT + '.';
+    if (state.popover) {
+      const pop = state.popover, done = state.found.length >= RISK_COUNT;
+      const next = state.players[(pop.player + 1) % state.players.length];
+      if (seat === pop.player) Object.assign(v, { status: 'turn', title: pop.hacked ? '💀 You got hacked!' : pop.correct ? '✅ Risk found! +' + SCORE.find : '😬 Decoy, that one is safe',
+        prompt: state.what, note: 'Shield: ' + pop.lesson.flag, warning: pop.lesson.warning || null,
+        buttons: [{ label: done ? '🏆 See leaderboard' : pop.passes ? '👉 Pass to ' + next.name : '🔎 Keep hunting', move: { type: 'closeLesson' }, kind: 'primary' }] });
+      else Object.assign(v, { title: state.players[pop.player].name + ' is reading Shield\'s lesson', prompt: state.what });
+    } else if (seat === cur) {
+      v.status = 'turn'; v.title = 'Your turn: tap a risky spot';
+      v.prompt = progress + ' A real risk scores +' + SCORE.find + ' and you keep the turn; a safe spot passes it.';
+      v.note = state.hintText || null;
+      v.warning = Shield.mode !== 'off' && Shield.warned[cur] ? 'Careful: your last tap was a decoy. One more wrong tap in a row and you get hacked.' : null;
+      v.buttons = state.layout.filter(id => !state.found.includes(id) && !state.checked.includes(id))
+        .map(id => ({ label: TILE[id].icon + ' ' + TILE[id].label + (state.hinted === id ? ' ✨' : ''), move: { type: 'tap', id }, kind: state.hinted === id ? 'hint' : '' }));
+      if (Shield.beforeAction(cur, 'hint', null).allow && unfoundRisks().length && !state.hinted) v.buttons.push({ label: '🛡️ Shield hint (-50, once)', move: { type: 'hint' }, kind: 'hint' });
+    } else Object.assign(v, { title: p.name + '\'s turn', prompt: (state.what ? state.what + '\n' : '') + progress });
+  } else if (state.phase === 'leaderboard' || state.phase === 'debrief') roomOver(v, seat);
+  else Object.assign(v, { title: 'Waiting for the big screen' });
+  return v;
+}
+if (window.Net) window.Net.init({
+  slug: 'first-week-hunt', name: '🔎 First Week Hunt', kind: 'Player',
+  phase: () => state.phase, view: roomView, dispatch: m => dispatch(m), render: () => render(),
+  start: players => { Roster.setCount(roster, players.length); players.forEach((p, i) => { roster.list[i].name = p.name; }); dispatch({ type: 'start', names: players.map(p => p.name).join('\n') }); }
+});
+
 // Test / console hook (read-only view plus dispatch); used by the Playwright checks.
-window.FirstWeekHunt = { dispatch, get state() { return state; }, TILES, Shield, narrationLines };
+window.FirstWeekHunt = { dispatch, get state() { return state; }, roomView, TILES, Shield, narrationLines };
 </script>
 </body>
 </html>

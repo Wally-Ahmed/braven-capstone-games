@@ -103,6 +103,7 @@ test('bank of 24, each item exactly one of the 8 Shield categories, all 8 covere
 });
 
 test('no item repeats in a 6-player match (5 heats x 4); ?seed= makes the deck deterministic', async ({ page, baseURL }) => {
+  test.setTimeout(60000); // five page loads and a 20-snippet match: slow when the whole suite runs in parallel
   const issues = watch(page, baseURL);
   const names = ['A', 'B', 'C', 'D', 'E', 'F'];
   await openGame(page, '?seed=5');
