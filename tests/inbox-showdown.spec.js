@@ -104,6 +104,7 @@ test('bank has 18 messages, 10 risky and 8 legit, all Northbridge-fictional', as
 });
 
 test('btn-open, btn-report, btn-ask, btn-challenge work; btn-ask shows agent-hint for every message', async ({ page, baseURL }) => {
+  test.slow(); // 18 full turns; narration audio decoding makes it slower under a full parallel run
   const issues = watch(page, baseURL);
   await page.goto(GAME + '?shield=off');
   // Shield off: Ask is disabled; turn it on from the menu so Ask works for the whole match.

@@ -44,8 +44,10 @@ for (const p of PAGES) {
       const issues = watch(page, baseURL);
       await slowSpeech(page);
       await page.goto(p.url);
-      // setup intro is read first and has its Replay
+      // setup intro: autoplay before any tap is blocked by the browser, so its Replay pulses; a tap reads it
       const intro = page.getByTestId('setup-intro');
+      await expect(intro).toHaveClass(/nr-blocked/);
+      await intro.getByTestId('narrate-replay').click();
       await expect(intro).toHaveAttribute('data-narrating', 'true');
       await expect(intro.getByTestId('narrate-indicator')).toBeVisible();
       await expect(intro.getByTestId('narrate-replay')).toBeVisible();
@@ -100,17 +102,17 @@ test('inbox: the message, Shield warning and reveal are each read; the warning i
   await page.getByTestId('btn-ready').click();
   const card = page.getByTestId('message-card');
   const id = await card.getAttribute('data-msg-id');
-  await expect.poll(async () => (await log(page)).map(e => e.id)).toContain('msg-' + id);
+  await expect.poll(async () => (await log(page)).map(e => e.id), { timeout: 20000 }).toContain('msg-' + id);
   const risky = await page.evaluate(i => window.InboxShowdown.MESSAGES.find(m => m.id === i).risky, id);
   if (risky) {
     await page.getByTestId('btn-open').click();
     await expect(page.getByTestId('shield-warning')).toHaveAttribute('data-narrating', 'true');
-    await expect.poll(async () => (await log(page)).map(e => e.id)).toContain('hint-' + id);
+    await expect.poll(async () => (await log(page)).map(e => e.id), { timeout: 20000 }).toContain('hint-' + id);
     await page.getByTestId('btn-back-out').click();
   }
   await page.getByTestId('btn-report').click();
   await page.getByTestId('btn-reveal').click();
-  await expect.poll(async () => (await log(page)).map(e => e.id)).toContain('flag-' + id);
+  await expect.poll(async () => (await log(page)).map(e => e.id), { timeout: 20000 }).toContain('flag-' + id); // after the result line and the browser-voice recap
   expectClean(issues);
 });
 
@@ -122,9 +124,9 @@ test('hub: focusing or tapping a card reads its pitch; every card has Replay', a
   for (let i = 0; i < n; i++) await expect(cards.nth(i).getByTestId('narrate-replay')).toBeVisible();
   await page.waitForFunction(() => window.Narrate && Object.keys(window.Narrate.lines()).length > 0);
   await cards.nth(1).getByTestId('play-btn').focus();
-  await expect.poll(async () => (await log(page)).map(e => e.id)).toContain('card-first-week-hunt');
+  await expect.poll(async () => (await log(page)).map(e => e.id), { timeout: 20000 }).toContain('card-first-week-hunt');
   await cards.nth(2).getByTestId('game-pitch').click();
-  await expect.poll(async () => (await log(page)).map(e => e.id)).toContain('card-phish-or-fine');
+  await expect.poll(async () => (await log(page)).map(e => e.id), { timeout: 20000 }).toContain('card-phish-or-fine');
   for (const vp of [{ width: 360, height: 640 }, { width: 1280, height: 800 }]) {
     await page.setViewportSize(vp);
     await expectNoHorizontalScroll(page);

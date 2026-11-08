@@ -190,7 +190,19 @@
     // autoplay is blocked until the player taps: keep the block, make its Replay pulse
     if (item.el) item.el.classList.add('nr-blocked');
     current = null; queue = []; mark();
+    pendingGesture = item.el;
   }
+  // the first tap or key press anywhere starts the block autoplay could not
+  var pendingGesture = null;
+  function onGesture(e) {
+    var el = pendingGesture;
+    if (!el) return;
+    pendingGesture = null;
+    if (muted() || (e.target && e.target.closest && e.target.closest('.nr-replay, .nbm-bar, .nbm-panel, .tut-overlay'))) return; // Replay and menu taps decide for themselves
+    setTimeout(function () { if (el.isConnected && !current && !muted()) Narrate.replay(el); }, 0);
+  }
+  window.addEventListener('pointerdown', onGesture, true);
+  window.addEventListener('keydown', onGesture, true);
 
   function pickVoice() {
     try {

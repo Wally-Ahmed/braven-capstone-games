@@ -6,6 +6,11 @@
 # step0) and adds "audio": "<id>.mp3" to that step in
 # script.json only when the file came back as real audio, so the games never request a missing file.
 # Steps whose audio file already exists are skipped unless FORCE=1.
+# Then it voices the in-game lines in shared/narration/<slug>/lines.json (hub + games; refresh that file first
+# with `node tools/extract-lines.js`): lines/<id>.mp3, and "audio": true on the line once the file is real
+# audio. Lines that already have audio are skipped. Lines go in priority order (1 prompts and items, 2 hints
+# and lessons, 3 tips and habits) until MAX_CHARS (default 14800) new characters are used; the rest stay on
+# the browser voice. LINES=0 skips the lines, STEPS=0 skips the tutorial steps.
 # Voice and model match the walkthrough tooling: voice DbwWo4rVEd5NrejHYUnm, eleven_multilingual_v2.
 set -u
 cd "$(dirname "$0")/.."
@@ -20,7 +25,8 @@ curl -s -H "xi-api-key: $ELEVENLABS_API_KEY" https://api.elevenlabs.io/v1/user/s
   python3 -c 'import sys,json; d=json.load(sys.stdin); print("quota:", d.get("character_count"), "/", d.get("character_limit"))' || true
 
 fail=0
-for slug in "${SLUGS[@]}"; do
+[ "${STEPS:-1}" = "0" ] && SLUGS_STEPS=() || SLUGS_STEPS=("${SLUGS[@]}")
+for slug in ${SLUGS_STEPS[@]+"${SLUGS_STEPS[@]}"}; do
   dir="shared/narration/$slug"; json="$dir/script.json"
   n=$(python3 -c "import json; print(len(json.load(open('$json'))['steps']))")
   for ((i=0; i<n; i++)); do
@@ -46,4 +52,50 @@ PY
     fi
   done
 done
+if [ "${LINES:-1}" != "0" ]; then
+  export VOICE MODEL
+  python3 - "${MAX_CHARS:-14800}" hub "${SLUGS[@]}" <<'PY' || fail=1
+import json, os, subprocess, sys
+budget = int(sys.argv[1]); slugs = sys.argv[2:]
+key, voice, model = os.environ['ELEVENLABS_API_KEY'], os.environ['VOICE'], os.environ['MODEL']
+todo = []
+for order, slug in enumerate(slugs):
+    f = f'shared/narration/{slug}/lines.json'
+    if not os.path.exists(f): continue
+    for id_, v in json.load(open(f))['lines'].items():
+        if v.get('audio') and os.path.exists(f'shared/narration/{slug}/lines/{id_}.mp3'): continue
+        todo.append((v.get('priority', 1), order, slug, id_, v['text']))
+todo.sort(key=lambda t: (t[0], t[1]))
+need = sum(len(t[4]) for t in todo)
+print(f'lines: {len(todo)} without audio, {need} characters; budget {budget}')
+used = made = skipped = failed = 0
+for pri, _, slug, id_, text in todo:
+    if used + len(text) > budget: skipped += 1; continue
+    body = json.dumps({'text': text, 'model_id': model, 'voice_settings': {'stability': 0.45, 'similarity_boost': 0.8, 'style': 0.35}}).encode()
+    tmp = f'shared/narration/{slug}/.part.mp3'
+    r = subprocess.run(['curl', '-s', '-o', tmp, '-w', '%{http_code}', '-X', 'POST',
+                        f'https://api.elevenlabs.io/v1/text-to-speech/{voice}?output_format=mp3_44100_128',
+                        '-H', 'xi-api-key: ' + key, '-H', 'Content-Type: application/json', '--data-binary', '@-'],
+                       input=body, capture_output=True)
+    code = r.stdout.decode().strip()
+    data = open(tmp, 'rb').read() if os.path.exists(tmp) else b''
+    if os.path.exists(tmp): os.remove(tmp)
+    if code != '200':
+        print(f'FAIL {slug}/{id_}: HTTP {code} {data[:160]!r}'); failed += 1
+        if code in ('401', '402', '429'): break
+        continue
+    if not (data[:3] == b'ID3' or (data[0] == 0xff and data[1] & 0xe0 == 0xe0)) or len(data) < 2000:
+        print(f'FAIL {slug}/{id_}: not audio'); failed += 1; continue
+    os.makedirs(f'shared/narration/{slug}/lines', exist_ok=True)
+    open(f'shared/narration/{slug}/lines/{id_}.mp3', 'wb').write(data)
+    f = f'shared/narration/{slug}/lines.json'
+    d = json.load(open(f)); d['lines'][id_]['audio'] = True
+    open(f, 'w').write(json.dumps(d, indent=2, ensure_ascii=False) + '\n')
+    used += len(text); made += 1
+print(f'lines: {made} MP3s, {used} characters used, {skipped} left on the browser voice (budget), {failed} failed')
+sys.exit(1 if failed else 0)
+PY
+  curl -s -H "xi-api-key: $ELEVENLABS_API_KEY" https://api.elevenlabs.io/v1/user/subscription |
+    python3 -c 'import sys,json; d=json.load(sys.stdin); print("quota after:", d.get("character_count"), "/", d.get("character_limit"))' || true
+fi
 exit $fail

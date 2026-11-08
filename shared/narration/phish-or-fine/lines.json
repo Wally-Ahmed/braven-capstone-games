@@ -3,135 +3,168 @@
   "lines": {
     "setup": {
       "text": "Phish or Fine? Buzzer Battle. Two players per heat race to call each message Phish, a scam, or Fine, safe. Left player: A for phish, S for fine. Right player: K for phish, L for fine. Or just tap. First right answer scores 100, a wrong buzz costs 50, and three in a row multiplies your points. Type the player names, then press Start battle.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "next-heat": {
       "text": "Get ready: left player uses A and S, right player uses K and L. Tap Start heat when you are both set.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "champ": {
       "text": "Tap See leaderboard for the final scores.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "coach": {
       "text": "Shield coach tip:",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "rv-phish": {
       "text": "Phish! That one was unsafe.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "rv-fine": {
       "text": "Fine! That one was safe.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "board": {
       "text": "That is the final leaderboard. Tap Shield debrief to see what each player lost on.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "debrief": {
       "text": "Shield debrief. Here is what each player should practice next.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "first": {
       "text": "First move: read the message, then buzz Phish if it is a scam, or Fine if it is safe. Fastest right answer wins!",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-u1": {
       "text": "A text from an unknown number. Northbridge Security: your account will be DELETED in 30 minutes unless you verify now at nb-verify.co/now",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-u2": {
       "text": "An email from cfo.office@northbridge-finance.net. Boarding in 10 min. Wire the vendor $7,200 before I land and do not loop anyone else in.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-u3": {
       "text": "A chat message from Priya Shah (your team, northbridge.co). Reminder: timesheets are due by 5 today. Submit them in the HR portal from your bookmark like usual.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-d1": {
       "text": "An email from it-help@northbrigde.co. Your mailbox is 99% full. Click here within 24 hours to keep your messages.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-d2": {
       "text": "An email from payroll@northbridge.co.pay-portal.io. Your November pay stub is ready. Sign in to view it.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-d3": {
       "text": "An email from facilities@northbridge.co. The 3rd floor kitchen is closed Friday for cleaning. Use the 2nd floor kitchen instead.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-c1": {
       "text": "An email from vpn@login-northbridge.help. Your VPN session expired. Re-enter your Northbridge username and password here to reconnect.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-c2": {
       "text": "A phone call from \"IT Helpdesk\" (unknown number). \"Hi, I am finishing your laptop setup remotely. What is your password so I can log in as you?\"",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-c3": {
       "text": "A browser page from portal.northbridge.co (opened from your bookmark). You typed the portal address yourself. It asks you to sign in with single sign-on.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-g1": {
       "text": "A text from \"Your manager\" (new number). Can you grab 4 gift cards for a client? Scratch them and text me photos of the codes. Will pay you back.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-g2": {
       "text": "An email from ceo.dana.ortiz@gmail.com. Buy $500 in gift cards for the team raffle. Keep it a surprise, reimbursement tomorrow.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-g3": {
       "text": "An email from people-team@northbridge.co. Thanks for finishing onboarding! Your coffee reward is in the HR portal under Rewards. Nothing to buy.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-a1": {
       "text": "An email from scanner@northbridge-print.com. New scan from Floor 4 printer. Attachment: Scan_0042.pdf.exe",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-a2": {
       "text": "An email from tracking@parcel-notify.net. Your package could not be delivered. Open Shipping_Label.docm and click \"Enable macros\" to view.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-a3": {
       "text": "A chat message from Marco Lee (your manager, northbridge.co). As promised in standup, I shared \"Onboarding checklist\" in our team folder on Northbridge Drive.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-m1": {
       "text": "A sign-in prompt from Northbridge Authenticator. 2:14 AM. Approve sign-in? (12th request in 5 minutes) You are not signing in.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-m2": {
       "text": "A text from an unknown number. Northbridge IT: reply with the 6-digit code we just sent to confirm your identity.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-m3": {
       "text": "A sign-in prompt from Northbridge Authenticator. You just signed in on your laptop. Approve sign-in from \"Your laptop, New York\"? Number 42 matches your screen.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-o1": {
       "text": "A social post from You (draft). First day at Northbridge! Close-up of my new badge and my desk screen with the login page open. #NewHire",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-o2": {
       "text": "A social message from \"Recruiter Jamie\" (no mutual connections). Love your profile! Who on your team approves vendor payments, and when is your manager traveling next?",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-o3": {
       "text": "A social post from You (draft). Excited to start as an analyst at Northbridge Co. this week! Grateful for the warm welcome.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-v1": {
       "text": "A pop-up from \"Northbridge Defender\" browser pop-up. VIRUS DETECTED! Your laptop is locked. Call 1-888-555-0199 now for Northbridge Support.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-v2": {
       "text": "In the lobby: USB stick found by the elevators. Label: \"Salary review 2026\". You plug it into your laptop to find the owner.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "snip-v3": {
       "text": "A system notice from Northbridge IT Software Center (installed app). Security update ready. Restart tonight to finish installing.",
-      "priority": 1
+      "priority": 1,
+      "audio": true
     },
     "flag-u1": {
       "text": "A 30-minute deadline plus a link that is not northbridge.co.",
@@ -163,7 +196,8 @@
     },
     "flag-c2": {
       "text": "IT never needs your password.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-c3": {
       "text": "Fine: you opened the real portal yourself.",

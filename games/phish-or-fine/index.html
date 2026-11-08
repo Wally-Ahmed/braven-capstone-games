@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Phish or Fine? Buzzer Battle</title>
 <link rel="stylesheet" href="/shared/menu.css">
 <script src="/shared/audio.js" defer></script>
@@ -601,7 +601,7 @@ function view() {
     }).join('') + state.rounds.filter(r => r.bye != null).map(r => '<li data-testid="bracket-bye" data-status="bye"><div class="round">' +
       heatName(state.rounds.indexOf(r)) + '</div>' + esc(state.players[r.bye].name) + ' has a bye</li>').join('') + '</ol>';
     if (state.champion != null) {
-      h += '<p class="champ" data-testid="champion"' + nar('_ champ', { say: state.players[state.champion].name + ' wins the battle!', label: 'the champion' }) + '>🏆 ' + esc(state.players[state.champion].name) + ' wins the battle</p>' +
+      h += '<div' + nar('_ champ', { say: state.players[state.champion].name + ' wins the battle!', label: 'the champion' }) + '><p class="champ" data-testid="champion">🏆 ' + esc(state.players[state.champion].name) + ' wins the battle</p></div>' +
         '<div class="row" style="margin-top:12px"><button class="primary" data-testid="btn-results" data-action="results">See leaderboard</button></div>';
     } else {
       const x = curHeat();

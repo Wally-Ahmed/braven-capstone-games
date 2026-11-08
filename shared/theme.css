@@ -10,9 +10,21 @@
   --font: ui-rounded, "SF Pro Rounded", "Segoe UI Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 html { background: #24145e; }
+/* Full page (his 11/7 7:52 PM ask, "games should be forced full page"): the page itself never scrolls; the body
+   fills the viewport (100dvh, 100vh fallback) and scrolls inside if a screen is taller; type scales up on big
+   screens instead of leaving empty margins; phones get safe-area padding (viewport-fit=cover). */
+html { height: 100%; overflow: hidden; font-size: clamp(16px, calc(.55rem + .6vw), 22px); }
+body { margin: 0; height: 100vh; height: 100dvh; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+  display: flex; flex-direction: column; box-sizing: border-box;
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+body > .nbm-bar { flex: 0 0 auto; padding-top: max(6px, env(safe-area-inset-top)); }
+#app { flex: 1 0 auto; width: 100%; max-width: none !important; margin: 0 !important; box-sizing: border-box;
+  padding: clamp(12px, 2.4vw, 40px) clamp(16px, 3.2vw, 56px) !important; }
+body > header, body > main#games { width: 100%; max-width: none !important; box-sizing: border-box; padding-left: clamp(16px, 3.2vw, 56px); padding-right: clamp(16px, 3.2vw, 56px); }
+body > main#games { flex: 1 0 auto; align-content: start; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)) !important; }
 /* the gradient is painted once on html+body (no fixed attachment, no backdrop blur: both repaint every frame) */
 body {
-  font-family: var(--font); font-size: 17px; color: var(--text); min-height: 100vh;
+  font-family: var(--font); font-size: 1.06rem; color: var(--text);
   background:
     radial-gradient(circle at 12% 8%, rgba(255, 79, 163, .55), transparent 38%),
     radial-gradient(circle at 92% 18%, rgba(34, 211, 238, .45), transparent 36%),
