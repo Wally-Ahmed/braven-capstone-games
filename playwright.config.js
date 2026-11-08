@@ -15,7 +15,8 @@ module.exports = defineConfig({
   timeout: 30000,
   fullyParallel: true,
   reporter: [['list']],
-  use: { baseURL: ORIGIN, headless: true, storageState: SKIP_TUTORIALS },
+  // --mute-audio: narration MP3s still play (events fire) but nothing comes out of the speakers.
+  use: { baseURL: ORIGIN, headless: true, storageState: SKIP_TUTORIALS, launchOptions: { args: ['--mute-audio'] } },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
     command: `python3 -m http.server ${PORT} --bind 127.0.0.1`,

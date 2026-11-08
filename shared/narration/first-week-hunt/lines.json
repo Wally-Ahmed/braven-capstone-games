@@ -1,0 +1,325 @@
+{
+  "slug": "first-week-hunt",
+  "lines": {
+    "setup": {
+      "text": "First Week Hunt. Your first week at Northbridge, and the office hides 8 security risks among safe look-alikes. Take turns tapping spots. A real risk scores 150 and you go again. A safe spot passes the turn. Two safe spots in a row and you get hacked: your score resets to zero. Each player gets one Shield hint. Type the player names, then press Start hunt.",
+      "priority": 1
+    },
+    "turn": {
+      "text": "Tap any spot in the office that looks like a security risk.",
+      "priority": 1
+    },
+    "office": {
+      "text": "Here are the spots in the office.",
+      "priority": 1
+    },
+    "hint": {
+      "text": "Look at the highlighted spot. Think:",
+      "priority": 1
+    },
+    "hint-again": {
+      "text": "You missed one like this earlier, so this one is for you.",
+      "priority": 1
+    },
+    "found": {
+      "text": "Risk found! Plus 150.",
+      "priority": 1
+    },
+    "decoy": {
+      "text": "Decoy. That one is safe.",
+      "priority": 1
+    },
+    "hacked": {
+      "text": "You got hacked! Two wrong taps in a row, so your score resets to zero. Start over!",
+      "priority": 1
+    },
+    "warn": {
+      "text": "Careful: that was a decoy. One more wrong tap in a row and you get hacked.",
+      "priority": 1
+    },
+    "coach": {
+      "text": "Coach tip:",
+      "priority": 1
+    },
+    "end-all": {
+      "text": "Every risk found!",
+      "priority": 1
+    },
+    "end-time": {
+      "text": "Time is up!",
+      "priority": 1
+    },
+    "board": {
+      "text": "That is the final leaderboard. Tap Shield debrief to see what each player should practice.",
+      "priority": 1
+    },
+    "still": {
+      "text": "Still hidden:",
+      "priority": 1
+    },
+    "debrief": {
+      "text": "Shield debrief. Here is what each player should practice next.",
+      "priority": 1
+    },
+    "rules": {
+      "text": "Plus 150 per risk. Your one hint costs 50. Two decoys in a row resets your score to zero.",
+      "priority": 1
+    },
+    "tile-sticky": {
+      "text": "Monitor with a yellow note: \"pw: Spring2026!\"",
+      "priority": 1
+    },
+    "tile-laptop": {
+      "text": "Empty desk, laptop open on email",
+      "priority": 1
+    },
+    "tile-usb": {
+      "text": "USB stick on the lobby floor, labelled \"Salaries\"",
+      "priority": 1
+    },
+    "tile-qr": {
+      "text": "Flyer: \"Scan for free parking\", QR sticker taped on top",
+      "priority": 1
+    },
+    "tile-tailgate": {
+      "text": "Stranger with two coffees: \"Hold the door, I'm late!\"",
+      "priority": 1
+    },
+    "tile-post": {
+      "text": "Coworker's phone post: new badge photo, \"first day!\"",
+      "priority": 1
+    },
+    "tile-update": {
+      "text": "Banner: \"Security update ready\" (Remind me later x5)",
+      "priority": 1
+    },
+    "tile-mfa": {
+      "text": "Phone: \"Approve sign-in?\" and you did not just sign in",
+      "priority": 1
+    },
+    "tile-locked": {
+      "text": "Empty desk, laptop on its lock screen",
+      "priority": 1
+    },
+    "tile-shred": {
+      "text": "Locked shred bin by the copier",
+      "priority": 1
+    },
+    "tile-poster": {
+      "text": "IT poster: \"Help desk: help.northbridge.co\"",
+      "priority": 1
+    },
+    "tile-badge": {
+      "text": "Coworker taps their own badge at the door",
+      "priority": 1
+    },
+    "tile-printer": {
+      "text": "Printer that holds jobs until you badge in",
+      "priority": 1
+    },
+    "tile-photo": {
+      "text": "Team photo on the wall, no badges or screens",
+      "priority": 1
+    },
+    "tile-restart": {
+      "text": "Laptop restarting to install updates",
+      "priority": 1
+    },
+    "tile-mfaok": {
+      "text": "MFA prompt right after you signed in yourself",
+      "priority": 1
+    },
+    "cat-urgency": {
+      "text": "Urgency pressure.",
+      "priority": 1
+    },
+    "cat-lookalike": {
+      "text": "Look-alike domain.",
+      "priority": 1
+    },
+    "cat-credential": {
+      "text": "Credential ask.",
+      "priority": 1
+    },
+    "cat-giftcard": {
+      "text": "Gift card scam.",
+      "priority": 1
+    },
+    "cat-attachment": {
+      "text": "Risky attachment.",
+      "priority": 1
+    },
+    "cat-mfa": {
+      "text": "MFA fatigue.",
+      "priority": 1
+    },
+    "cat-oversharing": {
+      "text": "Oversharing.",
+      "priority": 1
+    },
+    "cat-device": {
+      "text": "Device hygiene.",
+      "priority": 1
+    },
+    "flag-sticky": {
+      "text": "A password on a sticky note: anyone walking past can read it.",
+      "priority": 2
+    },
+    "flag-laptop": {
+      "text": "An unlocked laptop lets anyone send mail or open files as you.",
+      "priority": 2
+    },
+    "flag-usb": {
+      "text": "A found USB stick is a classic bait drop; plugging it in can run malware.",
+      "priority": 2
+    },
+    "flag-qr": {
+      "text": "The sticker QR goes to northbr1dge-parking.co, a look-alike login page.",
+      "priority": 2
+    },
+    "flag-tailgate": {
+      "text": "Tailgating: hurry plus full hands gets people through a badge door without a badge.",
+      "priority": 2
+    },
+    "flag-post": {
+      "text": "A clear badge photo lets someone print a copy and learn your name and team.",
+      "priority": 2
+    },
+    "flag-update": {
+      "text": "Skipped security updates leave known holes open on your laptop.",
+      "priority": 2
+    },
+    "flag-mfa": {
+      "text": "An MFA prompt you did not start means someone else has your password.",
+      "priority": 2
+    },
+    "flag-locked": {
+      "text": "Fine: the laptop is locked, so nobody can use it.",
+      "priority": 2
+    },
+    "flag-shred": {
+      "text": "Fine: papers with names and numbers go in the locked shred bin.",
+      "priority": 2
+    },
+    "flag-poster": {
+      "text": "Fine: help.northbridge.co is the real Northbridge domain.",
+      "priority": 2
+    },
+    "flag-badge": {
+      "text": "Fine: everyone badging in on their own is how the door should work.",
+      "priority": 2
+    },
+    "flag-printer": {
+      "text": "Fine: secure print release keeps documents off the tray until you arrive.",
+      "priority": 2
+    },
+    "flag-photo": {
+      "text": "Fine: a team photo with no badges, screens or plans gives nothing away.",
+      "priority": 2
+    },
+    "flag-restart": {
+      "text": "Fine: an update installing is exactly what you want.",
+      "priority": 2
+    },
+    "flag-mfaok": {
+      "text": "Fine: you just signed in, so this prompt is yours to approve.",
+      "priority": 2
+    },
+    "tip-urgency": {
+      "text": "Pressure to act right now is a red flag. Slow down and verify through a channel you already trust.",
+      "priority": 3
+    },
+    "tip-lookalike": {
+      "text": "Read web addresses letter by letter; northbridge.co is the only real one.",
+      "priority": 3
+    },
+    "tip-credential": {
+      "text": "Passwords live in the password manager, never on paper or in a link you were sent.",
+      "priority": 3
+    },
+    "tip-giftcard": {
+      "text": "Real managers never ask you to buy gift cards. Call them on a number you already have.",
+      "priority": 3
+    },
+    "tip-attachment": {
+      "text": "Unknown files and found USB sticks go to IT unopened.",
+      "priority": 3
+    },
+    "tip-mfa": {
+      "text": "Only approve an MFA prompt you just triggered yourself; deny and report the rest.",
+      "priority": 3
+    },
+    "tip-oversharing": {
+      "text": "Badges, screens and travel plans help attackers. Keep them off public posts.",
+      "priority": 3
+    },
+    "tip-device": {
+      "text": "Lock your screen when you step away and install updates when they are offered.",
+      "priority": 3
+    },
+    "habit-sticky": {
+      "text": "Safe habit: Keep passwords in the Northbridge password manager, never on paper.",
+      "priority": 3
+    },
+    "habit-laptop": {
+      "text": "Safe habit: Press Windows+L (or Ctrl+Cmd+Q on a Mac) every time you stand up.",
+      "priority": 3
+    },
+    "habit-usb": {
+      "text": "Safe habit: Hand found drives to IT unplugged.",
+      "priority": 3
+    },
+    "habit-qr": {
+      "text": "Safe habit: Type northbridge.co yourself instead of scanning stray QR codes.",
+      "priority": 3
+    },
+    "habit-tailgate": {
+      "text": "Safe habit: Let the door close; point them to reception to sign in.",
+      "priority": 3
+    },
+    "habit-post": {
+      "text": "Safe habit: Post the excitement, not the badge or your screen.",
+      "priority": 3
+    },
+    "habit-update": {
+      "text": "Safe habit: Install updates when they are offered, or schedule them for tonight.",
+      "priority": 3
+    },
+    "habit-mfa": {
+      "text": "Safe habit: Tap Deny, then report it and change your password.",
+      "priority": 3
+    },
+    "habit-locked": {
+      "text": "Safe habit: This is the habit: lock it every time you step away.",
+      "priority": 3
+    },
+    "habit-shred": {
+      "text": "Safe habit: Shred printouts with customer or login details.",
+      "priority": 3
+    },
+    "habit-poster": {
+      "text": "Safe habit: Check the domain letter by letter; this one matches.",
+      "priority": 3
+    },
+    "habit-badge": {
+      "text": "Safe habit: One person, one badge tap.",
+      "priority": 3
+    },
+    "habit-printer": {
+      "text": "Safe habit: Use badge release for anything sensitive.",
+      "priority": 3
+    },
+    "habit-photo": {
+      "text": "Safe habit: Check the background before you post a photo.",
+      "priority": 3
+    },
+    "habit-restart": {
+      "text": "Safe habit: Let updates finish; save your work first.",
+      "priority": 3
+    },
+    "habit-mfaok": {
+      "text": "Safe habit: Approve only prompts that match what you just did.",
+      "priority": 3
+    }
+  }
+}

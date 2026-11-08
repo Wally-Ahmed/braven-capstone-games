@@ -9,6 +9,7 @@
 <script src="/shared/fx.js" defer></script>
 <script src="/shared/menu.js" defer></script>
 <script src="/shared/tutorial.js" defer></script>
+<script src="/shared/narrate.js" defer></script>
 <style>
   :root { --bg:#0f172a; --card:#1e293b; --line:#334155; --text:#f1f5f9; --muted:#94a3b8; --accent:#38bdf8;
           --good:#22c55e; --bad:#ef4444; --warn:#f59e0b; --ink:#0f172a; --floor:#1a2438; }
@@ -179,6 +180,47 @@ function fx(name, sel, arg) {
 }
 
 /* ------------------------------------------------------------------ *
+ * Narration (shared/narrate.js). Every line a player has to read, by id. tools/extract-lines.js copies
+ * these into shared/narration/first-week-hunt/lines.json, and tools/generate-narration.sh voices them
+ * with ElevenLabs (priority 1 first). Names and scores are read by the browser voice (data-narrate-say).
+ * ------------------------------------------------------------------ */
+function narrationLines() {
+  const L = {};
+  const add = (id, text, priority) => { L[id] = { text, priority }; };
+  add('setup', 'First Week Hunt. Your first week at Northbridge, and the office hides 8 security risks among safe look-alikes. ' +
+    'Take turns tapping spots. A real risk scores 150 and you go again. A safe spot passes the turn. Two safe spots in a row and you get hacked: your score resets to zero. ' +
+    'Each player gets one Shield hint. Type the player names, then press Start hunt.', 1);
+  add('turn', 'Tap any spot in the office that looks like a security risk.', 1);
+  add('office', 'Here are the spots in the office.', 1);
+  add('hint', 'Look at the highlighted spot. Think:', 1);
+  add('hint-again', 'You missed one like this earlier, so this one is for you.', 1);
+  add('found', 'Risk found! Plus 150.', 1);
+  add('decoy', 'Decoy. That one is safe.', 1);
+  add('hacked', 'You got hacked! Two wrong taps in a row, so your score resets to zero. Start over!', 1);
+  add('warn', 'Careful: that was a decoy. One more wrong tap in a row and you get hacked.', 1);
+  add('coach', 'Coach tip:', 1);
+  add('end-all', 'Every risk found!', 1);
+  add('end-time', 'Time is up!', 1);
+  add('board', 'That is the final leaderboard. Tap Shield debrief to see what each player should practice.', 1);
+  add('still', 'Still hidden:', 1);
+  add('debrief', 'Shield debrief. Here is what each player should practice next.', 1);
+  add('rules', 'Plus 150 per risk. Your one hint costs 50. Two decoys in a row resets your score to zero.', 1);
+  TILES.forEach(t => add('tile-' + t.id, t.label, 1));
+  Object.keys(CATEGORIES).forEach(c => add('cat-' + c, CATEGORIES[c].label + '.', 1));
+  TILES.forEach(t => add('flag-' + t.id, t.flag, 2));
+  Object.keys(CATEGORIES).forEach(c => add('tip-' + c, CATEGORIES[c].tip, 3));
+  TILES.forEach(t => add('habit-' + t.id, 'Safe habit: ' + t.habit, 3));
+  return L;
+}
+/* data-narrate attributes for a block (see shared/narrate.js). */
+function nar(ids, o) {
+  o = o || {};
+  return ' data-narrate="' + esc(ids) + '"' + (o.say ? ' data-narrate-say="' + esc(o.say) + '"' : '') +
+    (o.key ? ' data-narrate-key="' + esc(o.key) + '"' : '') + (o.auto === false ? ' data-narrate-auto="0"' : '') +
+    (o.now ? ' data-narrate-interrupt="1"' : '') + (o.label ? ' data-narrate-label="' + esc(o.label) + '"' : '');
+}
+
+/* ------------------------------------------------------------------ *
  * Shield: the scripted agent assistant (spec section 4), same shape as Game A.
  * Game B: one hint per player, and a warning after the first decoy tap.
  * beforeAction -> {allow, warning}; afterAction -> lesson; debrief(player).
@@ -205,9 +247,10 @@ const Shield = {
     const missed = unfound.find(id => this.misses(player, TILE[id].category) > 0);
     return missed || unfound[0];
   },
+  hintSay(player, tileId) { return 'hint cat-' + TILE[tileId].category + (this.misses(player, TILE[tileId].category) ? ' hint-again' : ''); },
   hintText(player, tileId) {
     const c = CATEGORIES[TILE[tileId].category];
-    const extra = this.misses(player, TILE[tileId].category) ? ' You missed a ' + c.label.toLowerCase() + ' spot earlier, so this one is for you.' : '';
+    const extra = this.misses(player, TILE[tileId].category) ? ' You missed one like this earlier, so this one is for you.' : '';
     return 'Look at the highlighted spot. Think: ' + c.label.toLowerCase() + '.' + extra;
   },
   afterAction(player, entry) {
@@ -258,6 +301,7 @@ let state = freshState();
 function unfoundRisks() { return state.layout.filter(id => TILE[id].risk && !state.found.includes(id)); }
 function passTurn() {
   state.current = (state.current + 1) % state.players.length;
+  state.turnNo = (state.turnNo || 0) + 1;
   state.hinted = null; state.hintText = null;
   state.turnStartedAt = now();
 }
@@ -310,7 +354,7 @@ function dispatch(move) {
       state.error = null;
       state.players = names.map(name => ({ name, score: 0, found: 0, streak: 0, hintUsed: false, hacks: 0 }));
       state.layout = shuffle(TILES.map(t => t.id), rand);
-      state.found = []; state.checked = []; state.current = 0; state.hinted = null; state.hintText = null; state.popover = null;
+      state.found = []; state.checked = []; state.current = 0; state.turnNo = 0; state.hinted = null; state.hintText = null; state.popover = null;
       state.timeLeft = ROUND_SECONDS; state.lastTick = now(); state.turnStartedAt = now(); state.endReason = null;
       state.phase = 'scene';
       break;
@@ -327,6 +371,7 @@ function dispatch(move) {
       state.players[p].score += SCORE.hint;
       state.hinted = id;
       state.hintText = Shield.hintText(p, id);
+      state.hintSay = Shield.hintSay(p, id);
       state.what = state.players[p].name + ' used the Shield hint (-50 points). Tap the glowing spot!';
       Shield.afterAction(p, { item: id, category: TILE[id].category, action: 'hint', warned: false, backedOut: false, asked: true, seconds: 0, correct: true });
       break;
@@ -429,7 +474,12 @@ function popoverView() {
   const pop = state.popover, t = TILE[pop.tile], player = state.players[pop.player];
   const next = state.players[(pop.player + 1) % state.players.length];
   const done = state.found.length >= RISK_COUNT;
-  let h = '<div class="pop-overlay"><div class="popover" role="dialog" aria-modal="true" aria-label="Lesson" data-testid="lesson-popover" data-correct="' + pop.correct + '">';
+  const coachTip = pop.lesson.warning && pop.lesson.warning.indexOf('Coach tip') >= 0;
+  const popSay = (pop.correct ? 'found' : 'decoy') + (pop.hacked ? ' hacked' : '') + ' flag-' + t.id + ' habit-' + t.id +
+    (pop.lesson.warning ? ' warn' + (coachTip ? ' coach tip-' + t.category : '') : '') + ' _';
+  const nextSay = done ? 'Tap See leaderboard.' : pop.passes ? 'Pass to ' + next.name + '.' : 'Keep hunting, ' + player.name + '.';
+  let h = '<div class="pop-overlay"><div class="popover" role="dialog" aria-modal="true" aria-label="Lesson" data-testid="lesson-popover" data-correct="' + pop.correct + '"' +
+    nar(popSay, { say: (pop.hacked ? player.name + ', you got hacked. ' : '') + nextSay, now: true, key: 'pop:' + t.id, label: 'Shield\'s lesson' }) + '>';
   h += '<h2 class="' + (pop.correct ? 'result-good' : 'result-bad') + '" data-testid="lesson-result">' + t.icon + ' ' +
     (pop.correct ? 'Risk found! +' + SCORE.find : 'Decoy, that one is safe') + '</h2>';
   if (pop.hacked) {
@@ -450,37 +500,42 @@ function view() {
   let h = '';
   if (state.phase === 'setup') {
     h += '<section data-testid="setup-screen"><h1>🔎 First Week Hunt</h1>' +
+      '<div class="nr-intro" data-testid="setup-intro"' + nar('setup', { label: 'how this game works' }) + '>' +
       '<p class="goal" data-testid="game-goal">🎯 Goal: find the ' + RISK_COUNT + ' hidden security risks in the office before the clock runs out.</p>' +
       '<div class="how-row" aria-label="Quick rules"><span>👆 Tap risky spots</span><span>✅ Risk = +150, go again</span><span>😬 Safe spot = next player</span><span>💀 2 wrong in a row = hacked</span><span>🛡️ 1 hint each</span></div>' +
       '<div class="row"><button class="tutorial-btn" data-testid="btn-tutorial" data-action="tutorial">🎬 How to play (30 s, with voice)</button></div>' +
-      '<p>Your first week at Northbridge Co. The office hides <b>' + RISK_COUNT + ' security risks</b> among safe look-alikes. Take turns tapping spots: a find keeps your turn, a decoy passes it, and two decoys in a row means you got hacked.</p>' +
+      '<p>Your first week at Northbridge Co. The office hides <b>' + RISK_COUNT + ' security risks</b> among safe look-alikes. Take turns tapping spots: a find keeps your turn, a decoy passes it, and two decoys in a row means you got hacked.</p></div>' +
       '<div class="panel"><label for="player-names"><h2>Players (2 to 6, one per line)</h2></label>' +
       '<textarea id="player-names" data-testid="player-names" aria-describedby="setup-help">' + esc(state.namesDraft) + '</textarea>' +
       '<p id="setup-help" class="muted small">' + ROUND_SECONDS + ' seconds on the clock for the whole group. Pass the device (or share your screen) when the turn changes.</p>' +
-      (state.error ? '<p class="error" role="alert" data-testid="setup-error">' + esc(state.error) + '</p>' : '') +
+      (state.error ? '<p class="error" role="alert" data-testid="setup-error"' + nar('_', { say: state.error, now: true }) + '>' + esc(state.error) + '</p>' : '') +
       '<div class="row"><button class="primary" data-testid="btn-start" data-action="start">🚀 Start hunt</button></div></div>' +
       '<p>' + shieldBadge() + '</p></section>';
   } else if (state.phase === 'scene') {
     const p = state.players[state.current];
     const hintBlocked = !Shield.beforeAction(state.current, 'hint', null).allow;
     h += '<section data-testid="scene-screen">' +
-      '<div class="status"><div class="turn-banner" data-testid="turn-banner" data-player="' + esc(p.name) + '">🎯 ' + esc(p.name) + '\'s turn</div>' +
+      '<div class="status"' + nar('_ turn', { say: p.name + ', your turn.', key: 'turn:' + state.turnNo, label: 'whose turn it is' }) + '><div class="turn-banner" data-testid="turn-banner" data-player="' + esc(p.name) + '">🎯 ' + esc(p.name) + '\'s turn</div>' +
       '<div class="timer' + (state.timeLeft <= 15 ? ' low' : '') + '" data-testid="timer" data-seconds="' + Math.ceil(state.timeLeft) + '" aria-label="Time left">' + timerText() + '</div></div>' +
       '<p class="small"><span data-testid="found-progress">Risks found: ' + state.found.length + '/' + RISK_COUNT + '</span>' +
       (p.streak === 1 ? ' · <span class="result-bad">one wrong tap so far</span>' : '') + '</p>' +
       scoreStrip(state.current) +
-      (state.what ? '<p class="what" data-testid="what-happened">💡 ' + esc(state.what) + '</p>' : '') +
+      (state.what ? '<p class="what" data-testid="what-happened"' + nar('_', { say: state.what, auto: false, label: 'what just happened' }) + '>💡 ' + esc(state.what) + '</p>' : '') +
       (state.found.length === 0 && state.checked.length === 0 && !state.hinted
-        ? '<p class="first-hint" data-testid="first-move-hint"><span class="arrow">👇</span> First move, ' + esc(p.name) + ': tap any spot in the office that looks like a security risk.</p>' : '') +
-      (state.hintText ? '<div class="shield" data-testid="agent-hint"><div class="tag">🛡️ Shield hint · prototype, scripted agent</div>' + esc(state.hintText) + '</div>' : '') +
+        ? '<p class="first-hint" data-testid="first-move-hint"' + nar('_', { say: 'First move, ' + p.name + ': tap any spot in the office that looks like a security risk.', auto: false, label: 'first move' }) + '><span class="arrow">👇</span> First move, ' + esc(p.name) + ': tap any spot in the office that looks like a security risk.</p>' : '') +
+      (state.hintText ? '<div class="shield" data-testid="agent-hint"' + nar(state.hintSay || 'hint', { label: 'Shield hint' }) + '><div class="tag">🛡️ Shield hint · prototype, scripted agent</div>' + esc(state.hintText) + '</div>' : '') +
+      '<p class="nr-office small" data-testid="office-narration"' + nar('office ' + state.layout.filter(id => !state.found.includes(id) && !state.checked.includes(id)).map(id => 'tile-' + id).join(' '),
+        { auto: false, key: 'office', label: 'read every spot in the office aloud' }) + '>🔊 Need it read out? Replay reads every spot still in play.</p>' +
       '<div class="office' + (state.found.length === 0 && state.checked.length === 0 && !state.hinted ? ' hint-pulse' : '') + '" data-testid="scene" role="group" aria-label="Northbridge office">' + state.layout.map(tileButton).join('') + '</div>' +
       '<div class="row" style="margin-top:12px"><button class="hint" data-testid="hint-btn" data-action="hint"' + (hintBlocked ? ' disabled' : '') + '>' +
       (Shield.mode === 'off' ? '🛡️ Shield is off' : p.hintUsed ? '🛡️ Hint used' : '🛡️ Shield hint (-50, once each)') + '</button></div>' +
-      '<p class="muted small">+150 per risk · -50 for your one hint · two decoys in a row resets your score to 0.</p>' +
+      '<p class="muted small"' + nar('rules', { auto: false, label: 'scoring' }) + '>+150 per risk · -50 for your one hint · two decoys in a row resets your score to 0.</p>' +
       '<p>' + shieldBadge() + '</p></section>';
     if (state.popover) h += popoverView();
   } else if (state.phase === 'leaderboard') {
-    h += '<section class="panel" data-testid="leaderboard">' + winnerBanner() + '<h2>🏆 Leaderboard</h2>' +
+    const hidden = unfoundRisks();
+    h += '<section class="panel" data-testid="leaderboard"' + nar((state.endReason === 'time' ? 'end-time' : 'end-all') + ' _ board' + (hidden.length ? ' still ' + hidden.map(id => 'tile-' + id).join(' ') : ''),
+      { say: boardSay(), label: 'the leaderboard' }) + '>' + winnerBanner() + '<h2>🏆 Leaderboard</h2>' +
       '<p data-testid="found-count">Risks found: ' + state.found.length + '/' + RISK_COUNT + '</p>' +
       '<p class="muted small" data-testid="end-reason">' + (state.endReason === 'time' ? '⏱️ Time is up.' : '🎉 Every risk found.') + '</p>' +
       '<ol class="board">' +
@@ -491,12 +546,13 @@ function view() {
       '<button data-testid="btn-play-again" data-action="restart">Play again</button></div></section>';
   } else if (state.phase === 'debrief') {
     const total = state.players.reduce((n, p, i) => n + Shield.debrief(i).stopped, 0);
-    h += '<section class="panel" data-testid="debrief"><h2>🛡️ Shield debrief</h2>' +
+    h += '<section class="panel" data-testid="debrief"><div' + nar('debrief _', { say: 'Shield stopped ' + total + ' mistake' + (total === 1 ? '' : 's') + '.', label: 'Shield debrief' }) + '><h2>🛡️ Shield debrief</h2></div>' +
       '<p class="muted small">Prototype, scripted agent. Shield mode this match: ' + Shield.mode + '.</p>' +
       '<p data-testid="shield-stopped-total">Shield stopped ' + total + ' mistake' + (total === 1 ? '' : 's') + '.</p>' +
       state.players.map((p, i) => {
         const d = Shield.debrief(i);
-        return '<div class="debrief-player" data-testid="debrief-player" data-player="' + esc(p.name) + '"><h3>' + esc(p.name) + ' · ' + p.score + ' pts · ' + d.found + ' found in ' + d.taps + ' taps</h3>' +
+        return '<div class="debrief-player" data-testid="debrief-player" data-player="' + esc(p.name) + '"' +
+          nar('_ ' + d.weakest.map(w => 'tip-' + w.category).join(' '), { say: p.name + ': ' + d.found + ' found in ' + d.taps + ' taps, ' + p.score + ' points. Practice these.', label: p.name + ' debrief' }) + '><h3>' + esc(p.name) + ' · ' + p.score + ' pts · ' + d.found + ' found in ' + d.taps + ' taps</h3>' +
           '<p class="small">Weakest categories:</p><ul>' + d.weakest.map(w => '<li data-testid="debrief-weak" data-category="' + w.category + '"><b>' + esc(w.label) + '</b>' +
           (w.seen ? ' (' + w.misses + ' wrong of ' + w.seen + ')' : ' (not practiced yet)') + ': ' + esc(w.tip) + '</li>').join('') + '</ul>' +
           '<p class="small" data-testid="debrief-stopped">Shield stopped ' + d.stopped + ' mistake' + (d.stopped === 1 ? '' : 's') + '.</p></div>';
@@ -507,6 +563,13 @@ function view() {
       '<pre class="results" data-testid="results-text">' + esc(resultsText()) + '</pre></section>';
   }
   return h;
+}
+
+/* The leaderboard read aloud (names and scores change, so the browser voice reads this part). */
+function boardSay() {
+  const board = leaderboard();
+  const tie = board.length > 1 && board[0].score === board[1].score;
+  return (tie ? 'It is a tie at the top! ' : board[0].name + ' wins the hunt! ') + board.map(r => r.name + ', ' + r.score + ' points.').join(' ');
 }
 
 function winnerBanner() {
@@ -589,10 +652,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   if (window.Tutorial) window.Tutorial.init({ slug: 'first-week-hunt', name: '🔎 First Week Hunt' });
+  if (window.Narrate) window.Narrate.init({ slug: 'first-week-hunt' });
 });
 
 // Test / console hook (read-only view plus dispatch); used by the Playwright checks.
-window.FirstWeekHunt = { dispatch, get state() { return state; }, TILES, Shield };
+window.FirstWeekHunt = { dispatch, get state() { return state; }, TILES, Shield, narrationLines };
 </script>
 </body>
 </html>

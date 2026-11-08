@@ -3,7 +3,7 @@
 const { test, expect } = require('@playwright/test');
 const { watch, expectClean } = require('./helpers');
 
-test.use({ storageState: { cookies: [], origins: [] }, launchOptions: { args: ['--autoplay-policy=user-gesture-required'] } });
+test.use({ storageState: { cookies: [], origins: [] }, launchOptions: { args: ['--autoplay-policy=user-gesture-required', '--mute-audio'] } });
 
 const SLUGS = ['inbox-showdown', 'first-week-hunt', 'phish-or-fine'];
 const overlay = page => page.getByTestId('tutorial-overlay');

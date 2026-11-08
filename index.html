@@ -46,9 +46,10 @@
   @media (max-width: 400px) { main { grid-template-columns: 1fr; } h1 { font-size:1.8rem; } }
 </style>
 <link rel="stylesheet" href="shared/theme.css">
+<script src="shared/narrate.js" defer></script>
 </head>
 <body>
-<header>
+<header data-narrate="intro" data-narrate-auto="0" data-narrate-label="what this site is">
   <h1><span class="shield" aria-hidden="true">🛡️</span> Northbridge Cyber Games</h1>
   <p>Quick party games about staying safe online. Play together on one screen while Shield, your scripted sidekick, steps in before a mistake.</p>
   <ol class="steps" data-testid="hub-steps"><li>1 · Pick a game</li><li>2 · Watch the 30-second tutorial</li><li>3 · Play together</li></ol>
@@ -93,6 +94,12 @@
     card.className = 'game-card';
     card.setAttribute('data-testid', 'game-card');
     card.setAttribute('data-slug', g.slug);
+    // Narration (shared/narrate.js): the pitch is read when a card is tapped or one of its links gets focus.
+    card.setAttribute('data-narrate', 'card-' + g.slug);
+    card.setAttribute('data-narrate-auto', '0');
+    card.setAttribute('data-narrate-focus', '1');
+    card.setAttribute('data-narrate-tap', '1');
+    card.setAttribute('data-narrate-label', g.name);
     card.innerHTML = `
       <div class="band" aria-hidden="true"><span class="icon">${g.icon}</span></div>
       <h2 data-testid="game-name">${g.name}</h2>
@@ -108,6 +115,13 @@
       </div>`;
     list.appendChild(card);
   }
+  function narrationLines() {
+    const L = { intro: { text: 'Northbridge Cyber Games. Quick party games about staying safe online. Pick a game, watch the 30-second tutorial, then play together on one screen while Shield, your scripted sidekick, steps in before a mistake. Tap a card to hear what it is.', priority: 1 } };
+    GAMES.forEach(g => { L['card-' + g.slug] = { text: g.name + '. ' + g.goal + ' ' + g.pitch + ' For ' + g.players + ' players, ' + g.minutes + ' minutes.', priority: 1 }; });
+    return L;
+  }
+  window.NorthbridgeHub = { GAMES, narrationLines };
+  document.addEventListener('DOMContentLoaded', () => { if (window.Narrate) window.Narrate.init({ slug: 'hub' }); });
 </script>
 </body>
 </html>

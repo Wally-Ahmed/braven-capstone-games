@@ -1,0 +1,397 @@
+{
+  "slug": "inbox-showdown",
+  "lines": {
+    "setup": {
+      "text": "Inbox Showdown. Your goal: open the safe messages, report the scams, and score the most points. Teams take turns on one shared inbox. On your turn, open the message, report it, or ask Shield for a hint. Other teams can challenge to steal points. Type your team names, one per line, then press Start match.",
+      "priority": 1
+    },
+    "pass": {
+      "text": "Hand them the screen. Everyone else, no peeking! Tap Ready when you have it.",
+      "priority": 1
+    },
+    "first": {
+      "text": "First move: read who sent it. Then tap Open if it is safe, or Report if it is a scam. Not sure? Ask Shield.",
+      "priority": 1
+    },
+    "warn-hold": {
+      "text": "Hold on.",
+      "priority": 1
+    },
+    "warn-still": {
+      "text": "Still open it? Back out, or open anyway.",
+      "priority": 1
+    },
+    "warn-again": {
+      "text": "You missed this kind of message earlier.",
+      "priority": 1
+    },
+    "backed": {
+      "text": "You backed out. Smart! Now report it, or open it anyway if you are sure.",
+      "priority": 1
+    },
+    "challenge-open": {
+      "text": "thinks this message is safe. Other teams, disagree? Pick your team and tap Challenge to steal 50 points. Agree? Tap No challenge to reveal the answer.",
+      "priority": 1
+    },
+    "challenge-report": {
+      "text": "thinks this message is a scam. Other teams, disagree? Pick your team and tap Challenge to steal 50 points. Agree? Tap No challenge to reveal the answer.",
+      "priority": 1
+    },
+    "rv-right-scam": {
+      "text": "Correct! This was a scam.",
+      "priority": 1
+    },
+    "rv-right-safe": {
+      "text": "Correct! This message was safe.",
+      "priority": 1
+    },
+    "rv-wrong-scam": {
+      "text": "Not quite. This was a scam.",
+      "priority": 1
+    },
+    "rv-wrong-safe": {
+      "text": "Not quite. This message was safe.",
+      "priority": 1
+    },
+    "board": {
+      "text": "That is the final leaderboard. Tap Shield debrief to see what each team should practice.",
+      "priority": 1
+    },
+    "debrief": {
+      "text": "Shield debrief. Here is what each team should practice next.",
+      "priority": 1
+    },
+    "coach": {
+      "text": "Shield coach: you have missed this kind before.",
+      "priority": 1
+    },
+    "hint-again": {
+      "text": "You missed one like this earlier, so look twice.",
+      "priority": 1
+    },
+    "turn-rules": {
+      "text": "Correct is plus 100, or plus 60 if Shield helped. Opening a phish costs 50.",
+      "priority": 1
+    },
+    "msg-r1": {
+      "text": "An email from it-support@northbr1dge.co. Your password expires today. Hi new hire, Your Northbridge password expires in 2 hours. Keep your access by confirming it here: northbr1dge.co/reset",
+      "priority": 1
+    },
+    "msg-r2": {
+      "text": "An email from dana.ortiz.ceo@northbridge-exec.com. URGENT: wire before 5 PM. I am stuck in board meetings. Wire $4,800 to the new vendor before 5 PM today or we lose the contract. Do not call, just do it.",
+      "priority": 1
+    },
+    "msg-r3": {
+      "text": "A text from an unknown number. Northbridge Payroll. Northbridge Payroll: your direct deposit is on hold. Log in with your work email and password at nb-payroll-login.com to release it.",
+      "priority": 1
+    },
+    "msg-r4": {
+      "text": "A chat message from \"Sam (your manager)\" - external account. quick favor. Hey, are you free? I need 5 x $100 gift cards for a client thank-you. Buy them and send me the codes, I will pay you back Friday.",
+      "priority": 1
+    },
+    "msg-r5": {
+      "text": "An email from billing@harborline-supplies.com. Overdue invoice attached. Please review the attached overdue invoice today. Attachment: Invoice_Nov.pdf.exe (2.1 MB)",
+      "priority": 1
+    },
+    "msg-r6": {
+      "text": "A phone call from \"Northbridge IT Helpdesk\" (blocked number). \"Hi, this is IT. We are fixing your account. I just sent a 6-digit code to your phone, can you read it back to me so I can verify you?\"",
+      "priority": 1
+    },
+    "msg-r7": {
+      "text": "An email from welcome@northbridge-careers.net. Show off your first day!. Welcome aboard! Post a close-up photo of your new ID badge and desk screen on social media with #NorthbridgeNewHire to win a hoodie.",
+      "priority": 1
+    },
+    "msg-r8": {
+      "text": "A chat message from \"IT Updates\" - external guest. required VPN update. IT here. Everyone must install the new VPN tonight. Download VPN_Fix.zip from this file-share link and run setup.exe.",
+      "priority": 1
+    },
+    "msg-r9": {
+      "text": "An email from docs@northbridge.share-files.io. Document shared with you. A document \"Q4 Bonuses.xlsx\" was shared with you. Sign in with your Northbridge credentials to view it.",
+      "priority": 1
+    },
+    "msg-r10": {
+      "text": "A text from an unknown number. Mailroom notice. Northbridge Mailroom: your package is held. Pay a $1.99 redelivery fee within 1 hour or it is returned: pkg-redeliver.info",
+      "priority": 1
+    },
+    "msg-l1": {
+      "text": "An email from it@northbridge.co. Laptop pickup Tuesday 10 AM. Your new laptop is ready. Pick it up Tuesday at 10 AM in room 4B and bring your badge. No reply or link needed.",
+      "priority": 1
+    },
+    "msg-l2": {
+      "text": "An email from hr@northbridge.co. Benefits enrollment opens Monday. Benefits enrollment opens Monday. Sign in through the HR portal from your intranet bookmark. We will never ask for your password by email.",
+      "priority": 1
+    },
+    "msg-l3": {
+      "text": "An email from people-team@northbridge.co. Welcome gift at the front desk. Welcome to Northbridge! Your welcome gift is at the front desk. Show your badge to pick it up. Nothing to click or buy.",
+      "priority": 1
+    },
+    "msg-l4": {
+      "text": "A sign-in prompt from Northbridge Authenticator. Sign-in request. You just signed in to the Northbridge portal on your laptop 5 seconds ago. Approve sign-in from \"Your laptop, New York\"?",
+      "priority": 1
+    },
+    "msg-l5": {
+      "text": "A chat message from Priya Shah (your team, northbridge.co). standup moved. Heads up, standup moved to 10:30 today because of the fire drill. Same room.",
+      "priority": 1
+    },
+    "msg-l6": {
+      "text": "An email from jordan.lee@northbridge.co. Agenda for Thursday, as discussed. As we talked about in the hallway, here is the agenda for Thursday. Attachment: Thursday-agenda.pdf (88 KB)",
+      "priority": 1
+    },
+    "msg-l7": {
+      "text": "An email from security@northbridge.co. Reminder: use the Report button. Thanks for completing security onboarding. If anything looks off, use the Report button in your mail app. No action needed today.",
+      "priority": 1
+    },
+    "msg-l8": {
+      "text": "A chat message from comms@northbridge.co. Share our job posting. We are hiring! Feel free to share the public job posting from our careers page. Please do not post photos of badges or screens.",
+      "priority": 1
+    },
+    "hint-r1": {
+      "text": "Check the sender: \"northbr1dge.co\" uses the number 1 instead of the letter i.",
+      "priority": 2
+    },
+    "hint-r2": {
+      "text": "An outside domain, a deadline and \"do not call\" together are classic pressure tactics.",
+      "priority": 2
+    },
+    "hint-r3": {
+      "text": "Payroll never asks for your password by text, and nb-payroll-login.com is not a Northbridge site.",
+      "priority": 2
+    },
+    "hint-r4": {
+      "text": "Gift card requests over chat, from an external account, are almost always scams.",
+      "priority": 2
+    },
+    "hint-r5": {
+      "text": "The attachment ends in .exe. A real invoice is a PDF, not a program.",
+      "priority": 2
+    },
+    "hint-r6": {
+      "text": "IT never needs your MFA code. Anyone asking you to read it back is trying to log in as you.",
+      "priority": 2
+    },
+    "hint-r7": {
+      "text": "A badge close-up and your screen give attackers what they need to copy your badge or target you.",
+      "priority": 2
+    },
+    "hint-r8": {
+      "text": "Real updates come from the IT software portal, never from a guest account with a zip file.",
+      "priority": 2
+    },
+    "hint-r9": {
+      "text": "Read the domain from the right: it ends in share-files.io, not northbridge.co. \"northbridge\" at the start is just decoration.",
+      "priority": 2
+    },
+    "hint-r10": {
+      "text": "The mailroom does not charge fees, and a 1-hour deadline is there to rush you.",
+      "priority": 2
+    },
+    "hint-l1": {
+      "text": "Sender is the real northbridge.co, there is no link, no attachment and no request for information.",
+      "priority": 2
+    },
+    "hint-l2": {
+      "text": "Real domain, and it tells you to use your own bookmark instead of a link. That is what a safe message looks like.",
+      "priority": 2
+    },
+    "hint-l3": {
+      "text": "Nothing to buy, nothing to click, real domain. Gifts you pick up in person are not the gift card scam.",
+      "priority": 2
+    },
+    "hint-l4": {
+      "text": "You triggered this yourself a moment ago, from your own device and city. Approving your own sign-in is fine.",
+      "priority": 2
+    },
+    "hint-l5": {
+      "text": "An internal teammate, no link, no ask. Normal schedule chatter.",
+      "priority": 2
+    },
+    "hint-l6": {
+      "text": "Expected attachment, from a colleague on the real domain, a normal .pdf you discussed in person.",
+      "priority": 2
+    },
+    "hint-l7": {
+      "text": "Spell it out: n-o-r-t-h-b-r-i-d-g-e dot co. The real domain, no link, no ask.",
+      "priority": 2
+    },
+    "hint-l8": {
+      "text": "Sharing a public job post is fine, and the message itself warns against oversharing.",
+      "priority": 2
+    },
+    "flag-r1": {
+      "text": "Look-alike domain: northbr1dge.co is not northbridge.co.",
+      "priority": 2
+    },
+    "flag-r2": {
+      "text": "Urgency plus \"do not call me\" from an outside domain.",
+      "priority": 2
+    },
+    "flag-r3": {
+      "text": "A text asking for your work password on an outside site.",
+      "priority": 2
+    },
+    "flag-r4": {
+      "text": "Gift card request from an account outside Northbridge.",
+      "priority": 2
+    },
+    "flag-r5": {
+      "text": "Double extension: Invoice_Nov.pdf.exe is a program, not a PDF.",
+      "priority": 2
+    },
+    "flag-r6": {
+      "text": "A caller asking for your MFA code.",
+      "priority": 2
+    },
+    "flag-r7": {
+      "text": "Asks you to post your badge and screen publicly, from an outside domain.",
+      "priority": 2
+    },
+    "flag-r8": {
+      "text": "Software from a guest account instead of the official IT portal.",
+      "priority": 2
+    },
+    "flag-r9": {
+      "text": "Look-alike domain: northbridge.share-files.io belongs to share-files.io.",
+      "priority": 2
+    },
+    "flag-r10": {
+      "text": "A tiny fee plus a short deadline, a common card-stealing trick.",
+      "priority": 2
+    },
+    "flag-l1": {
+      "text": "Real domain, no link, no ask: this one is fine.",
+      "priority": 2
+    },
+    "flag-l2": {
+      "text": "Fine: real domain and it points you to your own bookmark.",
+      "priority": 2
+    },
+    "flag-l3": {
+      "text": "Fine: no purchase, no codes, real sender.",
+      "priority": 2
+    },
+    "flag-l4": {
+      "text": "Fine: a prompt you just triggered yourself.",
+      "priority": 2
+    },
+    "flag-l5": {
+      "text": "Fine: internal teammate, no link, no request.",
+      "priority": 2
+    },
+    "flag-l6": {
+      "text": "Fine: an expected PDF from a colleague you spoke to.",
+      "priority": 2
+    },
+    "flag-l7": {
+      "text": "Fine: the real northbridge.co domain, spelled correctly.",
+      "priority": 2
+    },
+    "flag-l8": {
+      "text": "Fine: public job post, and it warns you about badges and screens.",
+      "priority": 2
+    },
+    "tip-urgency": {
+      "text": "Pressure to act right now is a red flag. Slow down and verify through a channel you already trust.",
+      "priority": 3
+    },
+    "tip-lookalike": {
+      "text": "Read the sender domain letter by letter; northbridge.co is the only real one.",
+      "priority": 3
+    },
+    "tip-credential": {
+      "text": "Never enter your password from a link in a message. Open the portal from your own bookmark.",
+      "priority": 3
+    },
+    "tip-giftcard": {
+      "text": "Real managers never ask you to buy gift cards. Call them on a number you already have.",
+      "priority": 3
+    },
+    "tip-attachment": {
+      "text": "Unexpected files, double extensions (.pdf.exe) and macro prompts mean report, do not open.",
+      "priority": 3
+    },
+    "tip-mfa": {
+      "text": "Only approve an MFA prompt you just triggered yourself. Never read a code to a caller.",
+      "priority": 3
+    },
+    "tip-oversharing": {
+      "text": "Badges, screens and travel plans help attackers. Keep them off public posts.",
+      "priority": 3
+    },
+    "tip-device": {
+      "text": "Install software only from the official IT portal, and lock your laptop when you step away.",
+      "priority": 3
+    },
+    "habit-r1": {
+      "text": "Safe habit: Report it, then reset passwords only from the IT portal bookmark.",
+      "priority": 3
+    },
+    "habit-r2": {
+      "text": "Safe habit: Verify payment requests by calling the person on a known number.",
+      "priority": 3
+    },
+    "habit-r3": {
+      "text": "Safe habit: Open payroll from the HR portal yourself, never from a text link.",
+      "priority": 3
+    },
+    "habit-r4": {
+      "text": "Safe habit: Call your manager directly before buying anything for anyone.",
+      "priority": 3
+    },
+    "habit-r5": {
+      "text": "Safe habit: Report unexpected attachments; never run files from email.",
+      "priority": 3
+    },
+    "habit-r6": {
+      "text": "Safe habit: Hang up and call the helpdesk number on the intranet yourself.",
+      "priority": 3
+    },
+    "habit-r7": {
+      "text": "Safe habit: Never post badges, screens or travel plans.",
+      "priority": 3
+    },
+    "habit-r8": {
+      "text": "Safe habit: Install only from the IT portal; report odd \"update\" messages.",
+      "priority": 3
+    },
+    "habit-r9": {
+      "text": "Safe habit: Read the domain from the right; the last part is the real owner.",
+      "priority": 3
+    },
+    "habit-r10": {
+      "text": "Safe habit: Check with the mailroom in person; never pay through a text link.",
+      "priority": 3
+    },
+    "habit-l1": {
+      "text": "Safe habit: Still lock your new laptop whenever you step away.",
+      "priority": 3
+    },
+    "habit-l2": {
+      "text": "Safe habit: Use bookmarks for portals, exactly as this email says.",
+      "priority": 3
+    },
+    "habit-l3": {
+      "text": "Safe habit: The red flag is being asked to BUY cards and send codes.",
+      "priority": 3
+    },
+    "habit-l4": {
+      "text": "Safe habit: Approve only prompts you started; deny any surprise prompt.",
+      "priority": 3
+    },
+    "habit-l5": {
+      "text": "Safe habit: Urgency alone is not a flag; urgency plus an ask is.",
+      "priority": 3
+    },
+    "habit-l6": {
+      "text": "Safe habit: If a file asks to \"enable macros\", report it even from a colleague.",
+      "priority": 3
+    },
+    "habit-l7": {
+      "text": "Safe habit: Keep checking domains letter by letter like you just did.",
+      "priority": 3
+    },
+    "habit-l8": {
+      "text": "Safe habit: Share public pages; keep badges and screens private.",
+      "priority": 3
+    }
+  }
+}

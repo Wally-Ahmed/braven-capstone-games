@@ -208,8 +208,12 @@
     showBlocked(false);
     idx = 0; renderStep(); syncMute();
     try { els.next.focus({ preventScroll: true }); } catch (e) { els.next.focus(); }
+    emit('nb-tutorial-open');
     narrate();
   }
+
+  /* Lets shared/narrate.js hold the in-game narration while the tutorial talks. */
+  function emit(name) { try { document.dispatchEvent(new CustomEvent(name)); } catch (e) { /* ignore */ } }
 
   function close(why) {
     if (!overlay || overlay.hidden) return;
@@ -220,6 +224,7 @@
     if (lastFocus && lastFocus.focus && lastFocus !== document.body && document.contains(lastFocus)) {
       try { lastFocus.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
     }
+    emit('nb-tutorial-close');
     if (typeof cfg.onClose === 'function') cfg.onClose(why);
   }
 
@@ -229,6 +234,7 @@
       loaded = true;
       var q = new URLSearchParams(window.location.search).get('tutorial');
       if (pendingOpen || q === '1' || (q !== '0' && !getSkip())) { pendingOpen = false; open(); }
+      emit('nb-tutorial-ready');
     };
     if (!window.fetch) { done(null); return; }
     window.fetch('/shared/narration/' + cfg.slug + '/script.json', { cache: 'no-cache' })
@@ -246,6 +252,7 @@
     open: open,
     close: function () { close('api'); },
     isOpen: function () { return !!(overlay && !overlay.hidden); },
+    loaded: function () { return loaded; },
     step: function () { return idx; }
   };
 })();

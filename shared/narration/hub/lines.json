@@ -1,0 +1,21 @@
+{
+  "slug": "hub",
+  "lines": {
+    "intro": {
+      "text": "Northbridge Cyber Games. Quick party games about staying safe online. Pick a game, watch the 30-second tutorial, then play together on one screen while Shield, your scripted sidekick, steps in before a mistake. Tap a card to hear what it is.",
+      "priority": 1
+    },
+    "card-inbox-showdown": {
+      "text": "Inbox Showdown. Open the safe messages, report the scams. Teams triage a shared Northbridge inbox; Shield warns before a risky click. For 2 to 6 players, about 3 minutes.",
+      "priority": 1
+    },
+    "card-first-week-hunt": {
+      "text": "First Week Hunt. Tap the 8 hidden risks before time runs out. Hot-seat scavenger hunt for 8 hidden risks in the Northbridge office; two wrong taps and you get hacked. For 2 to 6 players, about 3 minutes.",
+      "priority": 1
+    },
+    "card-phish-or-fine": {
+      "text": "Phish or Fine? Buzzer Battle. Buzz first: is it a phish or fine? Split-screen buzzer race: call each snippet phish or fine; Shield debriefs every player. For 2 to 6 players, about 3 minutes.",
+      "priority": 1
+    }
+  }
+}

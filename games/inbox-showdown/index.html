@@ -9,6 +9,7 @@
 <script src="/shared/fx.js" defer></script>
 <script src="/shared/menu.js" defer></script>
 <script src="/shared/tutorial.js" defer></script>
+<script src="/shared/narrate.js" defer></script>
 <style>
   :root { --bg:#0f172a; --card:#1e293b; --line:#334155; --text:#f1f5f9; --muted:#94a3b8; --accent:#38bdf8;
           --good:#22c55e; --bad:#ef4444; --warn:#f59e0b; --ink:#0f172a; }
@@ -194,6 +195,51 @@ function fx(name, sel, arg) {
 }
 
 /* ------------------------------------------------------------------ *
+ * Narration (shared/narrate.js). Every line a player has to read, by id. tools/extract-lines.js copies
+ * these into shared/narration/inbox-showdown/lines.json, and tools/generate-narration.sh voices them
+ * with ElevenLabs (priority 1 first). Names and scores are read by the browser voice (data-narrate-say).
+ * ------------------------------------------------------------------ */
+const CHANNEL_SAY = { Email: 'An email', SMS: 'A text', Chat: 'A chat message', Call: 'A phone call', 'MFA prompt': 'A sign-in prompt' };
+function spokenFrom(from) { return /^\+?[\d ()-]+$/.test(from) ? 'an unknown number' : from; }
+function narrationLines() {
+  const L = {};
+  const add = (id, text, priority) => { L[id] = { text, priority }; };
+  add('setup', 'Inbox Showdown. Your goal: open the safe messages, report the scams, and score the most points. Teams take turns on one shared inbox. ' +
+    'On your turn, open the message, report it, or ask Shield for a hint. Other teams can challenge to steal points. Type your team names, one per line, then press Start match.', 1);
+  add('pass', 'Hand them the screen. Everyone else, no peeking! Tap Ready when you have it.', 1);
+  add('first', 'First move: read who sent it. Then tap Open if it is safe, or Report if it is a scam. Not sure? Ask Shield.', 1);
+  add('warn-hold', 'Hold on.', 1);
+  add('warn-still', 'Still open it? Back out, or open anyway.', 1);
+  add('warn-again', 'You missed this kind of message earlier.', 1);
+  add('backed', 'You backed out. Smart! Now report it, or open it anyway if you are sure.', 1);
+  add('challenge-open', 'thinks this message is safe. Other teams, disagree? Pick your team and tap Challenge to steal 50 points. Agree? Tap No challenge to reveal the answer.', 1);
+  add('challenge-report', 'thinks this message is a scam. Other teams, disagree? Pick your team and tap Challenge to steal 50 points. Agree? Tap No challenge to reveal the answer.', 1);
+  add('rv-right-scam', 'Correct! This was a scam.', 1);
+  add('rv-right-safe', 'Correct! This message was safe.', 1);
+  add('rv-wrong-scam', 'Not quite. This was a scam.', 1);
+  add('rv-wrong-safe', 'Not quite. This message was safe.', 1);
+  add('board', 'That is the final leaderboard. Tap Shield debrief to see what each team should practice.', 1);
+  add('debrief', 'Shield debrief. Here is what each team should practice next.', 1);
+  add('coach', 'Shield coach: you have missed this kind before.', 1);
+  add('hint-again', 'You missed one like this earlier, so look twice.', 1);
+  add('turn-rules', 'Correct is plus 100, or plus 60 if Shield helped. Opening a phish costs 50.', 1);
+  MESSAGES.forEach(m => add('msg-' + m.id, (CHANNEL_SAY[m.channel] || m.channel) + ' from ' + spokenFrom(m.from) + '. ' +
+    (m.channel === 'Call' ? '' : m.subject + '. ') + m.body.replace(/\n/g, ' '), 1));
+  MESSAGES.forEach(m => add('hint-' + m.id, m.hint, 2));
+  MESSAGES.forEach(m => add('flag-' + m.id, m.flag, 2));
+  Object.keys(CATEGORIES).forEach(c => add('tip-' + c, CATEGORIES[c].tip, 3));
+  MESSAGES.forEach(m => add('habit-' + m.id, 'Safe habit: ' + m.habit, 3));
+  return L;
+}
+/* data-narrate attributes for a block (see shared/narrate.js). */
+function nar(ids, o) {
+  o = o || {};
+  return ' data-narrate="' + esc(ids) + '"' + (o.say ? ' data-narrate-say="' + esc(o.say) + '"' : '') +
+    (o.key ? ' data-narrate-key="' + esc(o.key) + '"' : '') + (o.auto === false ? ' data-narrate-auto="0"' : '') +
+    (o.now ? ' data-narrate-interrupt="1"' : '') + (o.label ? ' data-narrate-label="' + esc(o.label) + '"' : '');
+}
+
+/* ------------------------------------------------------------------ *
  * Shield: the scripted agent assistant (spec section 4).
  * beforeAction -> {allow, warning}; afterAction -> lesson; debrief(player).
  * shieldLog is in memory only; nothing leaves the page.
@@ -207,23 +253,20 @@ const Shield = {
     return (this.log[player] || []).filter(e => e.category === category && !e.correct).length;
   },
   hint(player, item) {
-    const extra = this.misses(player, item.category) ? ' You missed a ' + CATEGORIES[item.category].label.toLowerCase() + ' one earlier, so look twice.' : '';
-    return item.hint + extra;
+    return item.hint + (this.misses(player, item.category) ? ' You missed one like this earlier, so look twice.' : '');
   },
+  hintSay(player, item) { return 'hint-' + item.id + (this.misses(player, item.category) ? ' hint-again' : ''); },
   // Coach mode personalises: before a team even acts, a nudge on categories it keeps missing.
   coachTip(player, item) {
     if (this.mode !== 'coach') return null;
-    if (this.misses(player, item.category) > 0) return 'Shield coach: you have missed ' + CATEGORIES[item.category].label.toLowerCase() + ' before. ' + CATEGORIES[item.category].tip;
+    if (this.misses(player, item.category) > 0) return 'Shield coach: you have missed this kind before. ' + CATEGORIES[item.category].tip;
     return null;
   },
   beforeAction(player, action, item) {
     if (this.mode === 'off' || action !== 'open' || !item.risky) return { allow: true, warning: null };
-    const domain = (item.from.match(/@([\w.-]+)/) || [])[1];
-    let warning;
-    if (item.category === 'lookalike' && domain) warning = 'Hold on, the sender is ' + domain + ', not northbridge.co. Still open it?';
-    else warning = 'Hold on. ' + item.hint + ' Still open it?';
-    if (this.misses(player, item.category) > 0) warning += ' (You missed this kind of message earlier.)';
-    return { allow: false, warning };
+    const again = this.misses(player, item.category) > 0;
+    const warning = 'Hold on. ' + item.hint + ' Still open it?' + (again ? ' (You missed this kind of message earlier.)' : '');
+    return { allow: false, warning, say: 'warn-hold hint-' + item.id + (again ? ' warn-again' : '') + ' warn-still' };
   },
   afterAction(player, entry) {
     (this.log[player] = this.log[player] || []).push(entry);
@@ -323,11 +366,12 @@ function dispatch(move) {
       if (state.phase !== 'turn' || Shield.mode === 'off') break;
       state.current.asked = true;
       state.current.hint = Shield.hint(state.current.team, MSG[state.current.item]);
+      state.current.hintSay = Shield.hintSay(state.current.team, MSG[state.current.item]);
       break;
     case 'open': {
       if (state.phase !== 'turn') break;
       const res = Shield.beforeAction(state.current.team, 'open', MSG[state.current.item]);
-      if (!res.allow && !state.current.warned) { state.current.warning = res.warning; state.current.warned = true; break; }
+      if (!res.allow && !state.current.warned) { state.current.warning = res.warning; state.current.warningSay = res.say; state.current.warned = true; break; }
       decide('open');
       break;
     }
@@ -391,8 +435,8 @@ function scoreStrip(active) {
 function shieldBadge() {
   return '<span class="badge" data-testid="shield-status">🛡️ Shield: ' + Shield.mode + ' · prototype, scripted agent</span>';
 }
-function messageCard(item) {
-  return '<div class="msg" data-testid="message-card" data-msg-id="' + item.id + '">' +
+function messageCard(item, narration) {
+  return '<div class="msg" data-testid="message-card" data-msg-id="' + item.id + '"' + (narration || '') + '>' +
     '<span class="ch">' + esc(item.channel) + '</span>' +
     '<div class="from" data-testid="message-from">From: ' + esc(item.from) + '</div>' +
     '<div class="subj">' + esc(item.subject) + '</div>' +
@@ -403,21 +447,22 @@ function view() {
   let h = '';
   if (state.phase === 'setup') {
     h += '<section data-testid="setup-screen"><h1>📥 Inbox Showdown</h1>' +
+      '<div class="nr-intro" data-testid="setup-intro"' + nar('setup', { label: 'how this game works' }) + '>' +
       '<p class="goal" data-testid="game-goal">🎯 Goal: open the safe messages, report the scams, and score the most points.</p>' +
       '<div class="how-row" aria-label="Quick rules"><span>📂 Open = safe</span><span>🚩 Report = scam</span><span>🛡️ Ask Shield = hint</span><span>⚔️ Challenge = steal +50</span></div>' +
-      '<p>Day one at Northbridge Co. Teams take turns on one shared inbox: <b>Open</b> it, <b>Report</b> it, or <b>Ask Shield</b>. Other teams can <b>Challenge</b> to steal points.</p>' +
+      '<p>Day one at Northbridge Co. Teams take turns on one shared inbox: <b>Open</b> it, <b>Report</b> it, or <b>Ask Shield</b>. Other teams can <b>Challenge</b> to steal points.</p></div>' +
       '<div class="row"><button class="tutorial-btn" data-testid="btn-tutorial" data-action="tutorial">🎬 How to play (30 s, with voice)</button></div>' +
       '<div class="panel"><label for="team-names"><h2>Teams (2 to 6, one per line)</h2></label>' +
       '<textarea id="team-names" data-testid="team-names" aria-describedby="setup-help">' + esc(state.namesDraft) + '</textarea>' +
       '<p id="setup-help" class="muted small">Each team gets ' + PER_TEAM + ' messages. Pass the device (or share your screen) between turns.</p>' +
-      (state.error ? '<p class="error" role="alert" data-testid="setup-error">' + esc(state.error) + '</p>' : '') +
+      (state.error ? '<p class="error" role="alert" data-testid="setup-error"' + nar('_', { say: state.error, now: true }) + '>' + esc(state.error) + '</p>' : '') +
       '<div class="row"><button class="primary" data-testid="btn-start" data-action="start">🚀 Start match</button></div></div>' +
       '<p>' + shieldBadge() + '</p></section>';
   } else if (state.phase === 'pass') {
     const t = state.teams[state.current.team];
-    h += '<section class="panel" data-testid="pass-screen"><h2>Pass to ' + esc(t.name) + '</h2>' +
+    h += '<section class="panel" data-testid="pass-screen"><div' + nar('_ pass', { say: 'Pass to ' + t.name + '. ' + t.name + ', your turn.', key: 'pass:' + state.turn, label: 'whose turn it is' }) + '><h2>Pass to ' + esc(t.name) + '</h2></div>' +
       '<p class="muted">Message ' + (Math.floor(state.turn / state.teams.length) + 1) + ' of ' + PER_TEAM + ' for this team · turn ' + (state.turn + 1) + ' of ' + totalTurns() + '</p>' +
-      (state.lastWhat ? '<p class="what" data-testid="what-happened">⏪ Last turn: ' + esc(state.lastWhat) + '</p>' : '') +
+      (state.lastWhat ? '<p class="what" data-testid="what-happened"' + nar('_', { say: 'Last turn: ' + state.lastWhat, auto: false, label: 'last turn' }) + '>⏪ Last turn: ' + esc(state.lastWhat) + '</p>' : '') +
       scoreStrip(state.current.team) +
       '<p class="muted">Hand the screen to <b>' + esc(t.name) + '</b>. Everyone else, no peeking at the answer!</p>' +
       '<div class="row"><button class="primary" data-testid="btn-ready" data-action="ready">👋 ' + esc(t.name) + ' is ready</button></div></section>';
@@ -425,32 +470,32 @@ function view() {
     const c = state.current, item = MSG[c.item], t = state.teams[c.team];
     const coach = Shield.coachTip(c.team, item);
     h += '<section data-testid="turn-card" data-team="' + esc(t.name) + '"><h2 data-testid="turn-team">' + esc(t.name) + '\'s inbox</h2>' +
-      scoreStrip(c.team) + messageCard(item) +
-      (coach ? '<div class="shield" data-testid="shield-coach-tip"><div class="tag">Shield · prototype, scripted agent</div>' + esc(coach) + '</div>' : '') +
-      (c.hint ? '<div class="shield" data-testid="agent-hint"><div class="tag">🛡️ Shield says · prototype, scripted agent</div>' + esc(c.hint) + '</div>' : '');
+      scoreStrip(c.team) + messageCard(item, nar('msg-' + item.id, { key: 'msg:' + state.turn, label: 'the message' })) +
+      (coach ? '<div class="shield" data-testid="shield-coach-tip"' + nar('coach tip-' + item.category, { label: 'Shield coach tip' }) + '><div class="tag">Shield · prototype, scripted agent</div>' + esc(coach) + '</div>' : '') +
+      (c.hint ? '<div class="shield" data-testid="agent-hint"' + nar(c.hintSay || ('hint-' + item.id), { label: 'Shield hint' }) + '><div class="tag">🛡️ Shield says · prototype, scripted agent</div>' + esc(c.hint) + '</div>' : '');
     if (c.warning) {
-      h += '<div class="shield warn" role="alertdialog" aria-label="Shield warning" data-testid="shield-warning">' +
+      h += '<div class="shield warn" role="alertdialog" aria-label="Shield warning" data-testid="shield-warning"' + nar(c.warningSay || ('warn-hold hint-' + item.id + ' warn-still'), { now: true, label: 'Shield warning' }) + '>' +
         '<div class="tag">🛡️ Shield nudge · prototype, scripted agent</div><p>' + esc(c.warning) + '</p>' +
         '<div class="row"><button class="primary" data-testid="btn-back-out" data-action="backOut">Back out</button>' +
         '<button class="open" data-testid="btn-open-anyway" data-action="openAnyway">Open anyway</button></div></div>';
     } else {
       const first = state.turn === 0 && !c.asked;
-      h += (first ? '<p class="first-hint" data-testid="first-move-hint"><span class="arrow">👇</span> First move: read who sent it, then tap Open if it is safe or Report if it is a scam. Not sure? Ask Shield.</p>' : '') +
-        (c.backedOut ? '<p class="what good" data-testid="what-happened">🛡️ You backed out. Smart! Now report it, or open it anyway if you are sure.</p>' : '') +
+      h += (first ? '<p class="first-hint" data-testid="first-move-hint"' + nar('first', { label: 'first move' }) + '><span class="arrow">👇</span> First move: read who sent it, then tap Open if it is safe or Report if it is a scam. Not sure? Ask Shield.</p>' : '') +
+        (c.backedOut ? '<p class="what good" data-testid="what-happened"' + nar('backed', { label: 'what just happened' }) + '>🛡️ You backed out. Smart! Now report it, or open it anyway if you are sure.</p>' : '') +
         '<div class="row' + (first ? ' hint-pulse' : '') + '" style="margin-top:12px">' +
         '<button class="open" data-testid="btn-open" data-action="open">📂 Open <small>(safe)</small></button>' +
         '<button class="report" data-testid="btn-report" data-action="report">🚩 Report <small>(scam)</small></button>' +
         '<button class="ask" data-testid="btn-ask" data-action="ask"' + (Shield.mode === 'off' || c.asked ? ' disabled' : '') + '>' +
         (Shield.mode === 'off' ? '🛡️ Shield is off' : c.asked ? '🛡️ Hint shown' : '🛡️ Ask Shield <small>(hint)</small>') + '</button></div>' +
-        '<p class="muted small">Correct: +100 (+60 if Shield helped). Opening a phish: -50.</p>';
+        '<p class="muted small"' + nar('turn-rules', { auto: false, label: 'scoring' }) + '>Correct: +100 (+60 if Shield helped). Opening a phish: -50.</p>';
     }
     h += '<p>' + shieldBadge() + '</p></section>';
   } else if (state.phase === 'challenge') {
     const c = state.current, t = state.teams[c.team];
     const others = state.teams.map((x, i) => ({ x, i })).filter(o => o.i !== c.team);
     h += '<section class="panel" data-testid="challenge-screen"><h2>' + esc(t.name) + ' chose ' + (c.decision === 'open' ? '📂 Open' : '🚩 Report') + '</h2>' +
-      '<p class="what warn" data-testid="what-happened">' + esc(t.name) + (c.decision === 'open' ? ' thinks this message is safe.' : ' thinks this message is a scam.') + ' Other teams: disagree? Challenge to steal +' + SCORE.steal + '. Agree? Reveal the answer.</p>' +
-      messageCard(MSG[c.item]) +
+      '<p class="what warn" data-testid="what-happened"' + nar('_ challenge-' + c.decision, { say: t.name, key: 'ch:' + state.turn, label: 'challenge' }) + '>' + esc(t.name) + (c.decision === 'open' ? ' thinks this message is safe.' : ' thinks this message is a scam.') + ' Other teams: disagree? Challenge to steal +' + SCORE.steal + '. Agree? Reveal the answer.</p>' +
+      messageCard(MSG[c.item], nar('msg-' + c.item, { auto: false, key: 'msgc:' + state.turn, label: 'the message' })) +
       '<p>Does another team disagree? A correct challenge steals +' + SCORE.steal + '.</p>' +
       '<label for="challenge-team" class="small muted">Challenging team</label>' +
       '<select id="challenge-team" data-testid="challenge-team">' + others.map(o => '<option value="' + o.i + '">' + esc(o.x.name) + '</option>').join('') + '</select>' +
@@ -459,29 +504,31 @@ function view() {
   } else if (state.phase === 'reveal') {
     const r = state.reveal, item = MSG[r.item], t = state.teams[r.team];
     const last = state.turn + 1 >= totalTurns();
-    h += '<section class="panel" data-testid="reveal"><h2 data-testid="reveal-result" class="' + (r.correct ? 'result-good' : 'result-bad') + '">' +
+    const rvSay = (r.correct ? 'rv-right-' : 'rv-wrong-') + (item.risky ? 'scam' : 'safe') + ' _ flag-' + item.id + ' habit-' + item.id;
+    h += '<section class="panel" data-testid="reveal"' + nar(rvSay, { say: r.what, key: 'rv:' + state.turn, now: true, label: 'the answer and Shield\'s lesson' }) + '><h2 data-testid="reveal-result" class="' + (r.correct ? 'result-good' : 'result-bad') + '">' +
       (r.correct ? '✅ Correct' : '❌ Not quite') + ': this was ' + (item.risky ? 'a phish / scam' : 'safe') + '</h2>' +
       '<p>' + esc(t.name) + ' chose ' + r.decision + ' · <span class="delta ' + (r.delta >= 0 ? 'up' : 'down') + '" data-testid="reveal-delta">' + (r.delta >= 0 ? '+' : '') + r.delta + ' points</span></p>' +
       (r.steal ? '<p data-testid="steal-result">' + esc(state.teams[r.steal.by].name) + ' challenged: ' + (r.steal.ok ? 'steal +' + r.steal.points : 'no steal') + '</p>' : '') +
       '<p class="what ' + (r.correct ? 'good' : 'bad') + '" data-testid="what-happened">💡 What just happened: ' + esc(r.what) + '</p>' +
-      messageCard(item) +
+      messageCard(item, nar('msg-' + item.id, { auto: false, key: 'msgr:' + state.turn, label: 'the message' })) +
       '<div class="shield" data-testid="reveal-lesson"><div class="tag">🛡️ Shield explains · ' + esc(CATEGORIES[item.category].label) + '</div>' +
       '<p><b>Red flag:</b> ' + esc(r.lesson.flag) + '</p><p><b>Safe habit:</b> ' + esc(r.lesson.habit) + '</p></div>' +
       scoreStrip(-1) +
       '<div class="row"><button class="primary" data-testid="btn-next" data-action="next">' + (last ? '🏆 See leaderboard' : '➡️ Next team') + '</button></div></section>';
   } else if (state.phase === 'leaderboard') {
-    h += '<section class="panel" data-testid="leaderboard">' + winnerBanner() + '<h2>🏆 Leaderboard</h2><ol class="board">' +
+    h += '<section class="panel" data-testid="leaderboard"' + nar('_ board', { say: boardSay(), label: 'the leaderboard' }) + '>' + winnerBanner() + '<h2>🏆 Leaderboard</h2><ol class="board">' +
       leaderboard().map((r, i) => '<li data-testid="leaderboard-row" data-score="' + r.score + '"><span>' + (i + 1) + '. <span data-testid="leaderboard-name">' + esc(r.name) + '</span></span><span data-testid="leaderboard-score">' + r.score + '</span></li>').join('') +
       '</ol><div class="row" style="margin-top:12px"><button class="primary" data-testid="btn-debrief" data-action="debrief">🛡️ Shield debrief</button>' +
       '<button data-testid="btn-play-again" data-action="restart">Play again</button></div></section>';
   } else if (state.phase === 'debrief') {
     const total = state.teams.reduce((n, t, i) => n + Shield.debrief(i).stopped, 0);
-    h += '<section class="panel" data-testid="debrief"><h2>🛡️ Shield debrief</h2>' +
+    h += '<section class="panel" data-testid="debrief"><div' + nar('debrief _', { say: 'Shield stopped ' + total + ' mistake' + (total === 1 ? '' : 's') + '.', label: 'Shield debrief' }) + '><h2>🛡️ Shield debrief</h2></div>' +
       '<p class="muted small">Prototype, scripted agent. Shield mode this match: ' + Shield.mode + '.</p>' +
       '<p data-testid="shield-stopped-total">Shield stopped ' + total + ' mistake' + (total === 1 ? '' : 's') + '.</p>' +
       state.teams.map((t, i) => {
         const d = Shield.debrief(i);
-        return '<div class="debrief-team" data-testid="debrief-team" data-team="' + esc(t.name) + '"><h3>' + esc(t.name) + ' · ' + t.score + ' pts · ' + d.correct + '/' + d.decisions + ' correct</h3>' +
+        return '<div class="debrief-team" data-testid="debrief-team" data-team="' + esc(t.name) + '"' +
+          nar('_ ' + d.weakest.map(w => 'tip-' + w.category).join(' '), { say: t.name + ': ' + d.correct + ' of ' + d.decisions + ' correct, ' + t.score + ' points. Practice these.', label: t.name + ' debrief' }) + '><h3>' + esc(t.name) + ' · ' + t.score + ' pts · ' + d.correct + '/' + d.decisions + ' correct</h3>' +
           '<p class="small">Weakest categories:</p><ul>' + d.weakest.map(w => '<li data-testid="debrief-weak" data-category="' + w.category + '"><b>' + esc(w.label) + '</b>' +
           (w.seen ? ' (' + w.misses + ' missed of ' + w.seen + ')' : ' (not practiced yet)') + ': ' + esc(w.tip) + '</li>').join('') + '</ul>' +
           '<p class="small" data-testid="debrief-stopped">Shield stopped ' + d.stopped + ' mistake' + (d.stopped === 1 ? '' : 's') + '.</p></div>';
@@ -492,6 +539,13 @@ function view() {
       '<pre class="results" data-testid="results-text">' + esc(resultsText()) + '</pre></section>';
   }
   return h;
+}
+
+/* The leaderboard read aloud (names and scores change, so the browser voice reads this part). */
+function boardSay() {
+  const board = leaderboard();
+  const tie = board.length > 1 && board[0].score === board[1].score;
+  return (tie ? 'It is a tie at the top! ' : board[0].name + ' wins! ') + board.map(r => r.name + ', ' + r.score + ' points.').join(' ');
 }
 
 function winnerBanner() {
@@ -573,10 +627,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   if (window.Tutorial) window.Tutorial.init({ slug: 'inbox-showdown', name: '📥 Inbox Showdown' });
+  if (window.Narrate) window.Narrate.init({ slug: 'inbox-showdown' });
 });
 
 // Test / console hook (read-only view plus dispatch); used by the Playwright checks.
-window.InboxShowdown = { dispatch, get state() { return state; }, MESSAGES, Shield };
+window.InboxShowdown = { dispatch, get state() { return state; }, MESSAGES, Shield, narrationLines };
 </script>
 </body>
 </html>

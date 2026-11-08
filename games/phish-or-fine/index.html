@@ -9,6 +9,7 @@
 <script src="/shared/fx.js" defer></script>
 <script src="/shared/menu.js" defer></script>
 <script src="/shared/tutorial.js" defer></script>
+<script src="/shared/narrate.js" defer></script>
 <style>
   :root { --bg:#0f172a; --card:#1e293b; --line:#334155; --text:#f1f5f9; --muted:#94a3b8; --accent:#38bdf8;
           --good:#22c55e; --bad:#ef4444; --warn:#f59e0b; --ink:#0f172a; --p1:#a855f7; --p2:#f97316; }
@@ -223,6 +224,44 @@ function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':
 function sfx(name) { try { if (window.Sfx) window.Sfx[name](); } catch (e) { /* audio is optional */ } }
 function fx(name, sel, arg) {
   try { const node = typeof sel === 'string' ? document.querySelector(sel) : sel; if (window.FX && (node || name === 'confetti')) window.FX[name](node, arg); } catch (e) { /* effects are optional */ }
+}
+
+/* ------------------------------------------------------------------ *
+ * Narration (shared/narrate.js). Every line a player has to read, by id. tools/extract-lines.js copies
+ * these into shared/narration/phish-or-fine/lines.json, and tools/generate-narration.sh voices them
+ * with ElevenLabs (priority 1 first). Names and scores are read by the browser voice (data-narrate-say).
+ * ------------------------------------------------------------------ */
+const CHANNEL_SAY = { SMS: 'A text', Email: 'An email', Chat: 'A chat message', Call: 'A phone call', Browser: 'A browser page',
+  'MFA prompt': 'A sign-in prompt', 'Social post': 'A social post', 'Social DM': 'A social message', 'Pop-up': 'A pop-up',
+  Lobby: 'In the lobby', 'System tray': 'A system notice' };
+function spokenFrom(from) { return /^\+?[\d ()-]+$/.test(from) ? 'an unknown number' : from; }
+function narrationLines() {
+  const L = {};
+  const add = (id, text, priority) => { L[id] = { text, priority }; };
+  add('setup', 'Phish or Fine? Buzzer Battle. Two players per heat race to call each message Phish, a scam, or Fine, safe. ' +
+    'Left player: A for phish, S for fine. Right player: K for phish, L for fine. Or just tap. ' +
+    'First right answer scores 100, a wrong buzz costs 50, and three in a row multiplies your points. Type the player names, then press Start battle.', 1);
+  add('next-heat', 'Get ready: left player uses A and S, right player uses K and L. Tap Start heat when you are both set.', 1);
+  add('champ', 'Tap See leaderboard for the final scores.', 1);
+  add('coach', 'Shield coach tip:', 1);
+  add('rv-phish', 'Phish! That one was unsafe.', 1);
+  add('rv-fine', 'Fine! That one was safe.', 1);
+  add('board', 'That is the final leaderboard. Tap Shield debrief to see what each player lost on.', 1);
+  add('debrief', 'Shield debrief. Here is what each player should practice next.', 1);
+  add('first', 'First move: read the message, then buzz Phish if it is a scam, or Fine if it is safe. Fastest right answer wins!', 1);
+  SNIPPETS.forEach(n => add('snip-' + n.id, (CHANNEL_SAY[n.channel] || n.channel) + (n.channel === 'Lobby' ? '' : ' from ' + spokenFrom(n.from)) +
+    (n.channel === 'Lobby' ? ': ' + n.from : '') + '. ' + n.body.replace(/📸 /g, ''), 1));
+  SNIPPETS.forEach(n => add('flag-' + n.id, n.flag, 2));
+  Object.keys(CATEGORIES).forEach(c => add('tip-' + c, CATEGORIES[c].tip, 3));
+  SNIPPETS.forEach(n => add('habit-' + n.id, 'Safe habit: ' + n.habit, 3));
+  return L;
+}
+/* data-narrate attributes for a block (see shared/narrate.js). */
+function nar(ids, o) {
+  o = o || {};
+  return ' data-narrate="' + esc(ids) + '"' + (o.say ? ' data-narrate-say="' + esc(o.say) + '"' : '') +
+    (o.key ? ' data-narrate-key="' + esc(o.key) + '"' : '') + (o.auto === false ? ' data-narrate-auto="0"' : '') +
+    (o.now ? ' data-narrate-interrupt="1"' : '') + (o.label ? ' data-narrate-label="' + esc(o.label) + '"' : '');
 }
 
 /* ------------------------------------------------------------------ *
@@ -513,8 +552,8 @@ function shieldBadge() {
 function scoreStrip() {
   return '<div class="scores" data-testid="score-strip">' + state.players.map(p => '<span>' + esc(p.name) + ': ' + p.score + '</span>').join('') + '</div>';
 }
-function snippetCard(item) {
-  return '<div class="snip" data-testid="snippet-card" data-item-id="' + item.id + '" data-category="' + item.category + '">' +
+function snippetCard(item, narration) {
+  return '<div class="snip" data-testid="snippet-card" data-item-id="' + item.id + '" data-category="' + item.category + '"' + (narration || '') + '>' +
     '<span class="ch">' + esc(item.channel) + '</span>' +
     '<div class="from">From: ' + esc(item.from) + '</div>' +
     '<div class="body" data-testid="snippet-text">' + esc(item.body) + '</div></div>';
@@ -537,21 +576,22 @@ function view() {
   let h = '';
   if (state.phase === 'setup') {
     h += '<section data-testid="setup-screen"><h1>🎣 Phish or Fine? Buzzer Battle</h1>' +
+      '<div class="nr-intro" data-testid="setup-intro"' + nar('setup', { label: 'how this game works' }) + '>' +
       '<p class="goal" data-testid="game-goal">🎯 Goal: be the first to call each message 🎣 Phish (a scam) or ✅ Fine (safe).</p>' +
       '<div class="how-row" aria-label="Quick rules"><span>🟣 A = Phish · S = Fine</span><span>🟠 K = Phish · L = Fine</span><span>⏱️ 6 s per message</span><span>💯 +100 first right</span><span>🔥 3 in a row = x1.5</span></div>' +
       '<div class="row"><button class="tutorial-btn" data-testid="btn-tutorial" data-action="tutorial">🎬 How to play (30 s, with voice)</button></div>' +
-      '<p>Northbridge Co. pop quiz. Two players per heat race to call each snippet <b>Phish</b> (unsafe) or <b>Fine</b> (safe). With 3 to 6 players it runs as a bracket; every point counts on one leaderboard.</p>' +
+      '<p>Northbridge Co. pop quiz. Two players per heat race to call each snippet <b>Phish</b> (unsafe) or <b>Fine</b> (safe). With 3 to 6 players it runs as a bracket; every point counts on one leaderboard.</p></div>' +
       '<div class="panel"><label for="player-names"><h2>Players (2 to 6, one per line)</h2></label>' +
       '<textarea id="player-names" data-testid="player-names" aria-describedby="setup-help">' + esc(state.namesDraft) + '</textarea>' +
       '<p id="setup-help" class="muted small">2 players: one 12-snippet heat. 3 to 6: 4 snippets per heat, winners advance. Keys A/S (left or top) and K/L (right or bottom), or tap.</p>' +
-      (state.error ? '<p class="error" role="alert" data-testid="setup-error">' + esc(state.error) + '</p>' : '') +
+      (state.error ? '<p class="error" role="alert" data-testid="setup-error"' + nar('_', { say: state.error, now: true }) + '>' + esc(state.error) + '</p>' : '') +
       '<div class="row"><button class="primary" data-testid="btn-start" data-action="start">🚀 Start battle</button></div></div>' +
       '<p>' + shieldBadge() + '</p></section>';
   } else if (state.phase === 'bracket') {
     const last = state.lastHeat != null ? state.heats[state.lastHeat] : null;
     h += '<section class="panel" data-testid="bracket"><h2>🏁 Bracket</h2>' +
       '<p class="muted small">Heat ' + Math.min(state.heats.filter(x => x.done).length + 1, totalHeats()) + ' of ' + totalHeats() + ' · ' + state.perHeat + ' snippets per heat</p>';
-    if (last) h += '<p data-testid="heat-result" class="result-good">' + esc(state.players[last.winner].name) + ' wins ' + heatName(last.round) +
+    if (last) h += '<p data-testid="heat-result" class="result-good"' + nar('_', { say: state.players[last.winner].name + ' wins ' + heatName(last.round) + ', ' + last.scores[0] + ' to ' + last.scores[1] + '.', label: 'heat result' }) + '>' + esc(state.players[last.winner].name) + ' wins ' + heatName(last.round) +
       ' (' + last.scores[0] + ' to ' + last.scores[1] + ')</p>';
     h += '<ol class="bracket">' + state.heats.map((x, i) => {
       const status = x.done ? 'done' : (i === state.heat ? 'current' : 'pending');
@@ -561,14 +601,14 @@ function view() {
     }).join('') + state.rounds.filter(r => r.bye != null).map(r => '<li data-testid="bracket-bye" data-status="bye"><div class="round">' +
       heatName(state.rounds.indexOf(r)) + '</div>' + esc(state.players[r.bye].name) + ' has a bye</li>').join('') + '</ol>';
     if (state.champion != null) {
-      h += '<p class="champ" data-testid="champion">🏆 ' + esc(state.players[state.champion].name) + ' wins the battle</p>' +
+      h += '<p class="champ" data-testid="champion"' + nar('_ champ', { say: state.players[state.champion].name + ' wins the battle!', label: 'the champion' }) + '>🏆 ' + esc(state.players[state.champion].name) + ' wins the battle</p>' +
         '<div class="row" style="margin-top:12px"><button class="primary" data-testid="btn-results" data-action="results">See leaderboard</button></div>';
     } else {
       const x = curHeat();
       const tips = Shield.mode === 'coach' ? [x.a, x.b].map(pi => ({ pi, tip: Shield.coachTip(pi) })).filter(t => t.tip) : [];
-      h += tips.map(t => '<div class="shield" data-testid="shield-coach-tip"><div class="tag">🛡️ Shield coach · prototype, scripted agent</div>' +
+      h += tips.map(t => '<div class="shield" data-testid="shield-coach-tip"' + nar('coach _ tip-' + Shield.debrief(t.pi).lostOn[0], { say: state.players[t.pi].name + ', you lost on ' + CATEGORIES[Shield.debrief(t.pi).lostOn[0]].label.toLowerCase() + ' before.', label: 'Shield coach tip' }) + '><div class="tag">🛡️ Shield coach · prototype, scripted agent</div>' +
         esc(state.players[t.pi].name) + ', ' + esc(t.tip) + '</div>').join('') +
-        '<p>Next: <b>' + esc(state.players[x.a].name) + '</b> (🟣 A/S) vs <b>' + esc(state.players[x.b].name) + '</b> (🟠 K/L)</p>' +
+        '<p' + nar('_ next-heat', { say: 'Next heat: ' + state.players[x.a].name + ' versus ' + state.players[x.b].name + '.', key: 'heat:' + state.heat, label: 'who plays next' }) + '>Next: <b>' + esc(state.players[x.a].name) + '</b> (🟣 A/S) vs <b>' + esc(state.players[x.b].name) + '</b> (🟠 K/L)</p>' +
         '<div class="row" style="margin-top:12px"><button class="primary" data-testid="btn-start-heat" data-action="startHeat">🚦 Start ' + heatName(x.round) + ' heat</button></div>';
     }
     h += scoreStrip() + '<p>' + shieldBadge() + '</p></section>';
@@ -583,32 +623,33 @@ function view() {
     const left = Math.max(0, q.deadline - now());
     const first = state.heats.every(z => !z.done) && state.itemPos === 0 && q.buzzes.length === 0;
     h += '<section data-testid="question-screen" data-item-id="' + item.id + '">' +
-      (first ? '<p class="first-hint" data-testid="first-move-hint"><span class="arrow">👇</span> First move: read the message, then buzz 🎣 Phish if it is a scam or ✅ Fine if it is safe. Fastest right answer wins!</p>' : '') +
+      (first ? '<p class="first-hint" data-testid="first-move-hint"' + nar('first', { auto: false, label: 'first move' }) + '><span class="arrow">👇</span> First move: read the message, then buzz 🎣 Phish if it is a scam or ✅ Fine if it is safe. Fastest right answer wins!</p>' : '') +
       '<div class="arena' + (first ? ' first' : '') + '">' + zone(0) +
       '<div class="q"><p class="muted small" data-testid="question-progress">' + heatName(x.round) + ' · snippet ' + (state.itemPos + 1) + ' of ' + x.items.length + '</p>' +
-      snippetCard(item) +
+      snippetCard(item, nar('snip-' + item.id, { key: 'q:' + state.heat + ':' + state.itemPos, now: true, label: 'the message' })) +
       '<div class="timebar" aria-hidden="true"><span style="width:' + (100 * left / BUZZ_MS) + '%"></span></div>' +
       '<p class="small"><span data-testid="timer">' + Math.ceil(left / 1000) + ' s</span> to buzz</p>' +
-      '<p class="status" data-testid="buzz-status">' + (wrong ? '❌ ' + esc(state.players[wrong.player].name) + ' buzzed wrong (' + SCORE.wrong + '). ' +
+      '<p class="status" data-testid="buzz-status"' + nar('_', { say: wrong ? state.players[wrong.player].name + ' buzzed wrong. ' + state.players[slotPlayer(x, 1 - wrong.slot)].name + ' may answer for 50.' : 'Phish or fine?', auto: !!wrong, label: 'buzz status' }) + '>' + (wrong ? '❌ ' + esc(state.players[wrong.player].name) + ' buzzed wrong (' + SCORE.wrong + '). ' +
         esc(state.players[slotPlayer(x, 1 - wrong.slot)].name) + ' may answer for +' + SCORE.steal + '.' : 'Phish or fine? First correct buzz +' + SCORE.correct + '.') + '</p>' +
       '</div>' + zone(1) + '</div></section>';
   } else if (state.phase === 'reveal') {
     const r = state.reveal, item = SNIP[r.item], x = curHeat();
     const lastItem = state.itemPos + 1 >= x.items.length;
-    h += '<section class="panel" data-testid="reveal"><h2 data-testid="reveal-result" class="' + (item.phish ? 'result-bad' : 'result-good') + '">' +
+    h += '<section class="panel" data-testid="reveal"' + nar((item.phish ? 'rv-phish' : 'rv-fine') + (Shield.mode !== 'off' ? ' flag-' + item.id + ' habit-' + item.id : '') + ' _',
+      { say: whatHappened(r, item), key: 'rv:' + state.heat + ':' + state.itemPos, now: true, label: 'the answer and Shield\'s lesson' }) + '><h2 data-testid="reveal-result" class="' + (item.phish ? 'result-bad' : 'result-good') + '">' +
       (item.phish ? '🎣 Phish: unsafe' : '✅ Fine: safe') + '</h2>' +
       (r.timedOut ? '<p data-testid="reveal-timeout">⏱️ Time is up, nobody buzzed.</p>' : '') +
       '<p class="what ' + (r.buzzes.some(b => b.correct) ? 'good' : 'bad') + '" data-testid="what-happened">💡 What just happened: ' + esc(whatHappened(r, item)) + '</p>' +
       r.buzzes.map(b => '<p data-testid="reveal-buzz">' + (b.correct ? '✅ ' : '❌ ') + esc(state.players[b.player].name) + ' said ' + b.choice +
         ' · ' + (b.points >= 0 ? '+' : '') + b.points + (b.correct && !b.steal && b.streak >= SCORE.streakAt ? ' (🔥 x' + SCORE.streakMultiplier + ' streak)' : '') + (b.steal ? ' (steal)' : '') + '</p>').join('') +
-      snippetCard(item) +
+      snippetCard(item, nar('snip-' + item.id, { auto: false, key: 'rs:' + state.heat + ':' + state.itemPos, label: 'the message' })) +
       (Shield.mode !== 'off' ? '<div class="shield" data-testid="reveal-lesson"><div class="tag">🛡️ Shield explains · ' + esc(CATEGORIES[item.category].label) + ' · prototype, scripted agent</div>' +
         '<p><b>Red flag:</b> ' + esc(r.lesson.flag) + '</p><p><b>Safe habit:</b> ' + esc(r.lesson.habit) + '</p></div>' : '') +
       '<p class="small">' + esc(state.players[x.a].name) + ' ' + x.scores[0] + ' · ' + esc(state.players[x.b].name) + ' ' + x.scores[1] + '</p>' +
       '<div class="row"><button class="primary" data-testid="btn-next" data-action="next">' + (lastItem ? '🏁 End heat' : '➡️ Next snippet') + '</button></div>' +
       '<p class="muted small">The next one starts by itself in a few seconds.</p></section>';
   } else if (state.phase === 'leaderboard') {
-    h += '<section class="panel" data-testid="leaderboard">' + winnerBanner() + '<h2>🏆 Leaderboard</h2><ol class="board">' +
+    h += '<section class="panel" data-testid="leaderboard"' + nar('_ board', { say: boardSay(), label: 'the leaderboard' }) + '>' + winnerBanner() + '<h2>🏆 Leaderboard</h2><ol class="board">' +
       leaderboard().map((r, i) => '<li data-testid="leaderboard-row" data-score="' + r.score + '"><span>' + (i + 1) + '. <span data-testid="leaderboard-name">' + esc(r.name) + '</span>' +
         (r.index === state.champion ? ' 🏆' : '') + '</span><span data-testid="leaderboard-score">' + r.score + '</span></li>').join('') +
       '</ol><div class="row" style="margin-top:12px"><button class="primary" data-testid="btn-debrief" data-action="debrief">🛡️ Shield debrief</button>' +
@@ -616,14 +657,15 @@ function view() {
   } else if (state.phase === 'debrief') {
     const recap = Shield.recap();
     const totalMiss = state.players.reduce((n, p, i) => n + Shield.debrief(i).misses, 0);
-    h += '<section class="panel" data-testid="debrief"><h2>🛡️ Shield debrief</h2>' +
+    h += '<section class="panel" data-testid="debrief"><div' + nar('debrief _', { say: recap.length ? 'Most-missed red flags this match: ' + recap.map(c => c.label).join(' and ') + '.' : 'No missed red flags this match.', label: 'Shield debrief' }) + '><h2>🛡️ Shield debrief</h2></div>' +
       '<p class="muted small">Prototype, scripted agent. Shield mode this match: ' + Shield.mode + '. No mid-race nudges in a buzzer battle; Shield explains after every snippet.</p>' +
       '<p data-testid="shield-recap">' + (recap.length ? 'Most-missed red flags this match: ' + recap.map(c => '<b>' + esc(c.label) + '</b> <code>' + c.category + '</code> (' + c.misses + ')').join(' and ') + '.'
         : 'No missed red flags this match.') + '</p>' +
       '<p data-testid="shield-stopped-total">Shield stopped 0 mistakes mid-race (none attempted) and explained ' + totalMiss + ' miss' + (totalMiss === 1 ? '' : 'es') + '.</p>' +
       state.players.map((p, i) => {
         const d = Shield.debrief(i);
-        return '<div class="debrief-player" data-testid="p' + (i + 1) + '-debrief" data-player="' + esc(p.name) + '"><h3>' + esc(p.name) + ' · ' + p.score + ' pts · ' + d.correct + ' correct, ' + d.misses + ' missed</h3>' +
+        return '<div class="debrief-player" data-testid="p' + (i + 1) + '-debrief" data-player="' + esc(p.name) + '"' +
+          nar('_ ' + d.weakest.map(w => 'tip-' + w.category).join(' '), { say: p.name + ': ' + d.correct + ' correct, ' + d.misses + ' missed, ' + p.score + ' points. Practice these.', label: p.name + ' debrief' }) + '><h3>' + esc(p.name) + ' · ' + p.score + ' pts · ' + d.correct + ' correct, ' + d.misses + ' missed</h3>' +
           '<p class="small" data-testid="debrief-lost">Lost on: ' + (d.lostOn.length ? d.lostOn.map(c => '<code>' + c + '</code>').join(', ') : 'nothing') + '</p>' +
           '<p class="small">Two weakest categories:</p><ul>' + d.weakest.map(w => '<li data-testid="debrief-weak" data-category="' + w.category + '"><b>' + esc(w.label) + '</b> <code>' + w.category + '</code>' +
           (w.seen ? ' (' + w.misses + ' missed of ' + w.seen + ')' : ' (not seen this match)') + ': ' + esc(w.tip) + '</li>').join('') + '</ul></div>';
@@ -646,6 +688,13 @@ function whatHappened(r, item) {
   if (right) return name(wrongs[0]) + ' buzzed wrong (' + wrongs[0].points + '), so ' + name(right) + ' answered and stole +' + right.points + '.';
   if (wrongs.length === 2) return 'Both players buzzed wrong (' + SCORE.wrong + ' each). It was ' + answer + '.';
   return name(wrongs[0]) + ' buzzed wrong (' + wrongs[0].points + ') and the other player did not answer. It was ' + answer + '.';
+}
+
+/* The leaderboard read aloud (names and scores change, so the browser voice reads this part). */
+function boardSay() {
+  const board = leaderboard();
+  const name = state.champion != null ? state.players[state.champion].name : board[0].name;
+  return name + ' wins the battle! ' + board.map(r => r.name + ', ' + r.score + ' points.').join(' ');
 }
 
 function winnerBanner() {
@@ -739,10 +788,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   if (window.Tutorial) window.Tutorial.init({ slug: 'phish-or-fine', name: '🎣 Phish or Fine?' });
+  if (window.Narrate) window.Narrate.init({ slug: 'phish-or-fine' });
 });
 
 // Test / console hook (read-only view plus dispatch); used by the Playwright checks.
-window.PhishOrFine = { dispatch, get state() { return state; }, SNIPPETS, CATEGORIES, Shield };
+window.PhishOrFine = { dispatch, get state() { return state; }, SNIPPETS, CATEGORIES, Shield, narrationLines };
 </script>
 </body>
 </html>

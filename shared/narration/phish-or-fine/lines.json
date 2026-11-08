@@ -1,0 +1,361 @@
+{
+  "slug": "phish-or-fine",
+  "lines": {
+    "setup": {
+      "text": "Phish or Fine? Buzzer Battle. Two players per heat race to call each message Phish, a scam, or Fine, safe. Left player: A for phish, S for fine. Right player: K for phish, L for fine. Or just tap. First right answer scores 100, a wrong buzz costs 50, and three in a row multiplies your points. Type the player names, then press Start battle.",
+      "priority": 1
+    },
+    "next-heat": {
+      "text": "Get ready: left player uses A and S, right player uses K and L. Tap Start heat when you are both set.",
+      "priority": 1
+    },
+    "champ": {
+      "text": "Tap See leaderboard for the final scores.",
+      "priority": 1
+    },
+    "coach": {
+      "text": "Shield coach tip:",
+      "priority": 1
+    },
+    "rv-phish": {
+      "text": "Phish! That one was unsafe.",
+      "priority": 1
+    },
+    "rv-fine": {
+      "text": "Fine! That one was safe.",
+      "priority": 1
+    },
+    "board": {
+      "text": "That is the final leaderboard. Tap Shield debrief to see what each player lost on.",
+      "priority": 1
+    },
+    "debrief": {
+      "text": "Shield debrief. Here is what each player should practice next.",
+      "priority": 1
+    },
+    "first": {
+      "text": "First move: read the message, then buzz Phish if it is a scam, or Fine if it is safe. Fastest right answer wins!",
+      "priority": 1
+    },
+    "snip-u1": {
+      "text": "A text from an unknown number. Northbridge Security: your account will be DELETED in 30 minutes unless you verify now at nb-verify.co/now",
+      "priority": 1
+    },
+    "snip-u2": {
+      "text": "An email from cfo.office@northbridge-finance.net. Boarding in 10 min. Wire the vendor $7,200 before I land and do not loop anyone else in.",
+      "priority": 1
+    },
+    "snip-u3": {
+      "text": "A chat message from Priya Shah (your team, northbridge.co). Reminder: timesheets are due by 5 today. Submit them in the HR portal from your bookmark like usual.",
+      "priority": 1
+    },
+    "snip-d1": {
+      "text": "An email from it-help@northbrigde.co. Your mailbox is 99% full. Click here within 24 hours to keep your messages.",
+      "priority": 1
+    },
+    "snip-d2": {
+      "text": "An email from payroll@northbridge.co.pay-portal.io. Your November pay stub is ready. Sign in to view it.",
+      "priority": 1
+    },
+    "snip-d3": {
+      "text": "An email from facilities@northbridge.co. The 3rd floor kitchen is closed Friday for cleaning. Use the 2nd floor kitchen instead.",
+      "priority": 1
+    },
+    "snip-c1": {
+      "text": "An email from vpn@login-northbridge.help. Your VPN session expired. Re-enter your Northbridge username and password here to reconnect.",
+      "priority": 1
+    },
+    "snip-c2": {
+      "text": "A phone call from \"IT Helpdesk\" (unknown number). \"Hi, I am finishing your laptop setup remotely. What is your password so I can log in as you?\"",
+      "priority": 1
+    },
+    "snip-c3": {
+      "text": "A browser page from portal.northbridge.co (opened from your bookmark). You typed the portal address yourself. It asks you to sign in with single sign-on.",
+      "priority": 1
+    },
+    "snip-g1": {
+      "text": "A text from \"Your manager\" (new number). Can you grab 4 gift cards for a client? Scratch them and text me photos of the codes. Will pay you back.",
+      "priority": 1
+    },
+    "snip-g2": {
+      "text": "An email from ceo.dana.ortiz@gmail.com. Buy $500 in gift cards for the team raffle. Keep it a surprise, reimbursement tomorrow.",
+      "priority": 1
+    },
+    "snip-g3": {
+      "text": "An email from people-team@northbridge.co. Thanks for finishing onboarding! Your coffee reward is in the HR portal under Rewards. Nothing to buy.",
+      "priority": 1
+    },
+    "snip-a1": {
+      "text": "An email from scanner@northbridge-print.com. New scan from Floor 4 printer. Attachment: Scan_0042.pdf.exe",
+      "priority": 1
+    },
+    "snip-a2": {
+      "text": "An email from tracking@parcel-notify.net. Your package could not be delivered. Open Shipping_Label.docm and click \"Enable macros\" to view.",
+      "priority": 1
+    },
+    "snip-a3": {
+      "text": "A chat message from Marco Lee (your manager, northbridge.co). As promised in standup, I shared \"Onboarding checklist\" in our team folder on Northbridge Drive.",
+      "priority": 1
+    },
+    "snip-m1": {
+      "text": "A sign-in prompt from Northbridge Authenticator. 2:14 AM. Approve sign-in? (12th request in 5 minutes) You are not signing in.",
+      "priority": 1
+    },
+    "snip-m2": {
+      "text": "A text from an unknown number. Northbridge IT: reply with the 6-digit code we just sent to confirm your identity.",
+      "priority": 1
+    },
+    "snip-m3": {
+      "text": "A sign-in prompt from Northbridge Authenticator. You just signed in on your laptop. Approve sign-in from \"Your laptop, New York\"? Number 42 matches your screen.",
+      "priority": 1
+    },
+    "snip-o1": {
+      "text": "A social post from You (draft). First day at Northbridge! Close-up of my new badge and my desk screen with the login page open. #NewHire",
+      "priority": 1
+    },
+    "snip-o2": {
+      "text": "A social message from \"Recruiter Jamie\" (no mutual connections). Love your profile! Who on your team approves vendor payments, and when is your manager traveling next?",
+      "priority": 1
+    },
+    "snip-o3": {
+      "text": "A social post from You (draft). Excited to start as an analyst at Northbridge Co. this week! Grateful for the warm welcome.",
+      "priority": 1
+    },
+    "snip-v1": {
+      "text": "A pop-up from \"Northbridge Defender\" browser pop-up. VIRUS DETECTED! Your laptop is locked. Call 1-888-555-0199 now for Northbridge Support.",
+      "priority": 1
+    },
+    "snip-v2": {
+      "text": "In the lobby: USB stick found by the elevators. Label: \"Salary review 2026\". You plug it into your laptop to find the owner.",
+      "priority": 1
+    },
+    "snip-v3": {
+      "text": "A system notice from Northbridge IT Software Center (installed app). Security update ready. Restart tonight to finish installing.",
+      "priority": 1
+    },
+    "flag-u1": {
+      "text": "A 30-minute deadline plus a link that is not northbridge.co.",
+      "priority": 2
+    },
+    "flag-u2": {
+      "text": "Rush plus secrecy from an outside domain.",
+      "priority": 2
+    },
+    "flag-u3": {
+      "text": "Fine: a normal internal deadline, no link, no ask for data.",
+      "priority": 2
+    },
+    "flag-d1": {
+      "text": "Look-alike domain: northbrigde.co swaps two letters.",
+      "priority": 2
+    },
+    "flag-d2": {
+      "text": "The real owner is pay-portal.io; \"northbridge.co\" in front is decoration.",
+      "priority": 2
+    },
+    "flag-d3": {
+      "text": "Fine: the real northbridge.co domain, no link, no ask.",
+      "priority": 2
+    },
+    "flag-c1": {
+      "text": "A link asking for your password on a non-Northbridge site.",
+      "priority": 2
+    },
+    "flag-c2": {
+      "text": "IT never needs your password.",
+      "priority": 2
+    },
+    "flag-c3": {
+      "text": "Fine: you opened the real portal yourself.",
+      "priority": 2
+    },
+    "flag-g1": {
+      "text": "Gift cards plus codes over text from an unknown number.",
+      "priority": 2
+    },
+    "flag-g2": {
+      "text": "An executive on a personal email asking for gift cards, kept secret.",
+      "priority": 2
+    },
+    "flag-g3": {
+      "text": "Fine: nothing to buy, no codes to send, real sender.",
+      "priority": 2
+    },
+    "flag-a1": {
+      "text": "Double extension: .pdf.exe is a program.",
+      "priority": 2
+    },
+    "flag-a2": {
+      "text": "\"Enable macros\" on a surprise document runs code.",
+      "priority": 2
+    },
+    "flag-a3": {
+      "text": "Fine: an expected file in the drive you already use.",
+      "priority": 2
+    },
+    "flag-m1": {
+      "text": "A flood of prompts you did not start is an attacker with your password.",
+      "priority": 2
+    },
+    "flag-m2": {
+      "text": "Nobody legitimate asks you to send them your code.",
+      "priority": 2
+    },
+    "flag-m3": {
+      "text": "Fine: you started it and the number matches.",
+      "priority": 2
+    },
+    "flag-o1": {
+      "text": "A badge close-up and a screen shot help attackers copy or target you.",
+      "priority": 2
+    },
+    "flag-o2": {
+      "text": "A stranger mapping who pays and when people are away.",
+      "priority": 2
+    },
+    "flag-o3": {
+      "text": "Fine: no badge, no screen, no dates or places.",
+      "priority": 2
+    },
+    "flag-v1": {
+      "text": "Scary pop-ups with a phone number are fake support scams.",
+      "priority": 2
+    },
+    "flag-v2": {
+      "text": "Found USB sticks are a classic way to plant malware.",
+      "priority": 2
+    },
+    "flag-v3": {
+      "text": "Fine: the real IT app, nothing to download from a link.",
+      "priority": 2
+    },
+    "tip-urgency": {
+      "text": "Pressure to act right now is a red flag. Slow down and verify through a channel you already trust.",
+      "priority": 3
+    },
+    "tip-lookalike": {
+      "text": "Read the sender domain letter by letter, from the right; northbridge.co is the only real one.",
+      "priority": 3
+    },
+    "tip-credential": {
+      "text": "Never type your password from a link or give it to a caller. Open portals from your own bookmark.",
+      "priority": 3
+    },
+    "tip-giftcard": {
+      "text": "Real managers never ask you to buy gift cards and send codes. Call them on a number you already have.",
+      "priority": 3
+    },
+    "tip-attachment": {
+      "text": "Unexpected files, double extensions (.pdf.exe) and \"enable macros\" mean report, do not open.",
+      "priority": 3
+    },
+    "tip-mfa": {
+      "text": "Only approve an MFA prompt you just triggered yourself. Never read or text a code to anyone.",
+      "priority": 3
+    },
+    "tip-oversharing": {
+      "text": "Badges, screens, org charts and travel plans help attackers. Keep them off public posts and strangers.",
+      "priority": 3
+    },
+    "tip-device": {
+      "text": "Install only from the IT Software Center, never plug in found USB sticks, and lock your laptop.",
+      "priority": 3
+    },
+    "habit-u1": {
+      "text": "Safe habit: Slow down; check account notices in the IT portal yourself.",
+      "priority": 3
+    },
+    "habit-u2": {
+      "text": "Safe habit: Confirm every payment request by calling the person on a known number.",
+      "priority": 3
+    },
+    "habit-u3": {
+      "text": "Safe habit: Real deadlines point you to tools you already use.",
+      "priority": 3
+    },
+    "habit-d1": {
+      "text": "Safe habit: Read the domain letter by letter before you click.",
+      "priority": 3
+    },
+    "habit-d2": {
+      "text": "Safe habit: Read domains from the right; the last part is the owner.",
+      "priority": 3
+    },
+    "habit-d3": {
+      "text": "Safe habit: Even on real mail, still check before entering any data.",
+      "priority": 3
+    },
+    "habit-c1": {
+      "text": "Safe habit: Reconnect from the VPN app itself, never from an email link.",
+      "priority": 3
+    },
+    "habit-c2": {
+      "text": "Safe habit: Hang up and call the helpdesk number on the intranet.",
+      "priority": 3
+    },
+    "habit-c3": {
+      "text": "Safe habit: Bookmarks are the safe way into every portal.",
+      "priority": 3
+    },
+    "habit-g1": {
+      "text": "Safe habit: Call your manager on their known number first.",
+      "priority": 3
+    },
+    "habit-g2": {
+      "text": "Safe habit: Real raffles go through the People team, never your card.",
+      "priority": 3
+    },
+    "habit-g3": {
+      "text": "Safe habit: The scam is being asked to BUY cards and send codes.",
+      "priority": 3
+    },
+    "habit-a1": {
+      "text": "Safe habit: Report unexpected attachments; never run files from email.",
+      "priority": 3
+    },
+    "habit-a2": {
+      "text": "Safe habit: Never enable macros on a file you did not expect.",
+      "priority": 3
+    },
+    "habit-a3": {
+      "text": "Safe habit: Expected + known sender + company drive = fine.",
+      "priority": 3
+    },
+    "habit-m1": {
+      "text": "Safe habit: Deny, then tell IT and change your password.",
+      "priority": 3
+    },
+    "habit-m2": {
+      "text": "Safe habit: Codes are typed by you, into the real site, only.",
+      "priority": 3
+    },
+    "habit-m3": {
+      "text": "Safe habit: Approve only prompts you just triggered.",
+      "priority": 3
+    },
+    "habit-o1": {
+      "text": "Safe habit: Share the news, never the badge or screen.",
+      "priority": 3
+    },
+    "habit-o2": {
+      "text": "Safe habit: Do not share org charts or travel plans with strangers.",
+      "priority": 3
+    },
+    "habit-o3": {
+      "text": "Safe habit: Celebrate without the details attackers want.",
+      "priority": 3
+    },
+    "habit-v1": {
+      "text": "Safe habit: Close the tab and use the IT portal for real help.",
+      "priority": 3
+    },
+    "habit-v2": {
+      "text": "Safe habit: Hand found devices to security; never plug them in.",
+      "priority": 3
+    },
+    "habit-v3": {
+      "text": "Safe habit: Install updates promptly; do not hit \"later\" forever.",
+      "priority": 3
+    }
+  }
+}
