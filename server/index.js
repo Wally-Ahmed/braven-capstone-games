@@ -1,5 +1,6 @@
 // Room mode server for the Northbridge sample games (a demo: one process, in memory, no persistence).
-//   node server/index.js            PORT (default 8080), HOST (default 127.0.0.1), PUBLIC_ORIGIN (optional,
+//   node server/index.js            PORT (default 8080), HOST (default 127.0.0.1, or 0.0.0.0 when PORT is set,
+//                                   e.g. in the Fly.io image), PUBLIC_ORIGIN (optional,
 //                                   e.g. the Cloudflare tunnel URL, used for the join links and QR codes)
 // It serves the repo root as static files (same URLs as `python3 -m http.server`) and a WebSocket room relay
 // at /ws. The HOST screen (the one that created the room) is authoritative: players send moves, the server
@@ -25,7 +26,7 @@ const { WebSocketServer } = require('ws');
 
 const ROOT = path.join(__dirname, '..');
 const PORT = Number(process.env.PORT || 8080);
-const HOST = process.env.HOST || '127.0.0.1';
+const HOST = process.env.HOST || (process.env.PORT ? '0.0.0.0' : '127.0.0.1');
 const PUBLIC_ORIGIN = (process.env.PUBLIC_ORIGIN || '').replace(/\/+$/, '');
 const IDLE_MS = 2 * 60 * 60 * 1000;
 const MAX_SEATS = 6;

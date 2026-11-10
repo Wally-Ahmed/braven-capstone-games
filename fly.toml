@@ -1,17 +1,21 @@
-# Fly.io config for the static games site. Not deployed yet: Wally runs
-# `fly auth login`, then `fly launch --no-deploy --name braven-capstone-games --copy-config`, then `fly deploy`.
+# Fly.io config for the games site served by the Node server (static files + WebSocket room relay at /ws).
+# Rooms live in the process's memory, so the machine stays up (no auto-stop) and a deploy resets all rooms.
+# Runbook: deploy/FLY-DEPLOY.md. Wally runs `fly auth login` himself; nothing is deployed from here unasked.
 app = "braven-capstone-games"
 primary_region = "ewr"
 
 [build]
   dockerfile = "Dockerfile"
 
+[env]
+  PORT = "8080"
+
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = "stop"
+  auto_stop_machines = false
   auto_start_machines = true
-  min_machines_running = 0
+  min_machines_running = 1
 
   [[http_service.checks]]
     grace_period = "10s"

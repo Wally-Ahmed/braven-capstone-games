@@ -4,8 +4,8 @@ tests
 test-results
 playwright-report
 playwright.config.js
-package.json
-package-lock.json
+tools
+deploy/*.log
 SPEC.md
 README.md
 fly.toml
