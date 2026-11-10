@@ -53,6 +53,18 @@
 
   /* split-screen arena: top/bottom (desktop shows the same phone layout inside the portrait frame, shared/theme.css) */
   .arena { display:grid; gap:10px; grid-template-columns:minmax(0,1fr); grid-template-areas:"p1" "q" "p2"; }
+  /* 11/10: both buzz zones always on screen on a phone (player 2's sat below the fold at 360x640 and 375x667):
+     the arena fills the screen under the top bar, the middle (message + timer) scrolls inside it. */
+  .arena { height:calc(100dvh - var(--arena-top, 100px)); grid-template-rows:auto minmax(0,1fr) auto; }
+  .arena .q { overflow-y:auto; min-height:0; overscroll-behavior:contain; }
+  @media (max-height: 760px) {
+    .arena { gap:6px; }
+    .arena .zone { padding:6px 8px; gap:4px; }
+    .arena .zone .btns button { min-height:52px; }
+    .arena .first-hint { font-size:.85rem; padding:6px 10px; margin:0 0 6px; }
+    .arena .first-hint > .nr-bar, .arena .status > .nr-bar { display:none; }
+    .arena .status { margin:4px 0 0; font-size:.9rem; }
+  }
   .zone { border-radius:14px; border:2px solid var(--line); padding:10px; display:flex; flex-direction:column; gap:8px; background:#0b1222; min-width:0; }
   .zone.p1 { grid-area:p1; border-color:var(--p1); } .zone.p2 { grid-area:p2; border-color:var(--p2); }
   .zone.locked { opacity:.55; }
@@ -639,12 +651,13 @@ function view() {
     const left = Math.max(0, q.deadline - now());
     const first = state.heats.every(z => !z.done) && state.itemPos === 0 && q.buzzes.length === 0;
     h += '<section data-testid="question-screen" data-item-id="' + item.id + '">' +
-      (first ? '<p class="first-hint" data-testid="first-move-hint"' + nar('first', { auto: false, label: 'first move' }) + '><span class="arrow">👇</span> First move: read the message, then buzz 🎣 Phish if it is a scam or ✅ Fine if it is safe. Fastest right answer wins!</p>' : '') +
       '<div class="arena' + (first ? ' first' : '') + '">' + zone(0) +
-      '<div class="q"><p class="muted small" data-testid="question-progress">' + heatName(x.round) + ' · snippet ' + (state.itemPos + 1) + ' of ' + x.items.length + '</p>' +
-      snippetCard(item, nar('snip-' + item.id, { key: 'q:' + state.heat + ':' + state.itemPos, now: true, label: 'the message' })) +
+      '<div class="q">' +
+      (first ? '<p class="first-hint" data-testid="first-move-hint"' + nar('first', { auto: false, label: 'first move' }) + '><span class="arrow">👇</span> First move: read the message, then buzz 🎣 Phish if it is a scam or ✅ Fine if it is safe. Fastest right answer wins!</p>' : '') +
+      '<p class="muted small" data-testid="question-progress">' + heatName(x.round) + ' · snippet ' + (state.itemPos + 1) + ' of ' + x.items.length + '</p>' +
       '<div class="timebar" aria-hidden="true"><span style="width:' + (100 * left / BUZZ_MS) + '%"></span></div>' +
       '<p class="small"><span data-testid="timer">' + Math.ceil(left / 1000) + ' s</span> to buzz</p>' +
+      snippetCard(item, nar('snip-' + item.id, { key: 'q:' + state.heat + ':' + state.itemPos, now: true, label: 'the message' })) +
       '<p class="status" data-testid="buzz-status"' + nar('_', { say: wrong ? state.players[wrong.player].name + ' buzzed wrong. ' + state.players[slotPlayer(x, 1 - wrong.slot)].name + ' may answer for 50.' : 'Phish or fine?', auto: !!wrong, label: 'buzz status' }) + '>' + (wrong ? '❌ ' + esc(state.players[wrong.player].name) + ' buzzed wrong (' + SCORE.wrong + '). ' +
         esc(state.players[slotPlayer(x, 1 - wrong.slot)].name) + ' may answer for +' + SCORE.steal + '.' : 'Phish or fine? First correct buzz +' + SCORE.correct + '.') + '</p>' +
       '</div>' + zone(1) + '</div></section>';
@@ -723,12 +736,27 @@ let lastPhase = null;
 function render() {
   if (window.Net && window.Net.isPlayer()) return; // a phone in room mode shows only its player view
   const doc = new DOMParser().parseFromString('<body>' + view() + '</body>', 'text/html');
+  const oldQ = app.querySelector('.arena .q'), qScroll = oldQ ? oldQ.scrollTop : 0;
   app.replaceChildren(...Array.from(doc.body.childNodes));
+  fitArena(qScroll);
   if (state.phase !== lastPhase && app.firstElementChild) app.firstElementChild.classList.add('screen-in');
   lastPhase = state.phase;
   const focusTarget = app.querySelector('[data-testid="btn-start-heat"], [data-testid="btn-results"], [data-testid="btn-next"]');
   if (focusTarget && !(document.activeElement && document.activeElement.closest('.nbm-panel'))) focusTarget.focus({ preventScroll: true });
 }
+
+// keeps both buzz zones on screen: the arena is sized to the space under it (CSS --arena-top)
+function fitArena(qScroll) {
+  const ar = app.querySelector('.arena');
+  if (!ar) return;
+  let top = 0;
+  for (let e = ar; e && e !== document.body; e = e.offsetParent) top += e.offsetTop;
+  const main = getComputedStyle(app);
+  ar.style.setProperty('--arena-top', Math.round(top + parseFloat(main.paddingBottom || 0) + 4) + 'px');
+  const q = ar.querySelector('.q');
+  if (q && qScroll) q.scrollTop = qScroll;
+}
+window.addEventListener('resize', () => fitArena(0));
 
 function resultsText() {
   const recap = Shield.recap();

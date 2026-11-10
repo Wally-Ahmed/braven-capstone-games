@@ -212,4 +212,4 @@ _Sat 11/7/2026. Wally's DM, 6:28 PM: "The games are unintuitive hard to understa
 - [x] Hardening: any one shared file failing leaves every game playable (inline Roster fallback).
 - [x] Multi-screen lobby: hub panel + "Host multi-screen" per card (`?host=1` opens the room lobby), `/join/` by code, Phish or Fine played end to end from two phones (`tests/rooms.spec.js`, 2 more checks). 135 checks green.
 - [ ] 111 lines (7,521 characters) still have no ElevenLabs clip and are now silent; voicing them needs pay-as-you-go credits (Wally's yes).
-
+- [x] Phone fit: Phish or Fine's arena fills the screen so both buzz zones and the timer stay visible at 360x640 / 375x667 (the message scrolls inside); Inbox Showdown's Open / Report / Ask Shield stick to the bottom; Replay is readable on light cards (`tests/phone-fit.spec.js`, 7 checks; 142 green).

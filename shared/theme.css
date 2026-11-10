@@ -189,3 +189,7 @@ button.nr-replay { min-height: 44px !important; min-width: 44px; padding: 6px 14
   html .nbm-overlay { overflow: hidden; }
   html button.nr-badge { left: calc(var(--pf-gap) + 10px); }
 }
+
+/* 11/10: Replay on the light message / snippet cards was white on white */
+.msg > .nr-bar .nr-replay, .snip > .nr-bar .nr-replay, .tile > .nr-bar .nr-replay {
+  background: #ede9fe; color: #3b1d8f; border-color: #a78bfa; }
