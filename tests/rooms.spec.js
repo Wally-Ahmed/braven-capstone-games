@@ -179,6 +179,17 @@ test('First Week Hunt: the turn player taps office spots on the phone; the lesso
   await expect.poll(async () => (await S()).current).toBe(1);
   await expect(r.b.page.getByTestId('player-status')).toHaveAttribute('data-status', 'turn');
   await expect(r.a.page.getByTestId('player-status')).toHaveAttribute('data-status', 'wait');
+  // 11/10 Fix it! on the phone: Ben finds a risk and picks the right fix from his own screen
+  const risk = await r.host.page.evaluate(() => window.FirstWeekHunt.state.layout.find(x => window.FirstWeekHunt.TILES.find(t => t.id === x).risk));
+  const rLabel = await r.host.page.evaluate(i => window.FirstWeekHunt.TILES.find(t => t.id === i).label, risk);
+  await r.b.page.getByTestId('player-btn').filter({ hasText: rLabel }).click();
+  await expect.poll(async () => { const s = await S(); return s.popover && s.popover.tile; }).toBe(risk);
+  await expect(r.b.page.getByTestId('player-btn').filter({ hasText: '🛠️' })).toHaveCount(3);
+  const right = await r.host.page.evaluate(() => { const s = window.FirstWeekHunt.state; return s.popover.fixOrder.indexOf(0); });
+  await r.b.page.getByTestId('player-btn').filter({ hasText: '🛠️' }).nth(right).click();
+  await expect.poll(async () => (await S()).players[1].score).toBe(200);
+  await expect(r.host.page.getByTestId('fix-result')).toHaveAttribute('data-correct', 'true');
+  await expect(r.b.page.getByTestId('player-btn').filter({ hasText: '🛠️' })).toHaveCount(0);
   await done(r);
 });
 
