@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Shield Check · Northbridge Cyber Games</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; overflow-x:hidden; }
+  main { max-width:430px; margin:0 auto; padding:20px 16px 32px; display:flex; flex-direction:column; gap:14px; }
+  h1 { margin:0; font-size:1.9rem; line-height:1.1; }
+  h2 { margin:0; font-size:1.25rem; }
+  .card { background:rgba(29,16,78,.86); border:3px solid rgba(255,255,255,.18); border-radius:24px; padding:16px; display:flex; flex-direction:column; gap:10px; }
+  .muted { color:#d9d0ff; margin:0; }
+  .tag { font-size:.8rem; font-weight:800; color:#ffd23f; text-transform:uppercase; letter-spacing:.04em; }
+  textarea { font:inherit; font-size:1rem; min-height:130px; border-radius:14px; border:3px solid rgba(255,255,255,.3); padding:10px 12px; background:#fff; color:#1b1446; width:100%; resize:vertical; }
+  button, a.btn { min-height:48px; border-radius:14px; font:inherit; font-weight:900; cursor:pointer; border:0; padding:8px 14px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
+  .go { background:linear-gradient(90deg,#ffd23f,#ff8a3d); color:#1b1446; font-size:1.15rem; box-shadow:0 6px 0 rgba(0,0,0,.2); }
+  .ghost { background:rgba(255,255,255,.12); color:#fff; border:2px solid rgba(255,255,255,.3); }
+  .samples { display:flex; flex-wrap:wrap; gap:8px; }
+  .samples button { font-size:.9rem; min-height:44px; }
+  .light { display:flex; align-items:center; gap:14px; padding:14px; border-radius:18px; font-weight:900; font-size:1.25rem; }
+  .light .lamp { width:54px; height:54px; border-radius:50%; flex:0 0 auto; box-shadow:0 0 22px currentColor; background:currentColor; }
+  .light[data-level="safe"] { background:rgba(132,240,107,.18); color:#84f06b; }
+  .light[data-level="careful"] { background:rgba(255,210,63,.18); color:#ffd23f; }
+  .light[data-level="stop"] { background:rgba(255,79,109,.2); color:#ff4f6d; animation: sc-pulse 1s ease-in-out 2; }
+  .light .vtext { color:#fff; }
+  .light small { display:block; font-size:.9rem; font-weight:700; color:#f1f5f9; }
+  @keyframes sc-pulse { 50% { transform:scale(1.03); } }
+  ul.reasons { margin:0; padding-left:20px; display:flex; flex-direction:column; gap:6px; }
+  ul.reasons b { color:#ffd23f; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; }
+  .done { color:#84f06b; font-weight:800; margin:0; }
+  details summary { cursor:pointer; font-weight:900; min-height:44px; display:flex; align-items:center; }
+  ol.plan, ul.plan { margin:0; padding-left:20px; display:flex; flex-direction:column; gap:8px; }
+  .flow { display:grid; grid-template-columns:1fr; gap:6px; }
+  .flow div { background:rgba(255,255,255,.1); border-radius:12px; padding:8px 10px; }
+  .flow div.model { border:2px dashed #22d3ee; }
+  a.back { color:#fff; font-weight:800; min-height:44px; display:inline-flex; align-items:center; }
+  button:focus-visible, a:focus-visible, textarea:focus-visible, summary:focus-visible { outline:3px solid #fff; outline-offset:2px; }
+  @media (prefers-reduced-motion: reduce) { .light[data-level="stop"] { animation:none; } }
+</style>
+<link rel="stylesheet" href="../shared/theme.css">
+</head>
+<body>
+<main>
+  <a class="back" href="../" data-testid="shield-back">⬅️ All games</a>
+  <h1>🛡️ Shield Check</h1>
+  <p class="muted">The sidekick a new hire would have at work: paste a message you are not sure about and Shield tells you how risky it looks and why, before you click. <b>Demo, not a security tool:</b> a prototype, scripted agent with simple rules; nothing you type leaves this page.</p>
+
+  <section class="card" aria-labelledby="check-h">
+    <h2 id="check-h">Check a message</h2>
+    <label for="msg" class="muted">Paste an email, text or chat message (include the sender if you have it)</label>
+    <textarea id="msg" data-testid="shield-input" placeholder="From: it-support@northbr1dge.co&#10;Your password expires today. Confirm it here: bit.ly/nb-reset"></textarea>
+    <div class="tag">Or try a sample</div>
+    <div class="samples" data-testid="shield-samples"></div>
+    <div class="row"><button class="go" data-testid="shield-check-btn" type="button">🛡️ Check with Shield</button>
+      <button class="ghost" data-testid="shield-clear" type="button">Clear</button></div>
+    <div data-testid="shield-result" aria-live="polite"></div>
+  </section>
+
+  <section class="card" aria-labelledby="plan-h" data-testid="shield-plan">
+    <h2 id="plan-h">How Shield would work</h2>
+    <p class="muted">The team's selected idea: an AI agent assigned to each new hire that gives correct security info fast and checks a suspicious email or link before it is opened. The three games are where people meet it.</p>
+    <details open>
+      <summary>What Shield does (the same four steps in every game)</summary>
+      <ol class="plan">
+        <li><b>Nudge before:</b> a risky click on a flagged item is paused: "Hold on, the sender is northbr1dge.co, not northbridge.co. Still open it?"</li>
+        <li><b>Explain after:</b> one line naming the red flag and the safe habit.</li>
+        <li><b>Personalize:</b> it tracks misses across 8 categories (urgency, look-alike domain, credential ask, gift card or payment, attachment, MFA fatigue, oversharing, device hygiene) and nudges sooner where a person keeps missing.</li>
+        <li><b>Debrief:</b> each player's two weakest categories with a tip, and how many mistakes Shield stopped.</li>
+      </ol>
+    </details>
+    <details>
+      <summary>Where a real AI model plugs in</summary>
+      <div class="flow" data-testid="shield-flow">
+        <div>📩 Message arrives (email, chat, text, a "call from IT" note)</div>
+        <div class="model">🧠 <code>Shield.assess(text)</code>: today simple rules on this page; in a real version a language model plus the company's allowlist of real domains and threat feeds</div>
+        <div>🚦 Traffic light + reasons + the safe next step</div>
+        <div>🚩 "Report to IT" in one tap; the miss or the save is logged for the person's own coaching</div>
+      </div>
+    </details>
+    <details>
+      <summary>Guardrails the team would keep</summary>
+      <ul class="plan">
+        <li>It advises, it never blocks work: the person always decides.</li>
+        <li>Coaching data stays with the person; team reports show totals, not names.</li>
+        <li>It says when it is unsure ("careful") instead of guessing "safe".</li>
+        <li>Real reports go to the security team, who stay the decider.</li>
+      </ul>
+    </details>
+  </section>
+  <p class="muted">Braven Capstone prototype. Fictional company "Northbridge Co." and fictional senders.</p>
+</main>
+<script>
+(function () {
+  'use strict';
+  var REAL = ['northbridge.co'];
+  var SAMPLES = [
+    { label: '🔑 Password expiry', text: 'From: it-support@northbr1dge.co\nSubject: Your password expires today\nHi new hire, your Northbridge password expires in 2 hours. Keep your access by confirming it here: northbr1dge.co/reset' },
+    { label: '🎁 Gift cards', text: 'From: Dana Ortiz (CEO) <dana.ortiz.ceo@northbridge-exec.com>\nI need a favor before my 3 PM meeting. Buy five $100 gift cards and text me the codes. Keep this between us, it is a surprise.' },
+    { label: '📦 Shipping text', text: 'Text from "NB Delivery": Your package is on hold. Pay the $1.99 redelivery fee within 24 hours: bit.ly/nb-pkg' },
+    { label: '✅ Benefits reminder', text: 'From: hr@northbridge.co\nSubject: Benefits enrollment closes Friday\nReminder: open enrollment closes Friday. Log in to the HR portal from your bookmarks as usual. Questions? Ask your HR partner.' },
+    { label: '🔔 MFA prompt', text: 'Northbridge Authenticator: Approve sign-in? 2:14 AM, new device, Lagos. You are not signing in right now.' }
+  ];
+  var RULES = [
+    { id: 'urgency', label: 'Urgency or pressure', re: /\b(urgent|immediately|asap|right away|today|within \d+ (hours?|minutes?)|expires?|final notice|act now|before \d{1,2}(:\d\d)? ?(am|pm)|last chance)\b/i,
+      why: 'Pressure to act fast is how scams stop you from checking.', tip: 'Slow down: a real request survives a five-minute check.' },
+    { id: 'credential', label: 'Asks for a password or code', re: /\b(password|passcode|(log ?in|sign ?in) (here|now|below|using|with this)|verify your (account|identity)|confirm (it|your (password|account|details))|one[- ]time code|mfa code|security code|credentials?)\b/i,
+      why: 'Real IT never asks you to confirm a password or code through a link or message.', tip: 'Go to the site yourself from a bookmark, never from the message.' },
+    { id: 'payment', label: 'Money, gift cards or bank details', re: /\b(gift ?cards?|wire|bank (details|account)|invoice|payment|pay the|fee|bitcoin|crypto|codes? to me|text me the codes)\b/i,
+      why: 'Requests for gift cards, wires or fees are the top payment scam.', tip: 'Confirm any money request by calling the person on a number you already have.' },
+    { id: 'shortlink', label: 'Short or hidden link', re: /\b(bit\.ly|tinyurl\.com|t\.co|goo\.gl|rb\.gy|is\.gd|cutt\.ly|tiny\.cc)\b/i,
+      why: 'A short link hides where it really goes.', tip: 'Do not tap it; look the page up yourself.' },
+    { id: 'attachment', label: 'Risky attachment', re: /\.(zip|exe|scr|js|iso|htm|html|docm|xlsm)\b|enable (macros|content)/i,
+      why: 'Zip files, programs and macro documents are how malware gets in.', tip: 'Open only attachments you expected, from someone you confirmed.' },
+    { id: 'secrecy', label: 'Secrecy or "do not call"', re: /\b(keep (this|it) between us|do not (call|tell)|don't (call|tell)|confidential favor|it is a surprise)\b/i,
+      why: 'Asking you to keep quiet stops you from checking with anyone.', tip: 'Tell your manager or IT anyway: that is exactly when to check.' },
+    { id: 'mfa', label: 'Sign-in approval you did not start', re: /\b(approve (sign-?in|request|login)|not signing in|new device)\b/i,
+      why: 'An approval prompt you did not start means someone has your password.', tip: 'Tap Deny, report it, change your password.' }
+  ];
+  function domains(text) {
+    var out = [], re = /(?:@|https?:\/\/|\b)([a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:co|com|net|org|io|info|biz|xyz|support))\b/ig, m;
+    while ((m = re.exec(text))) { var d = m[1].toLowerCase(); if (out.indexOf(d) < 0) out.push(d); }
+    return out;
+  }
+  function normalize(d) { return d.replace(/1/g, 'i').replace(/0/g, 'o').replace(/rn/g, 'm').replace(/[-_.]/g, ''); }
+  function lookalike(d) {
+    if (REAL.some(function (r) { return d === r || d.slice(-(r.length + 1)) === '.' + r; })) return null;
+    var base = normalize(d);
+    if (base.indexOf('northbridge') >= 0 || base.indexOf('northbndge') >= 0 || normalize(d).indexOf('northbrldge') >= 0 || base.indexOf('northbridgeco') >= 0) return d;
+    return null;
+  }
+  // Shield.assess: rule-based here; in a real version this one function calls a language model + allowlists + threat feeds.
+  function assess(text) {
+    var t = String(text || '').trim();
+    if (!t) return null;
+    var reasons = [];
+    domains(t).forEach(function (d) {
+      var l = lookalike(d);
+      if (l) reasons.push({ id: 'lookalike', label: 'Look-alike sender or link', detail: l + ' is not northbridge.co', why: 'One swapped letter or an extra word makes a fake address look real.', tip: 'Check the domain letter by letter; the real one is northbridge.co.' });
+    });
+    RULES.forEach(function (r) { var m = r.re.exec(t); if (m) reasons.push({ id: r.id, label: r.label, detail: '"' + m[0] + '"', why: r.why, tip: r.tip }); });
+    var ids = reasons.map(function (r) { return r.id; });
+    var has = function (k) { return ids.indexOf(k) >= 0; };
+    var level = 'safe';
+    if (reasons.length >= 3 || (has('lookalike') && (has('credential') || has('payment'))) || (has('payment') && (has('urgency') || has('secrecy'))) || has('attachment') || has('mfa') || (has('shortlink') && (has('payment') || has('credential')))) level = 'stop';
+    else if (reasons.length) level = 'careful';
+    var real = domains(t).some(function (d) { return REAL.indexOf(d) >= 0; });
+    return { level: level, reasons: reasons, realDomain: real };
+  }
+  var LIGHT = {
+    safe: { name: 'Looks fine', sub: 'No red flags found. Still use the normal path you know (bookmarks, the HR portal).' },
+    careful: { name: 'Careful', sub: 'Something here is a common scam trick. Check before you click.' },
+    stop: { name: 'Stop', sub: 'This looks like a scam. Do not click, reply or pay. Report it.' }
+  };
+  var input = document.getElementById('msg'), out = document.querySelector('[data-testid="shield-result"]');
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function setHtml(el, html) { var doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html'); el.replaceChildren.apply(el, Array.from(doc.body.childNodes)); }
+  function show() {
+    var r = assess(input.value);
+    if (!r) { setHtml(out, '<p class="muted" data-testid="shield-empty">Paste a message first, or tap a sample.</p>'); return; }
+    var L = LIGHT[r.level];
+    var h = '<div class="light" data-testid="verdict" data-level="' + r.level + '"><span class="lamp" aria-hidden="true"></span><span class="vtext">' +
+      { safe: '🟢', careful: '🟡', stop: '🔴' }[r.level] + ' ' + L.name + '<small>' + esc(L.sub) + '</small></span></div>';
+    if (r.reasons.length) {
+      h += '<div class="tag">Why · prototype, scripted agent</div><ul class="reasons">' + r.reasons.map(function (x) {
+        return '<li data-testid="reason" data-reason="' + x.id + '"><b>' + esc(x.label) + '</b> (' + esc(x.detail) + '): ' + esc(x.why) + ' <i>' + esc(x.tip) + '</i></li>';
+      }).join('') + '</ul>';
+    } else if (r.realDomain) h += '<p class="muted">The sender uses the real northbridge.co domain.</p>';
+    if (r.level !== 'safe') h += '<div class="row"><button class="go" type="button" data-testid="shield-report">🚩 Report to IT</button></div>';
+    setHtml(out, h);
+    try { out.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); } catch (e) { /* ignore */ }
+    try { if (window.Sfx) window.Sfx.play(r.level === 'safe' ? 'correct' : 'warning'); } catch (e) { /* optional */ }
+  }
+  var samples = document.querySelector('[data-testid="shield-samples"]');
+  SAMPLES.forEach(function (s, i) {
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'ghost'; b.textContent = s.label;
+    b.setAttribute('data-testid', 'shield-sample'); b.setAttribute('data-i', String(i));
+    b.addEventListener('click', function () { input.value = s.text; show(); });
+    samples.appendChild(b);
+  });
+  document.querySelector('[data-testid="shield-check-btn"]').addEventListener('click', show);
+  document.querySelector('[data-testid="shield-clear"]').addEventListener('click', function () { input.value = ''; out.replaceChildren(); input.focus(); });
+  out.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-testid="shield-report"]');
+    if (!b) return;
+    var p = document.createElement('p'); p.className = 'done'; p.setAttribute('data-testid', 'shield-reported');
+    p.textContent = '✅ Reported (demo: nothing was sent). In a real version this goes to the security team with the message attached.';
+    b.parentNode.replaceWith(p);
+  });
+  window.ShieldCheck = { assess: assess, SAMPLES: SAMPLES };
+})();
+</script>
+</body>
+</html>

@@ -37,6 +37,10 @@ Wally 11/10: "all games rely on a single screen but I want to have a multi scree
 - **One voice:** narration is clips-only by default. Only the recorded ElevenLabs clips play; parts without a clip (team names, scores, the 111 lines not voiced yet) stay on screen silently instead of switching to the robotic browser voice. Clips are preloaded into memory after load (blob URLs, 3 at a time), a clip that fails is retried once and then skipped, never replaced by the system voice. The tutorial does the same. `?voice=mixed` brings back the browser-voice fallback.
 - **Hardening:** if any one shared file fails to load (slow tunnel), every game still starts; `shared/roster.js` was the only one that took a game down and each game now carries an inline fallback. `tests/resilience.spec.js` blocks every shared file in turn.
 
+## Shield Check (v7, 11/10)
+
+`shield/` (linked from the hub's **Meet Shield** card) is the standalone agent-assistant prototype from SPEC section 4: paste a message (or tap one of five samples) and **Check with Shield** gives a traffic light (🟢 looks fine / 🟡 careful / 🔴 stop), the reasons with the matched words (look-alike sender or link, urgency, password or code ask, money or gift cards, short link, risky attachment, secrecy, sign-in approval you did not start) and a **Report to IT** button (demo: nothing is sent). Below it, **How Shield would work**: the four steps the games share, where a real model plugs in (`Shield.assess(text)`: rules here, a language model plus allowlists and threat feeds in a real version) and the guardrails. Rule-based, labelled a demo, nothing leaves the page. Checked by `tests/shield-check.spec.js`.
+
 ## Wrong answers and selections (v6, his 8:30 and 8:40 PM asks)
 
 - **Full-screen wrong-answer moment** (`FX.wrongFull()` in `shared/fx.js`): on every wrong outcome (a wrong call in Inbox Showdown, a decoy tap in First Week Hunt, a wrong buzz in Phish or Fine) one of six animations plays at random, each with its own synthesized sound (`Sfx.wrongVariant`): red alarm flash with shake (buzzer), cracked glass (glass crack), ACCESS DENIED stamp (slam), hacker glitch with falling green characters (glitch burst), a bouncing 🚫 that bursts into particles (boing-pop) and a padlock snapping shut (lock click). About 1.4 s, never takes clicks, a tap dismisses it, reduced motion gets a still card plus the sound. In room mode the big screen plays it and the phone that got it wrong plays a lighter version.
@@ -116,6 +120,7 @@ npx playwright test
 ```
 index.html                         game selection hub (GAMES array: one entry per game) + multi-screen panel
 join/index.html                    join a multi-screen room by its 4-letter code
+shield/index.html                  Shield Check: paste a message, get a traffic light + reasons; the Shield plan
 shared/menu.js, shared/menu.css    shared top bar + menu (with the sound toggle), loaded by every game
 shared/tutorial.js, tutorial.css   How to play overlay with narration
 shared/audio.js                    WebAudio sound effects + the global mute

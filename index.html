@@ -45,6 +45,10 @@
   @keyframes hub-card-in { from { opacity:0; } to { opacity:1; } }
   .lobby { max-width:1000px; margin:8px auto 0; padding:14px 16px; display:flex; flex-direction:column; gap:10px; background:rgba(29,16,78,.7);
     border:3px dashed rgba(255,255,255,.35); border-radius:20px; width:calc(100% - 32px); }
+  .shield-cta { max-width:1000px; margin:0 auto 24px; width:calc(100% - 32px); display:flex; gap:12px; align-items:flex-start; padding:16px; border-radius:24px;
+    background:linear-gradient(135deg, rgba(34,211,238,.25), rgba(29,16,78,.9)); border:3px solid #22d3ee; }
+  .shield-cta h2 { margin:0 0 4px; font-size:1.25rem; } .shield-cta p { margin:0 0 10px; color:#d9d0ff; }
+  .shield-cta .big { font-size:2.6rem; }
   .lobby[hidden], .host-btn[hidden] { display:none; }
   .lobby .lobby-text { display:block; color:#d9d0ff; font-size:.95rem; }
   .join-btn, .host-btn { min-height:48px; border-radius:16px; font-weight:900; font-size:1.02rem; text-decoration:none; display:flex; align-items:center; justify-content:center; text-align:center; padding:8px 12px; }
@@ -71,6 +75,12 @@
   <a class="join-btn" data-testid="hub-join" href="join/">📱 Join a game with a code</a>
 </section>
 <main id="games" data-testid="game-list" aria-label="Games"></main>
+<section class="shield-cta" data-testid="shield-card" aria-label="Meet Shield">
+  <span class="big" aria-hidden="true">🛡️</span>
+  <div><h2>Meet Shield, the agent assistant</h2>
+  <p>Paste a suspicious message and get a traffic light with the reasons, plus the plan for how Shield would work at a real company.</p>
+  <a class="play-btn" data-testid="shield-link" href="shield/">🛡️ Try Shield Check</a></div>
+</section>
 <script>
   // Register a game by adding one entry here.
   const GAMES = [
