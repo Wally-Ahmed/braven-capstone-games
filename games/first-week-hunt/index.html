@@ -61,6 +61,14 @@
   .tile:nth-child(4n+3) { border-color:#ffe27a; } .tile:nth-child(4n+4) { border-color:#b3f5a3; }
   .tile.found { background:linear-gradient(160deg,#d9ffcf,#84f06b); border-color:#3fbf2a; }
   .tile.decoy-checked { background:#ece8ff; border-style:dashed; border-color:#a78bfa; color:#5b4a99; }
+  .turn-clock { display:inline-block; margin-left:6px; padding:2px 8px; border-radius:999px; background:rgba(255,255,255,.14); font-size:.85rem; }
+  .turn-clock.low { background:#ff4f6d; color:#fff; animation: nb-screen .5s ease infinite alternate; }
+  .fixit { margin:10px 0; padding:12px; border-radius:16px; border:3px solid #22d3ee; background:rgba(34,211,238,.12); display:flex; flex-direction:column; gap:8px; }
+  .fixit .tag { font-weight:900; }
+  .fixit .fix-opt { min-height:48px; text-align:left; background:rgba(255,255,255,.12); border:2px solid rgba(255,255,255,.3); border-radius:12px; color:#fff; font-weight:700; padding:8px 12px; }
+  .fixit.ok { border-color:#84f06b; background:rgba(132,240,107,.16); font-weight:800; }
+  .fixit.bad { border-color:#ff8a3d; background:rgba(255,138,61,.16); font-weight:800; }
+  .run { margin:4px 0 0; font-weight:900; color:#ffd23f; animation: nb-screen .4s ease both; }
   .popover { animation: nb-screen .3s cubic-bezier(.2,1.2,.4,1) both; border-width:3px; border-radius:24px; }
   .hacked { background:linear-gradient(135deg,#ff2e63,#7a0b2e); }
   .office { background-color: rgba(10,4,40,.35); border:2px solid rgba(255,255,255,.18); }
@@ -152,7 +160,20 @@ const TILES = [
 ];
 const TILE = Object.fromEntries(TILES.map(t => [t.id, t]));
 const RISK_COUNT = TILES.filter(t => t.risk).length;
-const SCORE = { find: 150, hint: -50 };
+const SCORE = { find: 150, hint: -50, fix: 50 };
+/* 11/10 "Fix it!" (Wally: the hunt was "not interactive or engaging enough"): after finding a risk the finder
+   picks what to do about it; the right fix is +50. Option 0 is the right one; the order is shuffled per tap. */
+const FIXES = {
+  sticky:   ['Move it into the password manager and change that password', 'Turn the note face down', 'Write it smaller on the back of the keyboard'],
+  laptop:   ['Lock the screen (Windows+L) and tell your coworker', 'Close the email tab and walk away', 'Leave it, they will be back in a minute'],
+  usb:      ['Hand it to IT without plugging it in', 'Plug it in to find the owner', 'Keep it as a spare drive'],
+  qr:       ['Report the sticker and type northbridge.co yourself', 'Scan it, but only on your personal phone', 'Peel it off and scan the one underneath'],
+  tailgate: ['Let the door close and point them to reception', 'Hold the door, they have coffee', 'Ask their name, then let them in'],
+  post:     ['Ask them to take it down and repost without the badge', 'Like it so it gets fewer views', 'Comment "nice badge!"'],
+  update:   ['Install it now or schedule it for tonight', 'Click Remind me later once more', 'Turn off update notifications'],
+  mfa:      ['Tap Deny, report it to IT, change your password', 'Tap Approve to make it stop', 'Ignore it until it stops buzzing']
+};
+function fixOrder(id, n) { const o = [0, 1, 2]; for (let i = 2; i > 0; i--) { const j = (n + id.length * (i + 1)) % (i + 1); [o[i], o[j]] = [o[j], o[i]]; } return o; }
 
 /* ------------------------------------------------------------------ *
  * URL params: ?shield=off|nudge|coach, ?seed=<number> (tile layout), ?fast=1 (3 s timer)
@@ -162,6 +183,8 @@ const SHIELD_MODES = ['off', 'nudge', 'coach'];
 const initialShield = SHIELD_MODES.includes(params.get('shield')) ? params.get('shield') : 'nudge';
 const seedParam = params.get('seed');
 const ROUND_SECONDS = params.get('fast') === '1' ? 3 : 120;
+// 11/10: a shot clock per turn keeps the pressure on; it runs out -> the turn passes (no penalty). ?turnclock=0 turns it off.
+const TURN_SECONDS = params.get('turnclock') === '0' ? 0 : Number(params.get('turnclock')) || 20;
 
 function rng(seed) { // mulberry32
   let a = seed >>> 0;
@@ -305,7 +328,9 @@ let state = freshState();
 
 function unfoundRisks() { return state.layout.filter(id => TILE[id].risk && !state.found.includes(id)); }
 function passTurn() {
+  if (state.players[state.current]) state.players[state.current].run = 0;
   state.current = (state.current + 1) % state.players.length;
+  state.turnLeft = TURN_SECONDS;
   state.turnNo = (state.turnNo || 0) + 1;
   state.hinted = null; state.hintText = null;
   state.turnStartedAt = now();
@@ -325,6 +350,7 @@ function tap(id) {
     player.score += SCORE.find; delta = SCORE.find;
     player.found++;
     player.streak = 0;
+    player.run = (player.run || 0) + 1;            // finds in a row this turn (bragging only, no score change)
     if (state.hinted === id) { state.hinted = null; state.hintText = null; }
   } else {
     state.checked.push(id);
@@ -341,12 +367,14 @@ function tap(id) {
       ? player.name + ' tapped two safe spots in a row and got hacked: score back to 0. ' + nextName + ' is up.'
       : player.name + ' tapped a safe spot (' + spot + '), so the turn passes to ' + nextName + '.' +
         (player.streak === 1 ? ' Careful, ' + player.name + ': one more wrong tap in a row means hacked.' : '');
-  state.popover = { tile: id, player: p, correct: tile.risk, hacked, delta, lesson, passes: !tile.risk };
+  if (!tile.risk) player.run = 0;
+  state.popover = { tile: id, player: p, correct: tile.risk, hacked, delta, lesson, passes: !tile.risk, run: tile.risk ? player.run : 0,
+    fixOrder: tile.risk && FIXES[id] ? fixOrder(id, state.found.length + p) : null, fix: null };
   state.turnStartedAt = now();
 }
 
 function dispatch(move) {
-  const prev = { phase: state.phase, popover: !!state.popover, hinted: state.hinted };
+  const prev = { phase: state.phase, popover: !!state.popover, hinted: state.hinted, fix: state.popover ? state.popover.fix : null };
   switch (move.type) {
     case 'draft': state.namesDraft = move.text; return; // typing; no re-render
     case 'start': {
@@ -359,8 +387,8 @@ function dispatch(move) {
       state.error = null;
       state.players = names.map(name => ({ name, score: 0, found: 0, streak: 0, hintUsed: false, hacks: 0 }));
       state.layout = shuffle(TILES.map(t => t.id), rand);
-      state.found = []; state.checked = []; state.current = 0; state.turnNo = 0; state.hinted = null; state.hintText = null; state.popover = null;
-      state.timeLeft = ROUND_SECONDS; state.lastTick = now(); state.turnStartedAt = now(); state.endReason = null;
+      state.found = []; state.fixed = []; state.checked = []; state.current = 0; state.turnNo = 0; state.hinted = null; state.hintText = null; state.popover = null;
+      state.timeLeft = ROUND_SECONDS; state.turnLeft = TURN_SECONDS; state.lastTick = now(); state.turnStartedAt = now(); state.endReason = null;
       state.phase = 'scene';
       break;
     }
@@ -381,13 +409,22 @@ function dispatch(move) {
       Shield.afterAction(p, { item: id, category: TILE[id].category, action: 'hint', warned: false, backedOut: false, asked: true, seconds: 0, correct: true });
       break;
     }
+    case 'fix': {
+      const pop = state.popover;
+      if (state.phase !== 'scene' || !pop || !pop.fixOrder || pop.fix != null) break;
+      const i = Number(move.i);
+      if (!(i >= 0 && i < pop.fixOrder.length)) break;
+      pop.fix = pop.fixOrder[i];
+      if (pop.fix === 0) { state.players[pop.player].score += SCORE.fix; state.fixed = (state.fixed || []).concat(pop.tile); state.players[pop.player].fixes = (state.players[pop.player].fixes || 0) + 1; }
+      break;
+    }
     case 'closeLesson': {
       if (state.phase !== 'scene' || !state.popover) break;
       const pop = state.popover;
       state.popover = null;
       state.lastTick = now();            // the clock pauses while a lesson is open
       if (state.found.length >= RISK_COUNT) { finish('all'); break; }
-      if (pop.passes) passTurn();
+      if (pop.passes) passTurn(); else state.turnLeft = TURN_SECONDS; // a find refills the shot clock
       break;
     }
     case 'tick': {
@@ -397,6 +434,16 @@ function dispatch(move) {
       state.lastTick = t;
       if (state.popover || (window.Tutorial && window.Tutorial.isOpen())) return; // clock pauses for lessons and the tutorial
       state.timeLeft = Math.max(0, state.timeLeft - dt);
+      if (TURN_SECONDS && state.timeLeft > 0) {
+        state.turnLeft = Math.max(0, (state.turnLeft == null ? TURN_SECONDS : state.turnLeft) - dt);
+        if (state.turnLeft <= 0) {
+          const who = state.players[state.current];
+          passTurn();
+          state.what = '⏰ ' + who.name + ' ran out of turn time, so ' + state.players[state.current].name + ' is up.';
+          sfx('wrong');
+          break;
+        }
+      }
       if (state.timeLeft > 0) { updateTimer(); return; }
       finish('time');
       break;
@@ -429,6 +476,9 @@ function feedback(prev) {
       wrongFull(); fx('shake', '[data-testid="lesson-popover"]');
     }
     if (pop.lesson.warning) setTimeout(() => { sfx('warning'); fx('glow', '[data-testid="shield-warning"]'); }, 450);
+  }
+  if (pop && prev.fix == null && pop.fix != null) {
+    if (pop.fix === 0) { sfx('correct'); fx('confetti', '[data-testid="fix-result"]', 20); } else { sfx('wrong'); fx('shake', '[data-testid="fix-result"]'); }
   }
   if (state.hinted && state.hinted !== prev.hinted) { sfx('go'); fx('glow', '[data-hinted="true"]'); }
   if (state.phase === 'leaderboard' && prev.phase === 'scene') {
@@ -475,13 +525,15 @@ function updateTimer() {
   el.textContent = timerText();
   el.dataset.seconds = String(Math.ceil(state.timeLeft));
   el.classList.toggle('low', state.timeLeft <= 15);
+  const tc = app.querySelector('[data-testid="turn-clock"]');
+  if (tc && TURN_SECONDS) { const t = Math.ceil(state.turnLeft); tc.textContent = '⏳ ' + t + ' s'; tc.classList.toggle('low', t <= 5); }
 }
 
 function tileButton(id) {
   const t = TILE[id];
   const found = state.found.includes(id), checked = state.checked.includes(id), hinted = state.hinted === id;
   const cls = 'tile' + (found ? ' found' : '') + (checked ? ' decoy-checked' : '') + (hinted ? ' hinted' : '');
-  const mark = found ? '<span class="mark">✅ risk found</span>' : checked ? '<span class="mark">👍 safe</span>' : '';
+  const mark = found ? '<span class="mark">' + ((state.fixed || []).includes(id) ? '🛠️ fixed' : '✅ risk found') + '</span>' : checked ? '<span class="mark">👍 safe</span>' : '';
   return '<button class="' + cls + '" data-testid="tile" data-tile-id="' + id + '" data-risk="' + (t.risk ? 'true' : 'false') + '"' +
     (found ? ' data-found="true"' : '') + (hinted ? ' data-hinted="true"' : '') +
     ' data-action="tap" aria-label="' + esc(t.label) + (found ? ', risk found' : checked ? ', safe' : '') + '"' +
@@ -499,7 +551,18 @@ function popoverView() {
   let h = '<div class="pop-overlay"><div class="popover" role="dialog" aria-modal="true" aria-label="Lesson" data-testid="lesson-popover" data-correct="' + pop.correct + '"' +
     nar(popSay, { say: (pop.hacked ? player.name + ', you got hacked. ' : '') + nextSay, now: true, key: 'pop:' + t.id, label: 'Shield\'s lesson' }) + '>';
   h += '<h2 class="' + (pop.correct ? 'result-good' : 'result-bad') + '" data-testid="lesson-result">' + t.icon + ' ' +
-    (pop.correct ? 'Risk found! +' + SCORE.find : 'Decoy, that one is safe') + '</h2>';
+    (pop.correct ? 'Risk found! +' + SCORE.find : 'Decoy, that one is safe') + '</h2>' +
+    (pop.run >= 2 ? '<p class="run" data-testid="run-banner">🔥 ' + esc(player.name) + ' is on fire: ' + pop.run + ' risks in a row!</p>' : '');
+  if (pop.fixOrder) {
+    const opts = FIXES[pop.tile];
+    if (pop.fix == null) {
+      h += '<div class="fixit" data-testid="fix-it"><div class="tag">🛠️ Fix it for +' + SCORE.fix + ': what do you do?</div>' +
+        pop.fixOrder.map((k, i) => '<button class="fix-opt" data-testid="fix-option" data-action="fix" data-i="' + i + '">' + esc(opts[k]) + '</button>').join('') + '</div>';
+    } else {
+      h += '<div class="fixit ' + (pop.fix === 0 ? 'ok' : 'bad') + '" data-testid="fix-result" data-correct="' + (pop.fix === 0) + '">' +
+        (pop.fix === 0 ? '🛠️ Fixed! +' + SCORE.fix + ' · ' + esc(opts[0]) + '.' : '🤔 Not quite. The safe fix: ' + esc(opts[0]) + '.') + '</div>';
+    }
+  }
   if (pop.hacked) {
     h += '<div class="hacked" role="alert" data-testid="hacked-banner"><span class="big">💀 ' + esc(player.name) + ', you got hacked!</span>' +
       'Two wrong taps in a row. Your score resets to 0. Start over!</div>';
@@ -532,7 +595,8 @@ function view() {
     const p = state.players[state.current];
     const hintBlocked = !Shield.beforeAction(state.current, 'hint', null).allow;
     h += '<section data-testid="scene-screen">' +
-      '<div class="status"' + nar('_ turn', { say: p.name + ', your turn.', key: 'turn:' + state.turnNo, label: 'whose turn it is' }) + '><div class="turn-banner" data-testid="turn-banner" data-player="' + esc(p.name) + '">🎯 ' + esc(p.name) + '\'s turn</div>' +
+      '<div class="status"' + nar('_ turn', { say: p.name + ', your turn.', key: 'turn:' + state.turnNo, label: 'whose turn it is' }) + '><div class="turn-banner" data-testid="turn-banner" data-player="' + esc(p.name) + '">🎯 ' + esc(p.name) + '\'s turn' +
+        (TURN_SECONDS ? ' <span class="turn-clock' + (state.turnLeft <= 5 ? ' low' : '') + '" data-testid="turn-clock">⏳ ' + Math.ceil(state.turnLeft) + ' s</span>' : '') + '</div>' +
       '<div class="timer' + (state.timeLeft <= 15 ? ' low' : '') + '" data-testid="timer" data-seconds="' + Math.ceil(state.timeLeft) + '" aria-label="Time left">' + timerText() + '</div></div>' +
       '<p class="small"><span data-testid="found-progress">Risks found: ' + state.found.length + '/' + RISK_COUNT + '</span>' +
       (p.streak === 1 ? ' · <span class="result-bad">one wrong tap so far</span>' : '') + '</p>' +
@@ -649,6 +713,7 @@ app.addEventListener('click', e => {
   const a = btn.dataset.action;
   if (a === 'start') dispatch({ type: 'start', names: Roster.names(roster).join('\n') });
   else if (a === 'tap') dispatch({ type: 'tap', id: btn.dataset.tileId });
+  else if (a === 'fix') dispatch({ type: 'fix', i: Number(btn.dataset.i) });
   else if (a === 'copy') copyResults();
   else if (a === 'tutorial') { if (window.Tutorial) window.Tutorial.open(); }
   else if (a === 'rooms') { if (window.Net) window.Net.host(); }
@@ -662,6 +727,8 @@ setInterval(() => dispatch({ type: 'tick' }), 250);
 const HOW_TO = [
   'Your first week at Northbridge Co. The office hides 8 security risks among safe look-alikes. 2 to 6 players take turns on one screen.',
   '- Tap a spot you think is risky. A real risk scores +150 and you keep the turn.',
+  '- Then fix it: pick the safe thing to do for +50 more.',
+  '- You have 20 seconds per turn; when it runs out the turn passes.',
   '- A decoy (safe spot) passes the turn to the next player.',
   '- Two decoys in a row and you got hacked: your score resets to 0. Start over!',
   '- Each player gets one Shield hint (-50) that highlights a hidden risk.',
@@ -709,7 +776,8 @@ function roomView(seat) {
       if (seat === pop.player && !pop.correct) v.wrongKey = 'pop:' + pop.tile;
       if (seat === pop.player) Object.assign(v, { status: 'turn', title: pop.hacked ? '💀 You got hacked!' : pop.correct ? '✅ Risk found! +' + SCORE.find : '😬 Decoy, that one is safe',
         prompt: state.what, note: 'Shield: ' + pop.lesson.flag, warning: pop.lesson.warning || null,
-        buttons: [{ label: done ? '🏆 See leaderboard' : pop.passes ? '👉 Pass to ' + next.name : '🔎 Keep hunting', move: { type: 'closeLesson' }, kind: 'primary' }] });
+        buttons: (pop.fixOrder && pop.fix == null ? pop.fixOrder.map((k, i) => ({ label: '🛠️ ' + FIXES[pop.tile][k], move: { type: 'fix', i }, kind: '' })) : [])
+          .concat([{ label: done ? '🏆 See leaderboard' : pop.passes ? '👉 Pass to ' + next.name : '🔎 Keep hunting', move: { type: 'closeLesson' }, kind: 'primary' }]) });
       else Object.assign(v, { title: state.players[pop.player].name + ' is reading Shield\'s lesson', prompt: state.what });
     } else if (seat === cur) {
       v.status = 'turn'; v.title = 'Your turn: tap a risky spot';

@@ -361,3 +361,50 @@ test.describe('hub card and shared menu for First Week Hunt', () => {
     expectClean(issues);
   });
 });
+
+// 11/10 "more interactive": Fix it! choices after a find, a hot-streak banner, and a 20 s shot clock per turn.
+test('Fix it: after a find the finder picks the safe fix for +50 (wrong pick: no points, shows the right fix); found spots show fixed', async ({ page, baseURL }) => {
+  const issues = watch(page, baseURL);
+  await page.goto(GAME + '?seed=5');
+  await setNames(page, ['Ava', 'Ben']);
+  await page.getByTestId('btn-start').click();
+  const risks = await page.evaluate(() => window.FirstWeekHunt.TILES.filter(t => t.risk).map(t => t.id));
+  await page.locator(`[data-tile-id="${risks[0]}"]`).click();
+  await expect(page.getByTestId('fix-option')).toHaveCount(3);
+  await expect(page.getByTestId('btn-lesson-ok')).toBeVisible(); // optional: you can skip it
+  const right = await page.evaluate(id => window.FirstWeekHunt.state.popover.fixOrder.indexOf(0), risks[0]);
+  await page.getByTestId('fix-option').nth(right).click();
+  await expect(page.getByTestId('fix-result')).toHaveAttribute('data-correct', 'true');
+  expect(await scores(page)).toEqual([200, 0]);
+  await page.getByTestId('btn-lesson-ok').click();
+  await expect(page.locator(`[data-tile-id="${risks[0]}"]`)).toContainText('fixed');
+  await page.locator(`[data-tile-id="${risks[1]}"]`).click();
+  await expect(page.getByTestId('run-banner')).toContainText('2 risks in a row');
+  const wrong = await page.evaluate(() => window.FirstWeekHunt.state.popover.fixOrder.indexOf(1));
+  await page.getByTestId('fix-option').nth(wrong).click();
+  await expect(page.getByTestId('fix-result')).toHaveAttribute('data-correct', 'false');
+  await expect(page.getByTestId('fix-result')).toContainText('The safe fix');
+  expect(await scores(page)).toEqual([350, 0]);
+  await expectTapTargets(page);
+  expectClean(issues);
+});
+
+test('shot clock: 20 s per turn, pauses during a lesson, passes the turn when it runs out; ?turnclock=0 turns it off', async ({ page, baseURL }) => {
+  const issues = watch(page, baseURL);
+  await page.clock.install();
+  await page.goto(GAME + '?seed=5');
+  await setNames(page, ['Ava', 'Ben']);
+  await page.getByTestId('btn-start').click();
+  await expect(page.getByTestId('turn-clock')).toContainText('20 s');
+  await page.clock.runFor(8000);
+  await expect(page.getByTestId('turn-clock')).toContainText('12 s');
+  await page.clock.runFor(13000);
+  await expect(banner(page)).toContainText("Ben's turn");
+  await expect(page.getByTestId('what-happened')).toContainText('ran out of turn time');
+  expect(await scores(page)).toEqual([0, 0]);
+  await page.goto(GAME + '?seed=5&turnclock=0');
+  await setNames(page, ['Ava', 'Ben']);
+  await page.getByTestId('btn-start').click();
+  await expect(page.getByTestId('turn-clock')).toHaveCount(0);
+  expectClean(issues);
+});

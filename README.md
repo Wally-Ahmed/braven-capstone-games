@@ -71,12 +71,13 @@ Use the local server rather than double-clicking `index.html`: the narration man
 
 ### How to play First Week Hunt
 
-Enter 2 to 6 player names and press **Start hunt**. The office grid hides 8 risks (password sticky note, unlocked laptop, lobby USB stick, QR flyer, tailgater, oversharing phone post, ignored update banner, an MFA prompt you did not start) among safe look-alikes. On your turn tap a spot: a real risk scores +150 and you keep the turn; a decoy passes the turn; two decoys in a row and you got hacked, your score resets to 0. Each player gets one **Shield hint** (-50) that highlights a hidden risk, and Shield warns you after a first wrong tap. Every tap shows a one-line lesson. The hunt ends when all 8 are found or the 120 s clock runs out (it pauses while a lesson is open), then the leaderboard and Shield's per-player debrief.
+Enter 2 to 6 player names and press **Start hunt**. The office grid hides 8 risks (password sticky note, unlocked laptop, lobby USB stick, QR flyer, tailgater, oversharing phone post, ignored update banner, an MFA prompt you did not start) among safe look-alikes. On your turn tap a spot: a real risk scores +150 and you keep the turn; a decoy passes the turn; two decoys in a row and you got hacked, your score resets to 0. After a find, **Fix it!** asks what you do about it: pick the safe fix of three for +50 (optional; a wrong pick shows the right one), and a 🔥 banner cheers finds in a row. Each turn has a **20 s shot clock** (refills on a find, pauses during a lesson); when it runs out the turn passes. Each player gets one **Shield hint** (-50) that highlights a hidden risk, and Shield warns you after a first wrong tap. Every tap shows a one-line lesson. The hunt ends when all 8 are found or the 120 s clock runs out (it pauses while a lesson is open), then the leaderboard and Shield's per-player debrief.
 
 ### URL options (First Week Hunt)
 
 - `?shield=off|nudge|coach` as above (off: no hints, no warnings).
 - `?fast=1` sets the clock to 3 s for a quick demo or test.
+- `?turnclock=0` turns the per-turn shot clock off (`?turnclock=30` sets it to 30 s).
 - `?seed=<number>` makes the tile layout repeatable.
 ### How to play Phish or Fine? Buzzer Battle
 
