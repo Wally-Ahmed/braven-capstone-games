@@ -173,31 +173,38 @@
     },
     "flag-u1": {
       "text": "A 30-minute deadline plus a link that is not northbridge.co.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-u2": {
       "text": "Rush plus secrecy from an outside domain.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-u3": {
       "text": "Fine: a normal internal deadline, no link, no ask for data.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-d1": {
       "text": "Look-alike domain: northbrigde.co swaps two letters.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-d2": {
       "text": "The real owner is pay-portal.io; \"northbridge.co\" in front is decoration.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-d3": {
       "text": "Fine: the real northbridge.co domain, no link, no ask.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-c1": {
       "text": "A link asking for your password on a non-Northbridge site.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-c2": {
       "text": "IT never needs your password.",
@@ -206,195 +213,243 @@
     },
     "flag-c3": {
       "text": "Fine: you opened the real portal yourself.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-g1": {
       "text": "Gift cards plus codes over text from an unknown number.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-g2": {
       "text": "An executive on a personal email asking for gift cards, kept secret.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-g3": {
       "text": "Fine: nothing to buy, no codes to send, real sender.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-a1": {
       "text": "Double extension: .pdf.exe is a program.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-a2": {
       "text": "\"Enable macros\" on a surprise document runs code.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-a3": {
       "text": "Fine: an expected file in the drive you already use.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-m1": {
       "text": "A flood of prompts you did not start is an attacker with your password.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-m2": {
       "text": "Nobody legitimate asks you to send them your code.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-m3": {
       "text": "Fine: you started it and the number matches.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-o1": {
       "text": "A badge close-up and a screen shot help attackers copy or target you.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-o2": {
       "text": "A stranger mapping who pays and when people are away.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-o3": {
       "text": "Fine: no badge, no screen, no dates or places.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-v1": {
       "text": "Scary pop-ups with a phone number are fake support scams.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-v2": {
       "text": "Found USB sticks are a classic way to plant malware.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-v3": {
       "text": "Fine: the real IT app, nothing to download from a link.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "tip-urgency": {
       "text": "Pressure to act right now is a red flag. Slow down and verify through a channel you already trust.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "tip-lookalike": {
       "text": "Read the sender domain letter by letter, from the right; northbridge.co is the only real one.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "tip-credential": {
       "text": "Never type your password from a link or give it to a caller. Open portals from your own bookmark.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "tip-giftcard": {
       "text": "Real managers never ask you to buy gift cards and send codes. Call them on a number you already have.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "tip-attachment": {
       "text": "Unexpected files, double extensions (.pdf.exe) and \"enable macros\" mean report, do not open.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "tip-mfa": {
       "text": "Only approve an MFA prompt you just triggered yourself. Never read or text a code to anyone.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "tip-oversharing": {
       "text": "Badges, screens, org charts and travel plans help attackers. Keep them off public posts and strangers.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "tip-device": {
       "text": "Install only from the IT Software Center, never plug in found USB sticks, and lock your laptop.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-u1": {
       "text": "Safe habit: Slow down; check account notices in the IT portal yourself.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-u2": {
       "text": "Safe habit: Confirm every payment request by calling the person on a known number.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-u3": {
       "text": "Safe habit: Real deadlines point you to tools you already use.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-d1": {
       "text": "Safe habit: Read the domain letter by letter before you click.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-d2": {
       "text": "Safe habit: Read domains from the right; the last part is the owner.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-d3": {
       "text": "Safe habit: Even on real mail, still check before entering any data.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-c1": {
       "text": "Safe habit: Reconnect from the VPN app itself, never from an email link.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-c2": {
       "text": "Safe habit: Hang up and call the helpdesk number on the intranet.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-c3": {
       "text": "Safe habit: Bookmarks are the safe way into every portal.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-g1": {
       "text": "Safe habit: Call your manager on their known number first.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-g2": {
       "text": "Safe habit: Real raffles go through the People team, never your card.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-g3": {
       "text": "Safe habit: The scam is being asked to BUY cards and send codes.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-a1": {
       "text": "Safe habit: Report unexpected attachments; never run files from email.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-a2": {
       "text": "Safe habit: Never enable macros on a file you did not expect.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-a3": {
       "text": "Safe habit: Expected + known sender + company drive = fine.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-m1": {
       "text": "Safe habit: Deny, then tell IT and change your password.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-m2": {
       "text": "Safe habit: Codes are typed by you, into the real site, only.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-m3": {
       "text": "Safe habit: Approve only prompts you just triggered.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-o1": {
       "text": "Safe habit: Share the news, never the badge or screen.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-o2": {
       "text": "Safe habit: Do not share org charts or travel plans with strangers.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-o3": {
       "text": "Safe habit: Celebrate without the details attackers want.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-v1": {
       "text": "Safe habit: Close the tab and use the IT portal for real help.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-v2": {
       "text": "Safe habit: Hand found devices to security; never plug them in.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-v3": {
       "text": "Safe habit: Install updates promptly; do not hit \"later\" forever.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     }
   }
 }

@@ -258,123 +258,153 @@
     },
     "flag-poster": {
       "text": "Fine: help.northbridge.co is the real Northbridge domain.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-badge": {
       "text": "Fine: everyone badging in on their own is how the door should work.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-printer": {
       "text": "Fine: secure print release keeps documents off the tray until you arrive.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-photo": {
       "text": "Fine: a team photo with no badges, screens or plans gives nothing away.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-restart": {
       "text": "Fine: an update installing is exactly what you want.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "flag-mfaok": {
       "text": "Fine: you just signed in, so this prompt is yours to approve.",
-      "priority": 2
+      "priority": 2,
+      "audio": true
     },
     "tip-urgency": {
       "text": "Pressure to act right now is a red flag. Slow down and verify through a channel you already trust.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "tip-lookalike": {
       "text": "Read web addresses letter by letter; northbridge.co is the only real one.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "tip-credential": {
       "text": "Passwords live in the password manager, never on paper or in a link you were sent.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "tip-giftcard": {
       "text": "Real managers never ask you to buy gift cards. Call them on a number you already have.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "tip-attachment": {
       "text": "Unknown files and found USB sticks go to IT unopened.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "tip-mfa": {
       "text": "Only approve an MFA prompt you just triggered yourself; deny and report the rest.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "tip-oversharing": {
       "text": "Badges, screens and travel plans help attackers. Keep them off public posts.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "tip-device": {
       "text": "Lock your screen when you step away and install updates when they are offered.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-sticky": {
       "text": "Safe habit: Keep passwords in the Northbridge password manager, never on paper.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-laptop": {
       "text": "Safe habit: Press Windows+L (or Ctrl+Cmd+Q on a Mac) every time you stand up.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-usb": {
       "text": "Safe habit: Hand found drives to IT unplugged.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-qr": {
       "text": "Safe habit: Type northbridge.co yourself instead of scanning stray QR codes.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-tailgate": {
       "text": "Safe habit: Let the door close; point them to reception to sign in.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-post": {
       "text": "Safe habit: Post the excitement, not the badge or your screen.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-update": {
       "text": "Safe habit: Install updates when they are offered, or schedule them for tonight.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-mfa": {
       "text": "Safe habit: Tap Deny, then report it and change your password.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-locked": {
       "text": "Safe habit: This is the habit: lock it every time you step away.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-shred": {
       "text": "Safe habit: Shred printouts with customer or login details.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-poster": {
       "text": "Safe habit: Check the domain letter by letter; this one matches.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-badge": {
       "text": "Safe habit: One person, one badge tap.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-printer": {
       "text": "Safe habit: Use badge release for anything sensitive.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-photo": {
       "text": "Safe habit: Check the background before you post a photo.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-restart": {
       "text": "Safe habit: Let updates finish; save your work first.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-mfaok": {
       "text": "Safe habit: Approve only prompts that match what you just did.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     }
   }
 }

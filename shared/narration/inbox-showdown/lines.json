@@ -368,107 +368,133 @@
     },
     "tip-urgency": {
       "text": "Pressure to act right now is a red flag. Slow down and verify through a channel you already trust.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "tip-lookalike": {
       "text": "Read the sender domain letter by letter; northbridge.co is the only real one.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "tip-credential": {
       "text": "Never enter your password from a link in a message. Open the portal from your own bookmark.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "tip-giftcard": {
       "text": "Real managers never ask you to buy gift cards. Call them on a number you already have.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "tip-attachment": {
       "text": "Unexpected files, double extensions (.pdf.exe) and macro prompts mean report, do not open.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "tip-mfa": {
       "text": "Only approve an MFA prompt you just triggered yourself. Never read a code to a caller.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "tip-oversharing": {
       "text": "Badges, screens and travel plans help attackers. Keep them off public posts.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "tip-device": {
       "text": "Install software only from the official IT portal, and lock your laptop when you step away.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-r1": {
       "text": "Safe habit: Report it, then reset passwords only from the IT portal bookmark.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-r2": {
       "text": "Safe habit: Verify payment requests by calling the person on a known number.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-r3": {
       "text": "Safe habit: Open payroll from the HR portal yourself, never from a text link.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-r4": {
       "text": "Safe habit: Call your manager directly before buying anything for anyone.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-r5": {
       "text": "Safe habit: Report unexpected attachments; never run files from email.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-r6": {
       "text": "Safe habit: Hang up and call the helpdesk number on the intranet yourself.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-r7": {
       "text": "Safe habit: Never post badges, screens or travel plans.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-r8": {
       "text": "Safe habit: Install only from the IT portal; report odd \"update\" messages.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-r9": {
       "text": "Safe habit: Read the domain from the right; the last part is the real owner.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-r10": {
       "text": "Safe habit: Check with the mailroom in person; never pay through a text link.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-l1": {
       "text": "Safe habit: Still lock your new laptop whenever you step away.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-l2": {
       "text": "Safe habit: Use bookmarks for portals, exactly as this email says.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-l3": {
       "text": "Safe habit: The red flag is being asked to BUY cards and send codes.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-l4": {
       "text": "Safe habit: Approve only prompts you started; deny any surprise prompt.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-l5": {
       "text": "Safe habit: Urgency alone is not a flag; urgency plus an ask is.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-l6": {
       "text": "Safe habit: If a file asks to \"enable macros\", report it even from a colleague.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-l7": {
       "text": "Safe habit: Keep checking domains letter by letter like you just did.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     },
     "habit-l8": {
       "text": "Safe habit: Share public pages; keep badges and screens private.",
-      "priority": 3
+      "priority": 3,
+      "audio": true
     }
   }
 }
