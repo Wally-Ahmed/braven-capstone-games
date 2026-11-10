@@ -442,6 +442,15 @@ function feedback(prev) {
  * ------------------------------------------------------------------ */
 const app = document.getElementById('app');
 /* Setup: a tap-to-pick team list instead of a text box (shared/roster.js). It survives Restart. */
+// Hardening (11/10): if shared/roster.js fails to load (slow tunnel, blocked file) the game still starts
+// with its default names instead of dying on "Roster is not defined".
+if (!window.Roster) window.Roster = {
+  create: o => ({ list: (o.names || []).map(n => ({ name: n })) }),
+  bind: () => {}, afterRender: () => {}, handle: () => false, input: () => {},
+  view: r => '<p data-testid="roster-fallback">' + r.list.map(p => String(p.name).replace(/[&<>"']/g, '')).join(' · ') + '</p>',
+  names: r => r.list.map(p => p.name),
+  setCount: (r, n) => { while (r.list.length < n) r.list.push({ name: 'Player ' + (r.list.length + 1) }); r.list.length = n; }
+};
 const roster = Roster.create({ kind: 'Player', names: ['Alex', 'Sam', 'Jordan'], pool: ['Alex', 'Sam', 'Jordan', 'Riley', 'Casey', 'Morgan'] });
 Roster.bind(app, roster, () => render());
 
