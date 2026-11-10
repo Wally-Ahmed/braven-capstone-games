@@ -206,3 +206,10 @@ _Sat 11/7/2026. Wally's DM, 6:28 PM: "The games are unintuitive hard to understa
 **Still to do (v6)**
 - The room code lives only as long as the server process; restarting it ends every room.
 - No per-player hidden information yet (every phone could be shown the same echo); Phish or Fine phones sit idle while they are not in the current heat.
+
+**v7 (Tue 11/10, Wally's 1:35 PM bug list and "multi screen experience with lobbys")**
+- [x] One narration voice: clips-only by default (no system voice mixed in), clips preloaded, failing clips retried then skipped; tutorial likewise; `?voice=mixed` restores the fallback (`tests/resilience.spec.js`, `tests/tutorial.spec.js`).
+- [x] Hardening: any one shared file failing leaves every game playable (inline Roster fallback).
+- [x] Multi-screen lobby: hub panel + "Host multi-screen" per card (`?host=1` opens the room lobby), `/join/` by code, Phish or Fine played end to end from two phones (`tests/rooms.spec.js`, 2 more checks). 135 checks green.
+- [ ] 111 lines (7,521 characters) still have no ElevenLabs clip and are now silent; voicing them needs pay-as-you-go credits (Wally's yes).
+

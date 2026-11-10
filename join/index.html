@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Join a game · Northbridge Cyber Games</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; overflow-x:hidden; }
+  main { max-width:430px; margin:0 auto; padding:24px 16px; display:flex; flex-direction:column; gap:14px; }
+  h1 { margin:0; font-size:1.9rem; line-height:1.1; }
+  .card { background:rgba(29,16,78,.86); border:3px solid rgba(255,255,255,.18); border-radius:24px; padding:18px; display:flex; flex-direction:column; gap:12px; }
+  label { font-weight:800; }
+  input { font:inherit; font-size:1.2rem; min-height:52px; border-radius:14px; border:3px solid rgba(255,255,255,.3); padding:8px 14px; background:#fff; color:#1b1446; width:100%; }
+  #code { font-size:2.2rem; letter-spacing:.35em; text-transform:uppercase; text-align:center; font-weight:900; }
+  .avs { display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; }
+  .avs button { min-height:52px; font-size:1.6rem; border-radius:14px; border:3px solid transparent; background:rgba(255,255,255,.14); cursor:pointer; }
+  .avs button[aria-pressed="true"] { border-color:#ffd23f; background:rgba(255,210,63,.3); }
+  .go { min-height:56px; border:0; border-radius:16px; font:inherit; font-weight:900; font-size:1.2rem; cursor:pointer; color:#1b1446;
+    background:linear-gradient(90deg,#ffd23f,#ff8a3d); box-shadow:0 6px 0 rgba(0,0,0,.2); }
+  .go:disabled { opacity:.6; }
+  .err { background:#ffe1e1; color:#7a0010; border-radius:12px; padding:10px 12px; font-weight:700; margin:0; }
+  .muted { color:#d9d0ff; margin:0; }
+  a.back { color:#fff; font-weight:800; min-height:44px; display:inline-flex; align-items:center; }
+  button:focus-visible, input:focus-visible, a:focus-visible { outline:3px solid #fff; outline-offset:2px; }
+</style>
+<link rel="stylesheet" href="../shared/theme.css">
+</head>
+<body>
+<main>
+  <a class="back" href="../" data-testid="join-back">⬅️ All games</a>
+  <h1>📱 Join a game</h1>
+  <p class="muted">Type the 4-letter code from the big screen. You play on this phone; the big screen shows the board.</p>
+  <form class="card" data-testid="code-join-form" autocomplete="off" novalidate>
+    <label for="code">Room code</label>
+    <input id="code" data-testid="code-input" maxlength="4" inputmode="text" autocapitalize="characters" spellcheck="false" placeholder="ABCD" enterkeyhint="next">
+    <label for="name">Your name</label>
+    <input id="name" data-testid="code-name" maxlength="18" placeholder="Your name" enterkeyhint="go">
+    <div id="av-label">Pick your icon</div>
+    <div class="avs" role="group" aria-labelledby="av-label" id="avs"></div>
+    <p class="err" role="alert" data-testid="code-error" hidden></p>
+    <button class="go" type="submit" data-testid="code-join-btn">🚀 Join</button>
+  </form>
+  <p class="muted">Braven Capstone prototype. Fictional company "Northbridge Co.".</p>
+</main>
+<script>
+(function () {
+  'use strict';
+  var AVATARS = ['🦊', '🐙', '🦁', '🐸', '🦄', '🐯', '🐼', '🐳', '🦉', '🐝'];
+  var ROOT = new URL('../', location.href).href;
+  var $ = function (id) { return document.getElementById(id); };
+  var form = document.querySelector('form'), err = $('code-error') || document.querySelector('[data-testid="code-error"]');
+  var btn = document.querySelector('[data-testid="code-join-btn"]');
+  function get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function set(k, v, session) { try { (session ? sessionStorage : localStorage).setItem(k, v); } catch (e) { /* storage blocked */ } }
+  var avatar = get('nb-room-avatar') || AVATARS[Math.floor(Math.random() * AVATARS.length)];
+  $('name').value = get('nb-room-name') || '';
+  var q = new URLSearchParams(location.search).get('code');
+  if (q) $('code').value = q.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+  function drawAvatars() {
+    $('avs').replaceChildren.apply($('avs'), AVATARS.map(function (a) {
+      var b = document.createElement('button'); b.type = 'button'; b.textContent = a;
+      b.setAttribute('data-testid', 'code-avatar'); b.setAttribute('aria-label', 'Icon ' + a); b.setAttribute('aria-pressed', String(a === avatar));
+      b.addEventListener('click', function () { avatar = a; drawAvatars(); });
+      return b;
+    }));
+  }
+  drawAvatars();
+  $('code').addEventListener('input', function () { var v = this.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4); if (v !== this.value) this.value = v; if (v.length === 4 && !$('name').value) $('name').focus(); });
+  function fail(msg) { err.textContent = msg; err.hidden = false; btn.disabled = false; btn.textContent = '🚀 Join'; }
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var code = $('code').value.toUpperCase().replace(/[^A-Z]/g, '');
+    var name = $('name').value.trim();
+    if (code.length !== 4) { fail('The code has 4 letters. Look at the big screen.'); return; }
+    if (!name) { fail('Type a name first.'); $('name').focus(); return; }
+    if (!window.WebSocket) { fail('This browser cannot join rooms.'); return; }
+    err.hidden = true; btn.disabled = true; btn.textContent = '⏳ Joining…';
+    set('nb-room-name', name); set('nb-room-avatar', avatar);
+    var ws, done = false;
+    try { ws = new WebSocket(ROOT.replace(/^http/, 'ws') + 'ws'); } catch (x) { fail('Could not reach the game server.'); return; }
+    var timer = setTimeout(function () { if (!done) { done = true; try { ws.close(); } catch (x) { /* ignore */ } fail('Could not reach the game server. Multi-screen needs the link from the big screen.'); } }, 6000);
+    ws.onopen = function () { ws.send(JSON.stringify({ t: 'join', code: code, name: name, avatar: avatar })); };
+    ws.onmessage = function (ev) {
+      var m; try { m = JSON.parse(ev.data); } catch (x) { return; }
+      if (done) return;
+      if (m.t === 'welcome' && /^[a-z0-9-]+$/.test(m.game || '')) {
+        done = true; clearTimeout(timer);
+        // the game page picks this id up and reconnects as the same player (shared/net.js playerKey)
+        set('nb-room-player:' + m.code, m.playerId, true);
+        location.href = ROOT + 'games/' + m.game + '/?room=' + encodeURIComponent(m.code);
+      } else if (m.t === 'error') { done = true; clearTimeout(timer); try { ws.close(); } catch (x) { /* ignore */ } fail(m.msg || 'Could not join.'); }
+    };
+    ws.onerror = function () { if (!done) { done = true; clearTimeout(timer); fail('Could not reach the game server. Multi-screen needs the link from the big screen.'); } };
+  });
+})();
+</script>
+</body>
+</html>

@@ -43,6 +43,14 @@
   .play-btn:focus-visible, .tut-link:focus-visible { outline:3px solid #fff; outline-offset:2px; }
   @keyframes hub-bob { 0%,100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-8px) rotate(-4deg); } }
   @keyframes hub-card-in { from { opacity:0; } to { opacity:1; } }
+  .lobby { max-width:1000px; margin:8px auto 0; padding:14px 16px; display:flex; flex-direction:column; gap:10px; background:rgba(29,16,78,.7);
+    border:3px dashed rgba(255,255,255,.35); border-radius:20px; width:calc(100% - 32px); }
+  .lobby[hidden], .host-btn[hidden] { display:none; }
+  .lobby .lobby-text { display:block; color:#d9d0ff; font-size:.95rem; }
+  .join-btn, .host-btn { min-height:48px; border-radius:16px; font-weight:900; font-size:1.02rem; text-decoration:none; display:flex; align-items:center; justify-content:center; text-align:center; padding:8px 12px; }
+  .join-btn { background:linear-gradient(90deg,#22d3ee,#84f06b); color:#1b1446; }
+  .host-btn { background:rgba(34,211,238,.18); color:#fff; border:2px solid #22d3ee; }
+  .join-btn:focus-visible, .host-btn:focus-visible { outline:3px solid #fff; outline-offset:2px; }
   @media (max-width: 400px) { main { grid-template-columns: 1fr; } h1 { font-size:1.8rem; } }
 </style>
 <link rel="stylesheet" href="shared/theme.css">
@@ -55,6 +63,13 @@
   <ol class="steps" data-testid="hub-steps"><li>1 · Pick a game</li><li>2 · Watch the 30-second tutorial</li><li>3 · Play together</li></ol>
   <p class="note">Braven Capstone prototype. Fictional company "Northbridge Co.". Shield is a prototype, scripted agent.</p>
 </header>
+<section class="lobby" data-testid="hub-lobby" aria-label="Multi-screen" hidden>
+  <div>
+    <b>📱 Multi-screen</b>
+    <span class="lobby-text" data-testid="hub-lobby-text">Everyone plays on their own phone: one screen hosts, the rest join with a 4-letter code.</span>
+  </div>
+  <a class="join-btn" data-testid="hub-join" href="join/">📱 Join a game with a code</a>
+</section>
 <main id="games" data-testid="game-list" aria-label="Games"></main>
 <script>
   // Register a game by adding one entry here.
@@ -111,6 +126,7 @@
       </div>
       <div class="card-actions">
         <a class="play-btn" data-testid="play-btn" href="games/${g.slug}/">▶️ Play ${g.name}</a>
+        <a class="host-btn" data-testid="host-btn" href="games/${g.slug}/?host=1" hidden>📺 Host multi-screen (players join on phones)</a>
         <a class="tut-link" data-testid="tutorial-link" href="games/${g.slug}/?tutorial=1">🎬 Watch the 30-second tutorial</a>
       </div>`;
     list.appendChild(card);
@@ -120,7 +136,15 @@
     GAMES.forEach(g => { L['card-' + g.slug] = { text: g.name + '. ' + g.goal + ' ' + g.pitch + ' For ' + g.players + ' players, ' + g.minutes + ' minutes.', priority: 1 }; });
     return L;
   }
-  window.NorthbridgeHub = { GAMES, narrationLines };
+  // Multi-screen needs the game server (server/index.js answers HEAD with X-Rooms: 1); on a plain static
+  // host the Host links stay hidden and the Join page explains it.
+  let rooms = false;
+  fetch('./', { method: 'HEAD', cache: 'no-store' }).then(r => {
+    rooms = r.ok && r.headers.get('X-Rooms') === '1';
+    document.querySelectorAll('[data-testid="host-btn"]').forEach(a => { a.hidden = !rooms; });
+    document.querySelector('[data-testid="hub-lobby"]').hidden = !rooms;
+  }, () => {});
+  window.NorthbridgeHub = { GAMES, narrationLines, rooms: () => rooms };
   document.addEventListener('DOMContentLoaded', () => { if (window.Narrate) window.Narrate.init({ slug: 'hub' }); });
 </script>
 </body>

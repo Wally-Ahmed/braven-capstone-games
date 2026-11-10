@@ -29,6 +29,14 @@ then open <http://localhost:8080/>. Pick a game card and press **Play**, or **Wa
 - **How it works:** the host is authoritative. A phone sends a move; the server relays it to the host; the host accepts it only if that exact button is on that player's current view, then runs it through the game's own `dispatch(move)`; after every dispatch it sends each phone its view (`roomView(seat)` in each game). Phones reconnect by player id; if the big screen drops, phones show a notice until it reconnects. Without the server (GitHub Pages, `python3 -m http.server`) the button is simply not shown: the page sends one `HEAD` request for the site root and only `server/index.js` answers with `X-Rooms: 1`.
 - **Protocol** (JSON over `/ws`): `create` / `created {code, hostKey}`, `resume`, `join {code, name, avatar, playerId?}` / `welcome {playerId, seat}`, `players` (to the host), `move` (phone to host), `state {for?, view}` (host to one phone or all), `lock` / `unlock` (seating), `close`, `host-left` / `host-back`, `error`. Full list at the top of `server/index.js`.
 
+## Multi-screen lobby and one narration voice (v7, 11/10)
+
+Wally 11/10: "all games rely on a single screen but I want to have a multi screen experience with lobbys anyway can make it join" / "sometimes the system voice is played instead of elevenlabs".
+
+- **Lobby on the hub:** when the page is served by `server/index.js`, the hub shows a **📱 Multi-screen** panel with **Join a game with a code**, and every game card gets **📺 Host multi-screen**, which opens that game with `?host=1` and goes straight to the room lobby (code, QR, link, and the short address `<site>/join/` + code). Phones open **`/join/`**, type the 4-letter code, a name and an icon, and land seated in the right game (`join/index.html` joins over `/ws`, learns the game from the room, and hands its player id to the game page). A wrong code says so. On a plain static host the panel and Host buttons stay hidden. The setup-screen button now reads "📱 Multi-screen: everyone on their own phone".
+- **One voice:** narration is clips-only by default. Only the recorded ElevenLabs clips play; parts without a clip (team names, scores, the 111 lines not voiced yet) stay on screen silently instead of switching to the robotic browser voice. Clips are preloaded into memory after load (blob URLs, 3 at a time), a clip that fails is retried once and then skipped, never replaced by the system voice. The tutorial does the same. `?voice=mixed` brings back the browser-voice fallback.
+- **Hardening:** if any one shared file fails to load (slow tunnel), every game still starts; `shared/roster.js` was the only one that took a game down and each game now carries an inline fallback. `tests/resilience.spec.js` blocks every shared file in turn.
+
 ## Wrong answers and selections (v6, his 8:30 and 8:40 PM asks)
 
 - **Full-screen wrong-answer moment** (`FX.wrongFull()` in `shared/fx.js`): on every wrong outcome (a wrong call in Inbox Showdown, a decoy tap in First Week Hunt, a wrong buzz in Phish or Fine) one of six animations plays at random, each with its own synthesized sound (`Sfx.wrongVariant`): red alarm flash with shake (buzzer), cracked glass (glass crack), ACCESS DENIED stamp (slam), hacker glitch with falling green characters (glitch burst), a bouncing 🚫 that bursts into particles (boing-pop) and a padlock snapping shut (lock click). About 1.4 s, never takes clicks, a tap dismisses it, reduced motion gets a still card plus the sound. In room mode the big screen plays it and the phone that got it wrong plays a lighter version.
@@ -97,6 +105,7 @@ npx playwright test
 - `tests/phish-or-fine.spec.js` covers the Game C checklist (section 6) plus its hub card and menu checks; timers run on Playwright's clock.
 - `tests/tutorial.spec.js` covers the v4 tutorial for all three games (shows on first load, captions and dots, Next/Back, narration through the speech fallback, mute, Skip, "skip next time" persisting, Menu > How to play, keyboard, 360 px), a broken-MP3 fallback, the hub's tutorial links, the top-bar sound toggle and the goal / first-move / "What just happened" lines. `tests/tutorial-autoplay.spec.js` reruns the tutorial with Chromium's autoplay policy set to require a gesture and checks for zero console errors.
 - `tests/rooms.spec.js` covers room mode: `/healthz`, static serving (index, HEAD, directory redirect, 404, no path traversal, no `node_modules`), the button hidden on a plain static server, and for each game a host plus two 360 px phones in separate browser contexts (join by URL, the host lists them, phone moves change host state, host state reaches the phones, turn/wait per phone, a late joiner spectates, punch-in and wrong-answer effects on host and phone).
+- `tests/resilience.spec.js` checks the clips-only voice policy, clip preloading, `?voice=mixed`, and that each game stays playable with any one shared file blocked. `tests/rooms.spec.js` also runs the hub lobby: Host multi-screen, two phones joining by code at `/join/`, a full Phish or Fine heat played from the phones, and the wrong-code error.
 - `tests/wrong-fx.spec.js` forces each of the 6 wrong-answer variants (`Fx.wrongFull({variant: i})`) and checks it appears and clears, at 360 px, never blocks clicks, honours reduced motion and fires in each game; plus the selection punch-in.
 - The other specs start with every tutorial skipped (`storageState` in `playwright.config.js`), so they test the games themselves.
 - Both also check the section 3 rules: zero console errors, no requests outside the site, no horizontal scroll at 375x667 and 360x640, buttons at least 44 px.
@@ -104,7 +113,8 @@ npx playwright test
 ## Layout
 
 ```
-index.html                         game selection hub (GAMES array: one entry per game)
+index.html                         game selection hub (GAMES array: one entry per game) + multi-screen panel
+join/index.html                    join a multi-screen room by its 4-letter code
 shared/menu.js, shared/menu.css    shared top bar + menu (with the sound toggle), loaded by every game
 shared/tutorial.js, tutorial.css   How to play overlay with narration
 shared/audio.js                    WebAudio sound effects + the global mute

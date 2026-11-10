@@ -236,6 +236,11 @@
     if (publicOrigin) { try { base = publicOrigin + new URL(ROOT).pathname; } catch (e) { /* keep ROOT */ } }
     return base + 'games/' + cfg.slug + '/?room=' + H.code;
   }
+  function joinBase() {
+    var base = ROOT;
+    if (publicOrigin) { try { base = publicOrigin + new URL(ROOT).pathname; } catch (e) { /* keep ROOT */ } }
+    return base.replace(/^https?:\/\//, '');
+  }
   function seated() { return H.players.filter(function (p) { return p.seat != null; }).sort(function (a, b) { return a.seat - b.seat; }); }
   function hostOpen() {
     if (H.conn) { showLobby(); return; }
@@ -273,6 +278,7 @@
       '<div class="nr-grid"><div class="nr-qr" data-testid="room-qr">' + QR.svg(url) + '</div><div class="nr-info">' +
       '<div class="nr-muted">Room code</div><div class="nr-code" data-testid="room-code">' + esc(H.code) + '</div>' +
       '<div class="nr-url" data-testid="room-url">' + esc(url) + '</div>' +
+      '<div class="nr-muted" data-testid="room-join-hint">Or open <b>' + esc(joinBase()) + 'join/</b> on any phone and type <b>' + esc(H.code) + '</b>.</div>' +
       (local ? '<p class="nr-muted">Phones cannot reach localhost: open this page through the tunnel link so the QR code works.</p>' : '') +
       '<ul class="nr-list" data-testid="room-players" aria-live="polite">' +
       (s.length ? s.map(function (p) { return '<li data-testid="room-player"' + (p.connected ? '' : ' class="off"') + '>' + esc(p.avatar) + ' ' + esc(p.name) + (p.connected ? '' : ' (offline)') + '</li>'; }).join('') : '<li class="spec">Waiting for phones…</li>') +
@@ -476,7 +482,11 @@
       if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', playerStart); else playerStart();
       return;
     }
-    probe(function () { if (avail && cfg.render && cfg.phase && cfg.phase() === 'setup') cfg.render(); });
+    probe(function () {
+      if (avail && cfg.render && cfg.phase && cfg.phase() === 'setup') cfg.render();
+      // the hub's "Host on this screen" links here with ?host=1: open the lobby straight away
+      if (avail && params.get('host') === '1' && !H.conn) hostOpen();
+    });
   }
 
   window.Net = {
@@ -486,7 +496,7 @@
     active: function () { return !!H.code; },
     host: function () { if (avail) hostOpen(); },
     changed: changed,
-    button: function () { return avail ? '<button class="rooms-btn" data-testid="btn-rooms" data-action="rooms">📱 Play on phones</button>' : ''; },
+    button: function () { return avail ? '<button class="rooms-btn" data-testid="btn-rooms" data-action="rooms">📱 Multi-screen: everyone on their own phone</button>' : ''; },
     _qr: QR
   };
 })();

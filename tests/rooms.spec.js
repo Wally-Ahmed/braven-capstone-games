@@ -201,3 +201,74 @@ test('Phish or Fine: a phone starts the heat and buzzes; the buzz scores on the 
   await expect(r.a.page.getByTestId('player-status')).toContainText(phish ? 'Phish' : 'Fine');
   await done(r);
 });
+
+// 11/10 lobby (Wally: "I want to have a multi screen experience with lobbys anyway can make it join"):
+// the hub hosts and joins; phones join by typing the code at /join/ and land in the right game.
+async function joinByCode(page, code, name) {
+  await page.goto(origin + '/join/');
+  await page.getByTestId('code-input').fill(code.toLowerCase());
+  await expect(page.getByTestId('code-input')).toHaveValue(code);
+  await page.getByTestId('code-name').fill(name);
+  await page.getByTestId('code-avatar').nth(3).click();
+  await page.getByTestId('code-join-btn').click();
+  await expect(page.getByTestId('player-name')).toHaveText(name);
+  await expect(page.getByTestId('join-form')).toHaveCount(0); // no second name form: the join page already seated it
+}
+
+test('Lobby: hub "Host multi-screen" opens the room; two phones join by code at /join/ and play Phish or Fine end to end', async ({ browser }) => {
+  const host = await newPage(browser, { width: 390, height: 844 });
+  const issues = watch(host.page, origin);
+  await host.page.goto(origin + '/');
+  await expect(host.page.getByTestId('hub-lobby')).toBeVisible();
+  await expect(host.page.getByTestId('host-btn')).toHaveCount(3);
+  await host.page.locator('[data-slug="phish-or-fine"] [data-testid="host-btn"]').click();
+  await expect(host.page.getByTestId('room-lobby')).toBeVisible();
+  const code = (await host.page.getByTestId('room-code').textContent()).trim();
+  await expect(host.page.getByTestId('room-join-hint')).toContainText(code);
+
+  const a = await newPage(browser, { width: 360, height: 640 });
+  const b = await newPage(browser, { width: 360, height: 640 });
+  const pIssues = watch(a.page, origin);
+  await joinByCode(a.page, code, 'Ana');
+  expect(a.page.url()).toBe(origin + '/games/phish-or-fine/?room=' + code);
+  await joinByCode(b.page, code, 'Ben');
+  await expect(host.page.getByTestId('room-player')).toHaveCount(2);
+  await host.page.getByTestId('room-start').click();
+  const S = () => host.page.evaluate(() => JSON.parse(JSON.stringify(window.PhishOrFine.state)));
+  expect((await S()).players.map(p => p.name)).toEqual(['Ana', 'Ben']);
+  // phone A starts the heat, both phones buzz on their own screens across the whole 12-snippet heat
+  await a.page.getByTestId('player-btn').filter({ hasText: 'Start the heat' }).click();
+  for (let i = 0; i < 12; i++) {
+    await expect.poll(async () => (await S()).phase, { timeout: 9000 }).toBe('question');
+    const phish = await host.page.evaluate(() => { const s = window.PhishOrFine.state; return window.PhishOrFine.SNIPPETS.find(x => x.id === s.q.item).phish; });
+    const who = i % 2 ? b : a;
+    await who.page.getByTestId('player-btn').filter({ hasText: phish ? 'Phish' : 'Fine' }).click();
+    await expect.poll(async () => (await S()).phase).not.toBe('question');
+    if ((await S()).phase === 'reveal') await host.page.getByTestId('btn-next').click();
+  }
+  await expect(host.page.getByTestId('heat-result')).toBeVisible({ timeout: 10000 });
+  await host.page.getByTestId('btn-results').click();
+  await expect(host.page.getByTestId('leaderboard')).toBeVisible();
+  const s = await S();
+  expect(s.players[0].score).toBeGreaterThan(0);
+  expect(s.players[1].score).toBeGreaterThan(0);
+  await expect(a.page.getByTestId('player-status')).toHaveAttribute('data-status', 'over');
+  await expect(a.page.getByTestId('player-score')).toHaveText(s.players[0].score + ' pts');
+  await expectTapTargets(a.page);
+  expectClean(issues); expectClean(pIssues);
+  await host.ctx.close(); await a.ctx.close(); await b.ctx.close();
+});
+
+test('Lobby: a wrong code shows a clear error on /join/; the hub hides multi-screen on a plain static server', async ({ browser, baseURL }) => {
+  const p = await newPage(browser, { width: 360, height: 640 });
+  await p.page.goto(origin + '/join/?code=zzzz');
+  await expect(p.page.getByTestId('code-input')).toHaveValue('ZZZZ');
+  await p.page.getByTestId('code-name').fill('Ana');
+  await p.page.getByTestId('code-join-btn').click();
+  await expect(p.page.getByTestId('code-error')).toContainText('No room');
+  await p.page.goto(baseURL + '/');
+  await p.page.waitForTimeout(500);
+  await expect(p.page.getByTestId('hub-lobby')).toBeHidden();
+  await expect(p.page.getByTestId('host-btn').first()).toBeHidden();
+  await p.ctx.close();
+});
