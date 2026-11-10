@@ -20,7 +20,7 @@
     return '/';
   })();
   var cfg = null, steps = [], idx = 0, overlay = null, lastFocus = null, audioEl = null;
-  var els = {}, localMute = false, speaking = false, loaded = false, pendingOpen = false;
+  var playGen = 0, els = {}, localMute = false, speaking = false, loaded = false, pendingOpen = false;
   var HUES = ['#ff4fa3', '#22d3ee', '#ffd23f', '#84f06b', '#a78bfa'];
 
   function skipKey() { return 'nb-tutorial-skip:' + cfg.slug; }
@@ -87,14 +87,29 @@
         audioEl.addEventListener('playing', function () { speaking = true; showBlocked(false); syncTalking(); });
         audioEl.addEventListener('ended', function () { speaking = false; syncTalking(); });
       }
-      audioEl.onerror = function () { speakTTS(text); }; // file missing or undecodable: read it out instead
-      audioEl.src = ROOT + 'shared/narration/' + cfg.slug + '/' + s.audio;
-      var p;
-      try { p = audioEl.play(); } catch (e) { p = null; }
-      if (p && p.catch) p.catch(function (err) {
-        if (err && err.name === 'NotAllowedError') showBlocked(true);
-        else if (err && err.name !== 'AbortError') speakTTS(text);
-      });
+      // Wally 11/10: never swap the recorded coach for the system voice. A clip that fails is retried
+      // once (fresh request); if it still fails the caption stays on screen silently. ?voice=mixed
+      // restores the old browser-voice fallback.
+      var mixed = /[?&]voice=mixed/.test(location.search), tries = 0, my = ++playGen;
+      var url = ROOT + 'shared/narration/' + cfg.slug + '/' + s.audio;
+      var failed = function () {
+        if (my !== playGen) return;
+        if (tries < 1) { tries++; start(url + '?r=' + Date.now()); return; }
+        speaking = false; syncTalking();
+        if (mixed) speakTTS(text);
+      };
+      var start = function (u) {
+        audioEl.onerror = failed;
+        audioEl.src = u;
+        var p;
+        try { p = audioEl.play(); } catch (e) { p = null; }
+        if (p && p.catch) p.catch(function (err) {
+          if (my !== playGen) return;
+          if (err && err.name === 'NotAllowedError') showBlocked(true);
+          else if (err && err.name !== 'AbortError') failed();
+        });
+      };
+      start(url);
     } else {
       speakTTS(text);
     }

@@ -13,8 +13,9 @@
  *   data-narrate-interrupt="1"    stop whatever is playing and read this now (warnings, results).
  *   data-narrate-label="text"     what the Replay button's accessible name says it replays.
  *
- * A line plays its ElevenLabs MP3 (lines/<id>.mp3) when lines.json lists "audio"; otherwise, or if
- * the file fails, the browser's speech synthesis reads the same text. One queue, so nothing
+ * A line plays its ElevenLabs MP3 (lines/<id>.mp3) when lines.json lists "audio". Default voice policy
+ * 'clips': nothing else is spoken (no browser voice mixed in); ?voice=mixed restores the browser voice
+ * for lines without a clip. Clips are preloaded into memory after load. One queue, so nothing
  * overlaps. Shares the global mute with the sound effects (Sfx, localStorage "nb-muted"), waits
  * while the tutorial overlay is open, and stops a block's audio as soon as the block disappears.
  *
@@ -39,6 +40,49 @@
   var current = null;           // { key, el, parts, i }
   var audioEl = null, safety = null, scanQueued = false, observer = null, gen = 0;
   var log = [];
+  /* Voice policy (Wally 11/10: "sometimes the system voice is played instead of elevenlabs").
+     'clips' (default): only the recorded ElevenLabs clips are ever played. Parts with no clip (names,
+     scores, lines not voiced yet) stay on screen and are not spoken, and a clip that fails to load is
+     retried once and then skipped, never replaced by the browser voice. 'mixed' (?voice=mixed): the old
+     behaviour, browser voice for anything without a clip. A page whose manifest has no clips at all
+     uses the browser voice either way so it is not silent. */
+  var voiceMode = (function () {
+    try { var m = /[?&]voice=(clips|mixed)/.exec(location.search); if (m) return m[1]; } catch (e) { /* ignore */ }
+    return 'clips';
+  })();
+  var hasClips = false;
+  var clipCache = {};          // id -> { url (blob: or file url), state: 'loading'|'ready'|'failed', waiters: [] }
+  function clipUrl(id) { return ROOT + 'shared/narration/' + cfg.slug + '/lines/' + id + '.mp3'; }
+  function clipsOnly() { return voiceMode === 'clips' && hasClips; }
+  /* Preload a clip into memory (blob URL) so playback never waits on the network mid-game. */
+  function preload(id, cb) {
+    if (!cfg || !id || !lines[id] || !lines[id].audio) { if (cb) cb(null); return; }
+    var c = clipCache[id];
+    if (c) { if (c.state === 'loading') { if (cb) c.waiters.push(cb); } else if (cb) cb(c.url); return; }
+    c = clipCache[id] = { url: clipUrl(id), state: 'loading', waiters: cb ? [cb] : [] };
+    var finish = function (url, ok) { c.url = url; c.state = ok ? 'ready' : 'failed'; var w = c.waiters; c.waiters = []; w.forEach(function (f) { f(c.url); }); };
+    if (!window.fetch || !window.URL || !URL.createObjectURL) { finish(c.url, true); return; }
+    var attempt = function (n) {
+      window.fetch(clipUrl(id) + (n ? '?r=' + n : ''))
+        .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.blob(); })
+        .then(function (b) { finish(URL.createObjectURL(b), true); },
+          function () { if (n < 2) setTimeout(function () { attempt(n + 1); }, 400); else finish(clipUrl(id), false); });
+    };
+    attempt(0);
+  }
+  var warmQueue = [], warming = 0;
+  function warmAll() {
+    Object.keys(lines).forEach(function (id) { if (lines[id].audio && !clipCache[id]) warmQueue.push(id); });
+    var step = function () {
+      while (warming < 3 && warmQueue.length) {
+        var id = warmQueue.shift();
+        if (clipCache[id]) continue;
+        warming++;
+        preload(id, function () { warming--; step(); });
+      }
+    };
+    step();
+  }
 
   function muted() {
     if (window.Sfx) return window.Sfx.muted();
@@ -66,10 +110,12 @@
       if (L) parts.push({ id: id, text: L.text, audio: !!L.audio });
       else if (!ready) parts.push({ id: id, text: '' }); // manifest not loaded yet: resolved at play time
     });
-    if (!parts.length) {
+    if (!parts.length && !(clipsOnly() && el.getAttribute('data-narrate'))) {
       var t = (el.textContent || '').replace(/🔁 Replay/g, '').trim();
       if (t) parts.push({ id: null, text: t });
     }
+    if (clipsOnly()) parts = parts.filter(function (q) { return q.id && (q.audio || (!ready && !q.text)); });
+    parts.forEach(function (q) { if (q.audio) preload(q.id); });
     return parts;
   }
   function attachReplay(el) {
@@ -175,19 +221,33 @@
     if (!p.text) { nextPart(g); return; }
     if (p.audio && cfg) {
       if (!audioEl) { audioEl = new Audio(); audioEl.preload = 'auto'; }
-      audioEl.onended = function () { nextPart(g); };
-      audioEl.onerror = function () { if (g === gen) speak(p, item, g); };
-      try { audioEl.src = ROOT + 'shared/narration/' + cfg.slug + '/lines/' + p.id + '.mp3'; audioEl.currentTime = 0; } catch (e) { /* ignore */ }
-      log.push({ key: item.key, id: p.id, via: 'audio', text: p.text });
-      var pr;
-      try { pr = audioEl.play(); } catch (e) { pr = null; }
-      if (pr && pr.catch) pr.catch(function (err) {
+      var failed = function () {
         if (g !== gen) return;
-        if (err && err.name === 'NotAllowedError') { blocked(item); return; }
-        if (err && err.name !== 'AbortError') speak(p, item, g);
-      });
+        if (clipsOnly()) { log.push({ key: item.key, id: p.id, via: 'skip', text: p.text }); nextPart(g); }
+        else speak(p, item, g);
+      };
+      log.push({ key: item.key, id: p.id, via: 'audio', text: p.text });
       // never let one stuck file hold the queue
       safety = setTimeout(function () { nextPart(g); }, 30000);
+      var start = function (url) {
+        if (g !== gen) return;
+        audioEl.onended = function () { nextPart(g); };
+        audioEl.onerror = failed;
+        try { audioEl.src = url; audioEl.currentTime = 0; } catch (e) { /* ignore */ }
+        var pr;
+        try { pr = audioEl.play(); } catch (e) { pr = null; }
+        if (pr && pr.catch) pr.catch(function (err) {
+          if (g !== gen) return;
+          if (err && err.name === 'NotAllowedError') { blocked(item); return; }
+          if (err && err.name !== 'AbortError') failed();
+        });
+      };
+      var c = clipCache[p.id];
+      if (c && c.state !== 'loading') start(c.url);
+      else preload(p.id, start);
+    } else if (clipsOnly()) {
+      log.push({ key: item.key, id: p.id, via: 'skip', text: p.text });
+      nextPart(g);
     } else {
       speak(p, item, g);
     }
@@ -262,8 +322,10 @@
           var v = src[id];
           lines[id] = typeof v === 'string' ? { text: v, audio: false } : { text: v.text, audio: !!v.audio };
         });
+        hasClips = Object.keys(lines).some(function (id) { return lines[id].audio; });
         ready = true;
         present = new Map();
+        setTimeout(warmAll, 300);
         requestScan();
       };
       if (window.fetch) {
@@ -292,6 +354,7 @@
       var parts = [];
       if (id && lines[id]) parts.push({ id: id, text: lines[id].text, audio: !!lines[id].audio });
       else if (text) parts.push({ id: null, text: text });
+      if (clipsOnly()) parts = parts.filter(function (q) { return q.audio; });
       if (!parts.length || muted()) return;
       queue.push({ key: 'say:' + (id || text), el: el || null, parts: parts, i: 0 });
       pump();
@@ -310,6 +373,8 @@
     stop: function () { stopCurrent(); queue = []; },
     lines: function () { return lines; },
     busy: function () { return !!current; },
+    voice: function () { return clipsOnly() ? 'clips' : 'mixed'; },
+    preloaded: function () { return Object.keys(clipCache).filter(function (k) { return clipCache[k].state === 'ready'; }).length; },
     current: function () { return current ? current.key : null; },
     log: log
   };

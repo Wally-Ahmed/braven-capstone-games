@@ -183,7 +183,7 @@ for (const slug of SLUGS) {
       expectClean(issues);
     });
 
-    test('a broken narration MP3 falls back to speech synthesis without console errors', async ({ page, baseURL }) => {
+    test('a broken narration MP3 is retried, never swapped for the system voice (unless ?voice=mixed); no console errors', async ({ page, baseURL }) => {
       const issues = watch(page, baseURL);
       await spySpeech(page);
       await page.route('**/shared/narration/' + slug + '/script.json', async route => {
@@ -191,10 +191,17 @@ for (const slug of SLUGS) {
         data.steps.forEach((s, i) => { s.audio = 'step' + (i + 1) + '.mp3'; });
         await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(data) });
       });
-      await page.route('**/shared/narration/' + slug + '/*.mp3', route => route.fulfill({ status: 200, contentType: 'audio/mpeg', body: 'not really audio' }));
+      let hits = 0;
+      await page.route('**/shared/narration/' + slug + '/*.mp3*', route => { hits++; return route.fulfill({ status: 200, contentType: 'audio/mpeg', body: 'not really audio' }); });
       await page.goto(GAME);
       await expect(overlay(page)).toBeVisible();
       await page.getByTestId('tutorial-next').click(); // a user gesture, so autoplay is allowed
+      await expect.poll(() => hits).toBeGreaterThanOrEqual(2); // the retry
+      await page.waitForTimeout(600);
+      expect(await spoken(page)).toEqual([]);
+      await page.goto(GAME + '?voice=mixed');
+      await expect(overlay(page)).toBeVisible();
+      await page.getByTestId('tutorial-next').click();
       await expect.poll(async () => (await spoken(page)).some(t => t.includes(steps[1].text))).toBe(true);
       expectClean(issues);
     });

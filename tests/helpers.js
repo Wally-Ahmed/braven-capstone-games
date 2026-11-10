@@ -9,7 +9,7 @@ function watch(page, baseURL) {
   page.on('pageerror', e => issues.consoleErrors.push(String(e)));
   page.on('request', r => {
     const u = r.url();
-    if (!u.startsWith(origin) && !u.startsWith('data:') && !u.startsWith('about:')) issues.external.push(u);
+    if (!u.startsWith(origin) && !u.startsWith('data:') && !u.startsWith('blob:') && !u.startsWith('about:')) issues.external.push(u);
   });
   return issues;
 }
