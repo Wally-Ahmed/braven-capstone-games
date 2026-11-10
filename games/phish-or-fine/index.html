@@ -370,7 +370,7 @@ function slotPlayer(h, slot) { return slot === 0 ? h.a : h.b; }
 
 function openQuestion() {
   const h = curHeat();
-  state.q = { item: h.items[state.itemPos], startedAt: now(), deadline: now() + BUZZ_MS, locked: [], buzzes: [] };
+  state.q = { item: h.items[state.itemPos], startedAt: now(), deadline: now() + BUZZ_MS, locked: [], buzzes: [], guesses: {} };
   state.phase = 'question';
   state.step++;
 }
@@ -392,7 +392,7 @@ function resolveQuestion(timedOut) {
   });
   let lesson = null;
   entries.forEach(({ slot, entry }) => { lesson = Shield.afterAction(slotPlayer(h, slot), entry); });
-  state.reveal = { item: q.item, buzzes: q.buzzes.slice(), timedOut: !!timedOut && !correctBuzz && q.buzzes.length === 0,
+  state.reveal = { item: q.item, guesses: Object.assign({}, q.guesses || {}), buzzes: q.buzzes.slice(), timedOut: !!timedOut && !correctBuzz && q.buzzes.length === 0,
                    outcomes: entries.map(e => e.entry.outcome), lesson };
   state.phase = 'reveal';
   state.step++;
@@ -451,6 +451,7 @@ function dispatch(move) {
       if (new Set(names.map(n => n.toLowerCase())).size !== names.length) { state.error = 'Player names must be different.'; break; }
       const rand = seedParam != null && seedParam !== '' ? rng(Number(seedParam) || 0) : Math.random;
       state.error = null;
+      state.crowd = {};
       state.players = names.map(name => ({ name, score: 0, streak: 0 }));
       state.deck = shuffle(SNIPPETS.map(s => s.id), rand);
       state.deckPos = 0;
@@ -475,6 +476,17 @@ function dispatch(move) {
       if (move.step != null && move.step !== state.step) return;
       if (!buzz(Number(move.slot), move.choice === 'phish' ? 'phish' : 'fine')) return;
       break;
+    case 'guess': {
+      // 11/10 multi-screen: phones not in the current heat call each snippet from the crowd (no points, a crowd tally)
+      const x = curHeat(), seat = Number(move.seat);
+      if (state.phase !== 'question' || !(seat >= 0 && seat < state.players.length) || x.a === seat || x.b === seat || state.q.guesses[seat]) return;
+      const choice = move.choice === 'phish' ? 'phish' : 'fine';
+      state.q.guesses[seat] = choice;
+      state.crowd = state.crowd || {};
+      const c = state.crowd[seat] = state.crowd[seat] || { right: 0, total: 0 };
+      c.total++; if ((choice === 'phish') === SNIP[state.q.item].phish) c.right++;
+      break;
+    }
     case 'timeout':
       if (state.phase !== 'question' || move.step !== state.step) return;
       resolveQuestion(true);
@@ -671,6 +683,7 @@ function view() {
       '<p class="what ' + (r.buzzes.some(b => b.correct) ? 'good' : 'bad') + '" data-testid="what-happened">💡 What just happened: ' + esc(whatHappened(r, item)) + '</p>' +
       r.buzzes.map(b => '<p data-testid="reveal-buzz">' + (b.correct ? '✅ ' : '❌ ') + esc(state.players[b.player].name) + ' said ' + b.choice +
         ' · ' + (b.points >= 0 ? '+' : '') + b.points + (b.correct && !b.steal && b.streak >= SCORE.streakAt ? ' (🔥 x' + SCORE.streakMultiplier + ' streak)' : '') + (b.steal ? ' (steal)' : '') + '</p>').join('') +
+      crowdLine(r, item) +
       snippetCard(item, nar('snip-' + item.id, { auto: false, key: 'rs:' + state.heat + ':' + state.itemPos, label: 'the message' })) +
       (Shield.mode !== 'off' ? '<div class="shield" data-testid="reveal-lesson"><div class="tag">🛡️ Shield explains · ' + esc(CATEGORIES[item.category].label) + ' · prototype, scripted agent</div>' +
         '<p><b>Red flag:</b> ' + esc(r.lesson.flag) + '</p><p><b>Safe habit:</b> ' + esc(r.lesson.habit) + '</p></div>' : '') +
@@ -862,6 +875,12 @@ function roomOver(v, seat) {
     : board.map((r, i) => (i + 1) + '. ' + r.name + ': ' + r.score).join('\n');
   return v;
 }
+function crowdLine(r, item) {
+  const g = Object.keys(r.guesses || {});
+  if (!g.length) return '';
+  const right = g.filter(k => (r.guesses[k] === 'phish') === item.phish).length;
+  return '<p data-testid="crowd-line">👀 Crowd: ' + right + ' of ' + g.length + ' called it (' + g.map(k => esc(state.players[k].name) + ((r.guesses[k] === 'phish') === item.phish ? ' ✅' : ' ❌')).join(', ') + ')</p>';
+}
 function roomView(seat) {
   const me = seat != null ? state.players[seat] : null;
   const v = { status: 'wait', score: me ? me.score : null, buttons: [] };
@@ -891,10 +910,18 @@ function roomView(seat) {
         v.buttons = [{ label: '🎣 Phish (scam)', move: { type: 'buzz', slot, choice: 'phish', step: state.step }, kind: 'bad' },
                      { label: '✅ Fine (safe)', move: { type: 'buzz', slot, choice: 'fine', step: state.step }, kind: 'good' }];
       } else v.title = 'Buzz locked in';
+    } else if (me) {
+      const g = q.guesses[seat];
+      Object.assign(v, { status: g ? 'wait' : 'turn', title: g ? 'You said ' + (g === 'phish' ? '🎣 Phish' : '✅ Fine') + ' 🤞' : '👀 ' + vs + ': call it from the crowd', prompt: echo,
+        note: 'Crowd calls score no points; see if you beat the players.' });
+      if (!g) v.buttons = [{ label: '🤔 I say Phish', move: { type: 'guess', seat, choice: 'phish' }, kind: 'bad' },
+                           { label: '🤔 I say Fine', move: { type: 'guess', seat, choice: 'fine' }, kind: 'good' }];
     } else Object.assign(v, { title: vs, prompt: echo });
   } else if (state.phase === 'reveal') {
     const r = state.reveal, item = SNIP[r.item];
     Object.assign(v, { title: item.phish ? '🎣 Phish: unsafe' : '✅ Fine: safe', prompt: whatHappened(r, item), note: Shield.mode !== 'off' ? 'Red flag: ' + r.lesson.flag : null });
+    const g = r.guesses && r.guesses[seat];
+    if (g) { const c = (state.crowd || {})[seat] || { right: 0, total: 0 }; v.title = ((g === 'phish') === item.phish ? '🎯 You called it! ' : '😅 Not this time. ') + v.title; v.note = 'Your crowd calls: ' + c.right + ' of ' + c.total + ' right. ' + (v.note || ''); }
     if (slot >= 0) v.buttons = [{ label: state.itemPos + 1 >= x.items.length ? '🏁 End heat' : '➡️ Next snippet', move: { type: 'next', step: state.step }, kind: 'primary' }];
   } else if (state.phase === 'leaderboard' || state.phase === 'debrief') roomOver(v, seat);
   else Object.assign(v, { title: 'Waiting for the big screen' });

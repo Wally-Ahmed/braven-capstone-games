@@ -283,3 +283,32 @@ test('Lobby: a wrong code shows a clear error on /join/; the hub hides multi-scr
   await expect(p.page.getByTestId('host-btn').first()).toBeHidden();
   await p.ctx.close();
 });
+
+test('Phish or Fine with 3 phones: the phone sitting out calls each snippet from the crowd; the reveal shows the crowd line', async ({ browser }) => {
+  const host = await newPage(browser);
+  const issues = watch(host.page, origin);
+  await host.page.goto(origin + '/games/phish-or-fine/?host=1&seed=2');
+  await expect(host.page.getByTestId('room-lobby')).toBeVisible();
+  const code = (await host.page.getByTestId('room-code').textContent()).trim();
+  const phones = [];
+  for (const n of ['Ana', 'Ben', 'Cy']) { const p = await newPage(browser, { width: 360, height: 640 }); await joinByCode(p.page, code, n); phones.push(p); }
+  await host.page.getByTestId('room-start').click();
+  const S = () => host.page.evaluate(() => JSON.parse(JSON.stringify(window.PhishOrFine.state)));
+  const x = (await S()).heats[0];
+  const out = [0, 1, 2].find(i => i !== x.a && i !== x.b);
+  const crowd = phones[out].page, player = phones[x.a].page;
+  await player.getByTestId('player-btn').filter({ hasText: 'Start the heat' }).click();
+  await expect.poll(async () => (await S()).phase, { timeout: 9000 }).toBe('question');
+  await expect(crowd.getByTestId('player-status')).toContainText('call it from the crowd');
+  const phish = await host.page.evaluate(() => { const s = window.PhishOrFine.state; return window.PhishOrFine.SNIPPETS.find(i => i.id === s.q.item).phish; });
+  await crowd.getByTestId('player-btn').filter({ hasText: phish ? 'I say Phish' : 'I say Fine' }).click();
+  await expect(crowd.getByTestId('player-status')).toContainText('You said');
+  expect((await S()).players.map(p => p.score)).toEqual([0, 0, 0]); // crowd calls score nothing
+  await player.getByTestId('player-btn').filter({ hasText: phish ? 'Phish' : 'Fine' }).click();
+  await expect.poll(async () => (await S()).phase).toBe('reveal');
+  await expect(host.page.getByTestId('crowd-line')).toContainText('1 of 1 called it');
+  await expect(crowd.getByTestId('player-status')).toContainText('You called it');
+  await expect(crowd.getByTestId('player-note')).toContainText('1 of 1 right');
+  expectClean(issues);
+  await host.ctx.close(); for (const p of phones) await p.ctx.close();
+});
