@@ -1,0 +1,12 @@
+# Render Blueprint: one free web service running the Node server (static site + WebSocket rooms at /ws on one port).
+# Render injects PORT; the server binds 0.0.0.0 when PORT is set. No env vars are required.
+services:
+  - type: web
+    name: braven-capstone-games
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /healthz

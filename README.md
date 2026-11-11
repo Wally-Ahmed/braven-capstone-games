@@ -142,6 +142,14 @@ fly.toml, deploy/FLY-DEPLOY.md     Fly.io config (always-on single machine) and 
 
 To add a game: put it at `games/<slug>/index.html`, include `../../shared/menu.css`, then after its own `<style>` `../../shared/theme.css` and `../../shared/tutorial.css`, the scripts `audio.js`, `fx.js`, `menu.js`, `tutorial.js`, `narrate.js` from `../../shared/` (all `defer`, in that order) and `../../shared/roster.js` without `defer`. On `DOMContentLoaded` call `Menu.init({ name, restart, setShield, howTo, shield })`, `Tutorial.init({ slug, name })` and `Narrate.init({ slug })`; expose `narrationLines()` on the page's test hook and add it to `tools/extract-lines.js`; write `shared/narration/<slug>/script.json`, and add one entry (with a `goal`) to `GAMES` in `index.html`.
 
+## Deploy on Render (free plan)
+
+`render.yaml` at the repo root is a Render Blueprint for one free web service (`braven-capstone-games`, Docker, Oregon, auto-deploy from `main`, health check `/healthz`). The same Node process serves the pages and the WebSocket rooms at `/ws`, so the big screen, the join page and the phones all use one domain (`https://braven-capstone-games.onrender.com`, or whatever name Render assigns). Render terminates TLS and passes WebSocket upgrades on the same port; Render injects `PORT` and the server binds `0.0.0.0`. No environment variables are needed.
+
+- **Blueprint:** Render dashboard > New > Blueprint > pick this repo > Apply.
+- **Or by hand:** New > Web Service > Public Git repository `https://github.com/Wally-Ahmed/braven-capstone-games`, runtime Docker, plan Free, health check path `/healthz`.
+- **Free-plan caveats:** the service sleeps after 15 minutes with no traffic, the first load after that takes about a minute, and a restart or redeploy clears every room (rooms live in memory). Open the site a minute before class.
+
 ## Deploy (later, not done yet)
 
 Target: Fly.io, https://braven-capstone-games.fly.dev/, running the Node server so room mode works (GitHub Pages would be static only, same-screen play). Not deployed yet: Wally runs `fly auth login` first. Exact steps, rollback and caveats (a deploy resets all rooms): `deploy/FLY-DEPLOY.md`.
