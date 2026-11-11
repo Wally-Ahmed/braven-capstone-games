@@ -22,7 +22,23 @@
   .err { background:#ffe1e1; color:#7a0010; border-radius:12px; padding:10px 12px; font-weight:700; margin:0; }
   .muted { color:#d9d0ff; margin:0; }
   a.back { color:#fff; font-weight:800; min-height:44px; display:inline-flex; align-items:center; }
-  button:focus-visible, input:focus-visible, a:focus-visible { outline:3px solid #fff; outline-offset:2px; }
+  h2 { margin:0; font-size:1.25rem; }
+  .lobbies { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+  .lobbies li { display:flex; gap:10px; align-items:center; background:rgba(255,255,255,.1); border:3px solid transparent; border-radius:16px; padding:10px 12px; }
+  .lobbies li.on { border-color:#ffd23f; background:rgba(255,210,63,.18); }
+  .lobbies .lb-text { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; }
+  .lobbies .lb-name { font-weight:900; font-size:1.1rem; overflow-wrap:anywhere; }
+  .lobbies .lb-meta { color:#d9d0ff; font-size:.9rem; }
+  .lobbies .lb-state { font-weight:800; }
+  .lobbies button { flex:0 0 auto; min-height:48px; min-width:84px; border:0; border-radius:14px; font:inherit; font-weight:900; cursor:pointer; color:#1b1446; background:linear-gradient(90deg,#22d3ee,#84f06b); }
+  .lobbies button[aria-pressed="true"] { background:#ffd23f; }
+  .lobbies button:disabled { opacity:.55; cursor:not-allowed; }
+  .target { margin:0; font-weight:800; }
+  details.have-code summary { cursor:pointer; min-height:44px; display:flex; align-items:center; font-weight:800; color:#d9d0ff; }
+  details.have-code[open] { display:flex; flex-direction:column; gap:8px; }
+  #key { text-transform:uppercase; letter-spacing:.12em; font-weight:900; }
+  a.inline { color:#ffd23f; font-weight:800; }
+  summary:focus-visible, button:focus-visible, input:focus-visible, a:focus-visible { outline:3px solid #fff; outline-offset:2px; }
 </style>
 <link rel="stylesheet" href="../shared/theme.css">
 </head>
@@ -30,10 +46,21 @@
 <main>
   <a class="back" href="../" data-testid="join-back">⬅️ All games</a>
   <h1>📱 Join a game</h1>
-  <p class="muted">Type the 4-letter code from the big screen. You play on this phone; the big screen shows the board.</p>
+  <p class="muted">Tap an open lobby, then pick your name and icon and type the lobby code the host gives you. You play on this phone; the big screen shows the board.</p>
+  <section class="card" data-testid="lobby-browser" aria-labelledby="lb-h">
+    <h2 id="lb-h">Open lobbies</h2>
+    <ul class="lobbies" data-testid="lobby-list" aria-live="polite"></ul>
+    <p class="muted" data-testid="lobby-empty">⏳ Looking for lobbies…</p>
+  </section>
   <form class="card" data-testid="code-join-form" autocomplete="off" novalidate>
-    <label for="code">Room code</label>
-    <input id="code" data-testid="code-input" maxlength="4" inputmode="text" autocapitalize="characters" spellcheck="false" placeholder="ABCD" enterkeyhint="next">
+    <p class="target" data-testid="join-target">👆 Pick a lobby above.</p>
+    <details class="have-code" data-testid="code-toggle">
+      <summary data-testid="have-code">Have a code?</summary>
+      <label for="code">Room code (4 letters, from "Show code / QR" on the big screen)</label>
+      <input id="code" data-testid="code-input" maxlength="4" inputmode="text" autocapitalize="characters" spellcheck="false" placeholder="ABCD" enterkeyhint="next">
+    </details>
+    <label for="key">Lobby code (ask the host)</label>
+    <input id="key" data-testid="code-key" maxlength="12" autocapitalize="characters" spellcheck="false" placeholder="from the host" enterkeyhint="next">
     <label for="name">Your name</label>
     <input id="name" data-testid="code-name" maxlength="18" placeholder="Your name" enterkeyhint="go">
     <div id="av-label">Pick your icon</div>
@@ -48,15 +75,20 @@
   'use strict';
   var AVATARS = ['🦊', '🐙', '🦁', '🐸', '🦄', '🐯', '🐼', '🐳', '🦉', '🐝'];
   var ROOT = new URL('../', location.href).href;
+  var WS = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + new URL(ROOT).pathname + 'ws';
   var $ = function (id) { return document.getElementById(id); };
-  var form = document.querySelector('form'), err = $('code-error') || document.querySelector('[data-testid="code-error"]');
-  var btn = document.querySelector('[data-testid="code-join-btn"]');
+  var tid = function (t) { return document.querySelector('[data-testid="' + t + '"]'); };
+  var form = tid('code-join-form'), err = tid('code-error'), btn = tid('code-join-btn');
+  var list = tid('lobby-list'), empty = tid('lobby-empty'), target = tid('join-target'), toggle = tid('code-toggle');
   function get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function set(k, v, session) { try { (session ? sessionStorage : localStorage).setItem(k, v); } catch (e) { /* storage blocked */ } }
   var avatar = get('nb-room-avatar') || AVATARS[Math.floor(Math.random() * AVATARS.length)];
+  var lobbies = [], selected = null, firstList = true;
   $('name').value = get('nb-room-name') || '';
-  var q = new URLSearchParams(location.search).get('code');
-  if (q) $('code').value = q.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+  var q = new URLSearchParams(location.search);
+  var wantLobby = (q.get('lobby') || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+  if (q.get('code')) { $('code').value = q.get('code').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4); toggle.open = true; }
+  if (q.get('key')) $('key').value = q.get('key').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
   function drawAvatars() {
     $('avs').replaceChildren.apply($('avs'), AVATARS.map(function (a) {
       var b = document.createElement('button'); b.type = 'button'; b.textContent = a;
@@ -66,21 +98,86 @@
     }));
   }
   drawAvatars();
-  $('code').addEventListener('input', function () { var v = this.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4); if (v !== this.value) this.value = v; if (v.length === 4 && !$('name').value) $('name').focus(); });
-  function fail(msg) { err.textContent = msg; err.hidden = false; btn.disabled = false; btn.textContent = '🚀 Join'; }
+  function el(tag, cls, text, testid) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; if (testid) e.setAttribute('data-testid', testid); return e; }
+  // Lobby names come from hosts: always set as textContent, never as HTML.
+  function drawList() {
+    if (selected && !lobbies.some(function (l) { return l.code === selected.code; })) {
+      selected = null; showErr('That lobby just closed. Pick another one.');
+    }
+    list.replaceChildren.apply(list, lobbies.map(function (l) {
+      var li = el('li', selected && selected.code === l.code ? 'on' : '', null, 'lobby-item'); li.setAttribute('data-code', l.code);
+      var tx = el('div', 'lb-text');
+      tx.appendChild(el('span', 'lb-name', l.name, 'lobby-name'));
+      var meta = el('span', 'lb-meta');
+      meta.appendChild(el('span', '', l.title + ' · ', 'lobby-game'));
+      meta.appendChild(el('span', '', '👥 ' + l.players + '/' + l.max, 'lobby-count'));
+      meta.appendChild(el('span', 'lb-state', ' · ' + (l.state === 'in-game' ? '🎮 in game, join to watch' : l.players >= l.max ? 'full, join to watch' : '🟢 open'), 'lobby-state'));
+      tx.appendChild(meta); li.appendChild(tx);
+      var on = selected && selected.code === l.code;
+      var b = el('button', '', on ? '✓ Picked' : (l.state === 'in-game' || l.players >= l.max ? '👀 Watch' : 'Join'), 'lobby-join');
+      b.type = 'button'; b.setAttribute('aria-pressed', String(!!on)); b.setAttribute('aria-label', (on ? 'Picked ' : 'Join ') + l.name);
+      b.addEventListener('click', function () { pick(l); });
+      li.appendChild(b);
+      return li;
+    }));
+    empty.hidden = lobbies.length > 0;
+    if (!lobbies.length) { empty.replaceChildren(document.createTextNode('No open lobbies, '), Object.assign(el('a', 'inline', 'create one', 'lobby-create-link'), { href: ROOT })); }
+    drawTarget();
+  }
+  function drawTarget() {
+    if (selected) target.textContent = '➡️ Joining ' + selected.name + ' · ' + selected.title;
+    else target.textContent = toggle.open ? '⌨️ Joining by room code.' : '👆 Pick a lobby above.';
+  }
+  function pick(l) {
+    selected = l; err.hidden = true;
+    $('code').value = '';
+    drawList();
+    ($('key').value ? $('name') : $('key')).focus();
+  }
+  toggle.addEventListener('toggle', drawTarget);
+  $('code').addEventListener('input', function () {
+    var v = this.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4); if (v !== this.value) this.value = v;
+    if (v && selected) { selected = null; drawList(); }
+  });
+  $('key').addEventListener('input', function () { var v = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12); if (v !== this.value) this.value = v; });
+  // Live lobby list: subscribe over /ws and keep it current (reconnects by itself).
+  function subscribe() {
+    var ws; try { ws = new WebSocket(WS); } catch (x) { return; }
+    ws.onopen = function () { ws.send(JSON.stringify({ t: 'lobbies' })); };
+    ws.onmessage = function (ev) {
+      var m; try { m = JSON.parse(ev.data); } catch (x) { return; }
+      if (m.t !== 'lobbies' || !Array.isArray(m.lobbies)) return;
+      lobbies = m.lobbies;
+      if (firstList && wantLobby) { var w = lobbies.find(function (l) { return l.code === wantLobby; }); if (w) selected = w; else { $('code').value = wantLobby; toggle.open = true; } }
+      firstList = false;
+      drawList();
+    };
+    ws.onclose = function () { setTimeout(subscribe, 1500); };
+  }
+  fetch(ROOT, { method: 'HEAD', cache: 'no-store' }).then(function (r) {
+    if (r.ok && r.headers.get('X-Rooms') === '1' && window.WebSocket) subscribe();
+    else empty.textContent = 'Lobbies need the game server. Open the link from the big screen.';
+  }, function () { empty.textContent = 'Could not reach the game server.'; });
+
+  function showErr(msg) { err.textContent = msg; err.hidden = false; }
+  function fail(msg) { showErr(msg); btn.disabled = false; btn.textContent = '🚀 Join'; }
   form.addEventListener('submit', function (e) {
     e.preventDefault();
-    var code = $('code').value.toUpperCase().replace(/[^A-Z]/g, '');
+    var typed = $('code').value.toUpperCase().replace(/[^A-Z]/g, '');
+    var code = selected ? selected.code : typed;
+    var key = $('key').value.trim().toUpperCase();
     var name = $('name').value.trim();
-    if (code.length !== 4) { fail('The code has 4 letters. Look at the big screen.'); return; }
+    if (!selected && !toggle.open) { fail('Pick a lobby first, or open "Have a code?".'); return; }
+    if (code.length !== 4) { fail('The room code has 4 letters. Look at the big screen.'); return; }
+    if (!/^[A-Z0-9]{4,12}$/.test(key)) { fail('Type the lobby code from the host (4 to 12 letters or digits).'); $('key').focus(); return; }
     if (!name) { fail('Type a name first.'); $('name').focus(); return; }
     if (!window.WebSocket) { fail('This browser cannot join rooms.'); return; }
     err.hidden = true; btn.disabled = true; btn.textContent = '⏳ Joining…';
     set('nb-room-name', name); set('nb-room-avatar', avatar);
     var ws, done = false;
-    try { ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + new URL(ROOT).pathname + 'ws'); } catch (x) { fail('Could not reach the game server.'); return; }
+    try { ws = new WebSocket(WS); } catch (x) { fail('Could not reach the game server.'); return; }
     var timer = setTimeout(function () { if (!done) { done = true; try { ws.close(); } catch (x) { /* ignore */ } fail('Could not reach the game server. Multi-screen needs the link from the big screen.'); } }, 6000);
-    ws.onopen = function () { ws.send(JSON.stringify({ t: 'join', code: code, name: name, avatar: avatar })); };
+    ws.onopen = function () { ws.send(JSON.stringify({ t: 'join', code: code, key: key, name: name, avatar: avatar })); };
     ws.onmessage = function (ev) {
       var m; try { m = JSON.parse(ev.data); } catch (x) { return; }
       if (done) return;
@@ -89,7 +186,10 @@
         // the game page picks this id up and reconnects as the same player (shared/net.js playerKey)
         set('nb-room-player:' + m.code, m.playerId, true);
         location.href = ROOT + 'games/' + m.game + '/?room=' + encodeURIComponent(m.code);
-      } else if (m.t === 'error') { done = true; clearTimeout(timer); try { ws.close(); } catch (x) { /* ignore */ } fail(m.msg || 'Could not join.'); }
+      } else if (m.t === 'error') {
+        done = true; clearTimeout(timer); try { ws.close(); } catch (x) { /* ignore */ }
+        fail(m.code === 'bad-code' ? 'Wrong code, ask the host.' : (m.msg || 'Could not join.'));
+      }
     };
     ws.onerror = function () { if (!done) { done = true; clearTimeout(timer); fail('Could not reach the game server. Multi-screen needs the link from the big screen.'); } };
   });

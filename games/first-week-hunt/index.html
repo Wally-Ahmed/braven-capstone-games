@@ -792,14 +792,28 @@ function roomView(seat) {
   else Object.assign(v, { title: 'Waiting for the big screen' });
   return v;
 }
+/* v8 host transfer: the whole game as plain JSON, so a phone can take over as host and carry on.
+ * Times are shifted by (this device's now - the old host's now at export): the game resumes where it was synced. */
+function exportState() {
+  return JSON.parse(JSON.stringify({ state, shield: { mode: Shield.mode, log: Shield.log, stopped: Shield.stopped, warned: Shield.warned }, at: now() }));
+}
+function importState(x) {
+  const s = x.state, shift = now() - (x.at || now());
+  if (s.turnStartedAt) s.turnStartedAt += shift;
+  if (s.lastTick) s.lastTick = now();      // the clocks pause while the host changes
+  state = s;
+  Object.assign(Shield, x.shield || {});
+  render();
+}
 if (window.Net) window.Net.init({
   slug: 'first-week-hunt', name: '🔎 First Week Hunt', kind: 'Player',
   phase: () => state.phase, view: roomView, dispatch: m => dispatch(m), render: () => render(),
+  exportState, importState,
   start: players => { Roster.setCount(roster, players.length); players.forEach((p, i) => { roster.list[i].name = p.name; }); dispatch({ type: 'start', names: players.map(p => p.name).join('\n') }); }
 });
 
 // Test / console hook (read-only view plus dispatch); used by the Playwright checks.
-window.FirstWeekHunt = { dispatch, get state() { return state; }, roomView, TILES, Shield, narrationLines };
+window.FirstWeekHunt = { dispatch, get state() { return state; }, roomView, exportState, importState, TILES, Shield, narrationLines };
 </script>
 </body>
 </html>

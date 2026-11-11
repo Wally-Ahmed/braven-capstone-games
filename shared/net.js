@@ -8,12 +8,16 @@
  *
  * When /ws is not there (GitHub Pages, python http.server) room mode stays hidden and nothing is logged.
  *
- *   Net.init({ slug, name, kind, phase(), view(seat), start(players), dispatch(move), render() })
+ *   Net.init({ slug, name, kind, phase(), view(seat), start(players), dispatch(move), render(), exportState(), importState(s, pausedMs) })
+ *     exportState()/importState(): the game's full serializable state; the host syncs it to the server after every
+ *     change so a player can take over as host (v8 host transfer) and carry on from the same point.
  *     view(seat) -> { status: 'turn'|'wait'|'spectate'|'over', title, prompt, warning, note, score,
  *                     wrongKey, buttons: [{ label, move, kind }] }   seat null = spectator; a new wrongKey plays
  *                     the lighter FX.wrongFull on that phone
  *   Net.available()   true once the server answered the probe
- *   Net.isPlayer()    true on a phone page (?room=CODE)
+ *   Net.isPlayer()    true on a phone page (?room=CODE), false again once that phone is promoted to host
+ * v8 lobbies (11/11): the host's lobby screen shows the lobby name, the lobby code players type (changeable while
+ * open), the players and Start; the 4-letter room code, link and QR sit under a collapsed "Show code / QR".
  *   Net.host()        open a room from the setup screen
  *   Net.changed()     the game calls this after every dispatch/render
  *   Net.button()      the setup screen's "Play on phones" button HTML ('' when unavailable)
@@ -27,6 +31,8 @@
   })();
   var params = new URLSearchParams(location.search);
   var ROOM_PARAM = (params.get('room') || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+  var KEY_PARAM = (params.get('key') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+  var promoted = false; // a phone that became the host (v8 host transfer)
   var AVATARS = ['🦊', '🐙', '🦁', '🐸', '🦄', '🐯', '🐼', '🐳', '🦉', '🐝'];
   var cfg = null, avail = false, probed = false, publicOrigin = '';
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -211,6 +217,12 @@
     '#net-player .np-btns button.primary{background:#22d3ee}#net-player .np-btns button.good{background:#84f06b}#net-player .np-btns button.bad{background:#ff4fa3;color:#fff}#net-player .np-btns button.hint{background:#ffd23f}' +
     '#net-player .np-btns button:disabled{opacity:.5}#net-player input{min-height:48px;border-radius:12px;border:0;padding:8px 12px;font:inherit;font-size:1.1rem;width:100%;box-sizing:border-box}' +
     '#net-player .np-avs{display:flex;flex-wrap:wrap;gap:8px}#net-player .np-avs button{min-width:52px;min-height:52px;font-size:1.6rem;border-radius:12px;border:3px solid transparent;background:rgba(255,255,255,.15);cursor:pointer}' +
+    '.nr-name{font-size:1.6rem}.nr-hostnow{display:inline-block;background:#ffd23f;color:#1b1446;border-radius:999px;padding:4px 12px;font-weight:900;margin:0 0 8px}' +
+    '.nr-key{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#312e81;border-radius:14px;padding:10px 14px;margin:8px 0}.nr-key b{font-size:2rem;letter-spacing:.15em;color:#ffd23f}' +
+    '.nr-key input{min-height:44px;border-radius:10px;border:0;padding:6px 10px;font:inherit;font-size:1.2rem;text-transform:uppercase;width:12ch}.nr-key button{min-height:44px;padding:8px 14px;border-radius:10px;border:0;font:inherit;font-weight:800;cursor:pointer;background:#e0e7ff;color:#1e1b4b}' +
+    '.nr-more{margin-top:12px;border-top:1px solid rgba(255,255,255,.15);padding-top:8px}.nr-more summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:800;color:#c4b5fd}' +
+    '.nr-err{background:#ef4444;border-radius:10px;padding:8px 10px;margin:4px 0}' +
+    '.nr-badge.nr-hn{left:auto;right:10px;background:#ffd23f;color:#1b1446;border-color:#ffd23f;cursor:default}' +
     '#net-player .np-avs button[aria-pressed="true"]{border-color:#ffd23f;background:rgba(255,210,63,.3)}#net-player .np-err{background:#ef4444;border-radius:12px;padding:10px;margin:0}';
   function injectCss() {
     if (document.getElementById('net-css')) return;
@@ -221,15 +233,15 @@
    * Connection with automatic reconnect
    * ------------------------------------------------------------------ */
   function connect(onOpen, onMsg, onDrop) {
-    var c = { ws: null, closed: false,
+    var c = { ws: null, closed: false, onOpen: onOpen, onMsg: onMsg, onDrop: onDrop,
       send: function (m) { if (c.ws && c.ws.readyState === 1) c.ws.send(JSON.stringify(m)); },
       close: function () { c.closed = true; try { c.ws.close(); } catch (e) { /* ignore */ } } };
     function open() {
       var ws; try { ws = new WebSocket(wsUrl()); } catch (e) { retry(); return; }
       c.ws = ws;
-      ws.onopen = function () { onOpen(c); };
-      ws.onmessage = function (e) { var m; try { m = JSON.parse(e.data); } catch (x) { return; } onMsg(m, c); };
-      ws.onclose = function () { if (c.closed) return; if (onDrop) onDrop(); retry(); };
+      ws.onopen = function () { c.onOpen(c); };
+      ws.onmessage = function (e) { var m; try { m = JSON.parse(e.data); } catch (x) { return; } c.onMsg(m, c); };
+      ws.onclose = function () { if (c.closed) return; if (c.onDrop) c.onDrop(); retry(); };
       ws.onerror = function () { /* onclose follows */ };
     }
     function retry() { if (!c.closed) setTimeout(open, 1500); }
@@ -240,26 +252,34 @@
   /* ------------------------------------------------------------------ *
    * HOST
    * ------------------------------------------------------------------ */
-  var H = { conn: null, code: null, hostKey: null, players: [], started: false, seats: 0, lastSent: {}, ov: null, badge: null, showing: false };
-  function joinUrl() { return pageBase() + 'games/' + cfg.slug + '/?room=' + H.code; }
+  var H = { conn: null, code: null, hostKey: null, players: [], started: false, seats: 0, lastSent: {}, ov: null, badge: null, showing: false,
+    name: '', key: '', editingKey: false, keyDraft: '', keyError: null, moreOpen: false, selfId: null, hostNow: null, lastSync: null, syncTimer: null };
+  function joinUrl() { return pageBase() + 'games/' + cfg.slug + '/?room=' + H.code + (H.key ? '&key=' + encodeURIComponent(H.key) : ''); }
+  function gameTitle() { return String(cfg.name || cfg.slug).replace(/^[^A-Za-z0-9]+/, ''); }
   function joinBase() { return pageBase().replace(/^https?:\/\//, ''); }
   function seated() { return H.players.filter(function (p) { return p.seat != null; }).sort(function (a, b) { return a.seat - b.seat; }); }
   function hostOpen() {
     if (H.conn) { showLobby(); return; }
     injectCss();
-    H.conn = connect(function (c) {
-      if (H.code) c.send({ t: 'resume', code: H.code, hostKey: H.hostKey }); else c.send({ t: 'create', game: cfg.slug });
-    }, function (m) {
-      if (m.t === 'created') { H.code = m.code; H.hostKey = m.hostKey; showLobby(); }
-      else if (m.t === 'resumed') { H.lastSent = {}; changed(); }
-      else if (m.t === 'players') { H.players = m.players || []; drawLobby(); drawBadge(); changed(); }
-      else if (m.t === 'move') onMove(m);
-      else if (m.t === 'closed' || (m.t === 'error' && H.code)) endRoom();
-    });
+    H.conn = connect(hostOpenMsg, hostMsg);
+  }
+  function hostOpenMsg(c) {
+    if (H.code) c.send({ t: 'resume', code: H.code, hostKey: H.hostKey });
+    else c.send({ t: 'create', game: cfg.slug, title: gameTitle(), name: params.get('name') || '', key: params.get('key') || '' });
+  }
+  function hostMsg(m) {
+    if (m.t === 'created') { H.code = m.code; H.hostKey = m.hostKey; H.name = m.name || ''; H.key = m.key || ''; showLobby(); }
+    else if (m.t === 'resumed') { if (m.key) H.key = m.key; H.lastSent = {}; H.lastSync = null; changed(); }
+    else if (m.t === 'key-set') { H.key = m.key; H.editingKey = false; H.keyError = null; drawLobby(); }
+    else if (m.t === 'error' && m.code === 'bad-key') { H.keyError = m.msg || 'Use 4 to 12 letters or digits.'; drawLobby(); }
+    else if (m.t === 'players') { H.players = m.players || []; drawLobby(); drawBadge(); changed(); }
+    else if (m.t === 'move') onMove(m);
+    else if (m.t === 'closed' || (m.t === 'error' && H.code)) endRoom();
   }
   function endRoom() {
     if (H.conn) { H.conn.send({ t: 'close' }); H.conn.close(); }
-    H.conn = null; H.code = null; H.players = []; H.started = false; H.lastSent = {};
+    H.conn = null; H.code = null; H.players = []; H.started = false; H.lastSent = {}; H.selfId = null; H.lastSync = null;
+    clearTimeout(H.syncTimer);
     hideLobby(); drawBadge();
     if (cfg && cfg.render) cfg.render();
   }
@@ -269,27 +289,47 @@
     if (!H.showing || !H.code) return;
     if (!H.ov) {
       H.ov = document.createElement('div'); H.ov.className = 'nr-ov';
-      H.ov.setAttribute('data-testid', 'room-lobby'); H.ov.setAttribute('role', 'dialog'); H.ov.setAttribute('aria-label', 'Play on phones');
+      H.ov.setAttribute('data-testid', 'room-lobby'); H.ov.setAttribute('role', 'dialog'); H.ov.setAttribute('aria-label', 'Lobby');
       document.body.appendChild(H.ov); H.ov.addEventListener('click', lobbyClick);
+      H.ov.addEventListener('toggle', function (e) { if (e.target.matches && e.target.matches('[data-testid="room-code-toggle"]')) H.moreOpen = e.target.open; }, true);
+      H.ov.addEventListener('input', function (e) { if (e.target.matches && e.target.matches('[data-testid="room-key-input"]')) H.keyDraft = e.target.value; });
+      H.ov.addEventListener('keydown', function (e) { if (e.key === 'Enter' && e.target.matches && e.target.matches('[data-testid="room-key-input"]')) { e.preventDefault(); saveKey(); } });
     }
     var url = joinUrl(), s = seated(), spec = H.players.filter(function (p) { return p.seat == null; });
     var local = /^(localhost|127\.|\[::1\])/.test(new URL(url).hostname);
     var kind = (cfg.kind || 'Player').toLowerCase();
-    setHtml(H.ov, '<div class="nr-box"><h2>📱 Play on phones</h2>' +
-      '<p class="nr-muted">Each phone is one ' + esc(kind) + '. Scan the code or open the link, pick a name and an icon. This screen shows the board, scores and Shield; the phones get the buttons.</p>' +
-      '<div class="nr-grid"><div class="nr-qr" data-testid="room-qr">' + QR.svg(url) + '</div><div class="nr-info">' +
-      '<div class="nr-muted">Room code</div><div class="nr-code" data-testid="room-code">' + esc(H.code) + '</div>' +
-      '<div class="nr-url" data-testid="room-url">' + esc(url) + '</div>' +
-      '<div class="nr-muted" data-testid="room-join-hint">Or open <b>' + esc(joinBase()) + 'join/</b> on any phone and type <b>' + esc(H.code) + '</b>.</div>' +
-      (local ? '<p class="nr-muted">Phones cannot reach localhost: open this page through the tunnel link so the QR code works.</p>' : '') +
+    var keyHtml = H.editingKey
+      ? '<label for="nr-key-in">New lobby code</label><input id="nr-key-in" data-testid="room-key-input" maxlength="12" value="' + esc(H.keyDraft) + '" autocomplete="off" autocapitalize="characters" spellcheck="false">' +
+        '<button type="button" data-testid="room-key-save" data-nr="save-key">✓ Save</button><button type="button" data-nr="cancel-key">Cancel</button>'
+      : '<span class="nr-muted">Lobby code</span><b data-testid="room-key">' + esc(H.key) + '</b>' +
+        (H.started ? '' : '<button type="button" data-testid="room-key-edit" data-nr="edit-key">✏️ Change</button>');
+    setHtml(H.ov, '<div class="nr-box">' +
+      (H.selfId ? '<p class="nr-hostnow" data-testid="room-host-now-note">👑 You are the host now</p>' : '') +
+      '<h2 class="nr-name">📱 <span data-testid="room-name">' + esc(H.name) + '</span></h2>' +
+      '<p class="nr-muted">' + esc(gameTitle()) + ' · each phone is one ' + esc(kind) + '. Phones open <b data-testid="room-join-where">' + esc(joinBase()) + 'join/</b>, tap this lobby and type the lobby code. This screen shows the board, scores and Shield; the phones get the buttons.</p>' +
+      '<div class="nr-key" data-testid="room-key-box">' + keyHtml + '</div>' +
+      (H.keyError ? '<p class="nr-err" role="alert" data-testid="room-key-error">' + esc(H.keyError) + '</p>' : '') +
       '<ul class="nr-list" data-testid="room-players" aria-live="polite">' +
-      (s.length ? s.map(function (p) { return '<li data-testid="room-player"' + (p.connected ? '' : ' class="off"') + '>' + esc(p.avatar) + ' ' + esc(p.name) + (p.connected ? '' : ' (offline)') + '</li>'; }).join('') : '<li class="spec">Waiting for phones…</li>') +
+      (s.length ? s.map(function (p) { return '<li data-testid="room-player"' + (p.connected ? '' : ' class="off"') + '>' + esc(p.avatar) + ' ' + esc(p.name) + (p.id === H.selfId ? ' (you, host)' : p.connected ? '' : ' (offline)') + '</li>'; }).join('') : '<li class="spec">Waiting for phones…</li>') +
       spec.map(function (p) { return '<li class="spec" data-testid="room-spectator">' + esc(p.avatar) + ' ' + esc(p.name) + ' (watching)</li>'; }).join('') + '</ul>' +
       '<p class="nr-muted">' + s.length + ' of 6 joined' + (H.started ? ' · the game is on, new phones watch' : ' · 2 to 6 ' + esc(kind) + 's needed') + '</p>' +
       '<div class="nr-row">' + (H.started
         ? '<button class="go" data-testid="room-back" data-nr="back">⬅️ Back to the game</button>'
         : '<button class="go" data-testid="room-start" data-nr="start"' + (s.length >= 2 ? '' : ' disabled') + '>🚀 Start with ' + s.length + ' phone' + (s.length === 1 ? '' : 's') + '</button>') +
-      '<button data-testid="room-cancel" data-nr="cancel">✖ ' + (H.started ? 'End room mode' : 'Cancel, play on one screen') + '</button></div></div></div></div>');
+      '<button data-testid="room-cancel" data-nr="cancel">✖ ' + (H.started ? 'End room mode' : 'Close the lobby, play on one screen') + '</button></div>' +
+      '<details class="nr-more" data-testid="room-code-toggle"' + (H.moreOpen ? ' open' : '') + '><summary data-testid="room-show-code">Show code / QR</summary>' +
+      '<div class="nr-grid"><div class="nr-qr" data-testid="room-qr">' + QR.svg(url) + '</div><div class="nr-info">' +
+      '<div class="nr-muted">Room code</div><div class="nr-code" data-testid="room-code">' + esc(H.code) + '</div>' +
+      '<div class="nr-url" data-testid="room-url">' + esc(url) + '</div>' +
+      '<div class="nr-muted" data-testid="room-join-hint">Or open <b>' + esc(joinBase()) + 'join/</b>, tap <b>Have a code?</b> and type <b>' + esc(H.code) + '</b> and the lobby code <b>' + esc(H.key) + '</b>.</div>' +
+      (local ? '<p class="nr-muted">Phones cannot reach localhost: open this page through the tunnel link so the QR code works.</p>' : '') +
+      '</div></div></details></div>');
+    if (H.editingKey) { var inp = H.ov.querySelector('[data-testid="room-key-input"]'); if (inp && document.activeElement !== inp) inp.focus(); }
+  }
+  function saveKey() {
+    var k = String(H.keyDraft || '').trim().toUpperCase();
+    if (!/^[A-Z0-9]{4,12}$/.test(k)) { H.keyError = 'Use 4 to 12 letters or digits.'; drawLobby(); return; }
+    H.keyError = null; H.conn.send({ t: 'set-key', key: k });
   }
   function lobbyClick(e) {
     var b = e.target.closest && e.target.closest('[data-nr]');
@@ -304,8 +344,15 @@
       changed();
     } else if (a === 'back') hideLobby();
     else if (a === 'cancel') endRoom();
+    else if (a === 'edit-key') { H.editingKey = true; H.keyDraft = H.key; H.keyError = null; drawLobby(); }
+    else if (a === 'cancel-key') { H.editingKey = false; H.keyError = null; drawLobby(); }
+    else if (a === 'save-key') saveKey();
   }
   function drawBadge() {
+    if (H.selfId && H.code) {
+      if (!H.hostNow) { H.hostNow = document.createElement('div'); H.hostNow.className = 'nr-badge nr-hn'; H.hostNow.setAttribute('data-testid', 'room-host-now'); H.hostNow.setAttribute('role', 'status'); document.body.appendChild(H.hostNow); }
+      H.hostNow.textContent = '👑 You are the host now';
+    } else if (H.hostNow) { H.hostNow.remove(); H.hostNow = null; }
     if (!H.code || !H.started) { if (H.badge) { H.badge.remove(); H.badge = null; } return; }
     if (!H.badge) {
       H.badge = document.createElement('button'); H.badge.type = 'button'; H.badge.className = 'nr-badge';
@@ -332,13 +379,27 @@
     Promise.resolve().then(function () {
       flushQueued = false;
       if (!H.conn) return;
+      sync();
       H.players.forEach(function (p) {
+        if (p.id === H.selfId) return; // the promoted host plays on its own big screen
         var v = viewFor(p), json = JSON.stringify(v);
         if (H.lastSent[p.id] === json) return;
         H.lastSent[p.id] = json;
         H.conn.send({ t: 'state', for: p.id, view: v });
       });
     });
+  }
+  // Host transfer (v8): the full game state goes to the server (latest only), at most every 300 ms.
+  function sync() {
+    if (!cfg.exportState || H.syncTimer) return;
+    H.syncTimer = setTimeout(function () {
+      H.syncTimer = null;
+      if (!H.conn || !H.code) return;
+      var st; try { st = { started: H.started, seats: H.seats, game: H.started ? cfg.exportState() : null }; } catch (e) { return; }
+      var json = JSON.stringify(st);
+      if (json === H.lastSync) return;
+      H.lastSync = json; H.conn.send({ t: 'sync', state: st });
+    }, H.lastSync ? 300 : 0);
   }
   function onMove(m) {
     if (!H.started) return;
@@ -360,6 +421,23 @@
    * ------------------------------------------------------------------ */
   var P = { conn: null, root: null, me: null, view: null, joined: false, error: null, hostGone: false, avatar: null, sentMove: false, pendingName: null };
   function playerKey() { return 'nb-room-player:' + ROOM_PARAM; }
+  // v8 host transfer: this phone becomes the host on the same socket, keeps its seat, and the game carries on here.
+  function becomeHost(m) {
+    promoted = true;
+    var c = P.conn; P.conn = null; P.joined = false;
+    if (P.root) { P.root.remove(); P.root = null; }
+    document.documentElement.classList.remove('net-phone');
+    H.conn = c; c.onOpen = hostOpenMsg; c.onMsg = hostMsg; c.onDrop = null;
+    H.code = m.code; H.hostKey = m.hostKey; H.key = m.key || ''; H.name = m.lobby || ''; H.selfId = m.playerId; H.lastSent = {}; H.lastSync = null;
+    var sy = m.sync;
+    if (sy && sy.started && sy.game && cfg.importState) {
+      H.started = true; H.seats = sy.seats || 0;
+      try { cfg.importState(sy.game, m.pausedMs || 0); } catch (e) { /* keep the lobby if the state does not load */ H.started = false; }
+    }
+    if (!H.started) { H.started = false; if (m.locked) c.send({ t: 'unlock' }); if (cfg.render) cfg.render(); showLobby(); }
+    else if (cfg.render) cfg.render();
+    drawBadge(); changed();
+  }
   function playerStart() {
     injectCss();
     document.documentElement.classList.add('net-phone');
@@ -380,6 +458,9 @@
       var inp = P.root.querySelector('[data-testid="join-name"]');
       var name = inp ? inp.value.trim() : '';
       if (!name) { P.error = 'Type a name first.'; drawPlayer(); return; }
+      var kin = P.root.querySelector('[data-testid="join-key"]');
+      P.pendingKey = kin ? kin.value.trim().toUpperCase() : KEY_PARAM;
+      if (!P.pendingKey) { P.error = 'Type the lobby code from the host.'; drawPlayer(); return; }
       store('local', 'nb-room-name', name); store('local', 'nb-room-avatar', P.avatar);
       P.pendingName = name;
     }
@@ -387,7 +468,7 @@
     if (P.conn) P.conn.close();
     P.conn = connect(function (c) {
       var id = store('session', playerKey()) || playerId || null;
-      c.send({ t: 'join', code: ROOM_PARAM, name: P.pendingName || store('local', 'nb-room-name') || 'Player', avatar: P.avatar, playerId: id });
+      c.send({ t: 'join', code: ROOM_PARAM, key: P.pendingKey || KEY_PARAM, name: P.pendingName || store('local', 'nb-room-name') || 'Player', avatar: P.avatar, playerId: id });
     }, function (m) {
       if (m.t === 'welcome') { P.me = m; P.joined = true; P.hostGone = !m.hostOnline; P.offline = false; store('session', playerKey(), m.playerId); drawPlayer(); }
       else if (m.t === 'state') {
@@ -395,8 +476,10 @@
         var wk = m.view && m.view.wrongKey; // this phone's own wrong answer: a lighter full-screen animation
         if (wk && wk !== P.lastWrong) { P.lastWrong = wk; try { if (window.FX && window.FX.wrongFull) window.FX.wrongFull({ lite: true }); } catch (x) { /* optional */ } }
       }
-      else if (m.t === 'host-left') { P.hostGone = true; drawPlayer(); }
+      else if (m.t === 'host-left') { P.hostGone = true; P.transferS = Math.round((m.transferMs || 20000) / 1000); drawPlayer(); }
       else if (m.t === 'host-back') { P.hostGone = false; drawPlayer(); }
+      else if (m.t === 'promote') becomeHost(m);
+      else if (m.t === 'host-changed') { P.hostGone = false; P.newHost = m.name; drawPlayer(); }
       else if (m.t === 'closed') { P.conn.close(); P.conn = null; P.joined = false; P.view = null; P.ended = true; P.error = 'The host ended the room. Thanks for playing!'; drawPlayer(); }
       else if (m.t === 'error') { P.conn.close(); P.conn = null; P.joined = false; P.error = m.msg; store('session', playerKey(), ''); drawPlayer(); }
     }, function () { if (P.joined) { P.offline = true; drawPlayer(); } });
@@ -411,6 +494,7 @@
       if (!probed) h += '<div class="np-status">⏳ Connecting…</div>';
       else if (avail && !P.ended) {
         h += '<form data-testid="join-form" class="np" autocomplete="off"><div class="np-status">📱 Join room <span data-testid="join-code">' + esc(ROOM_PARAM) + '</span></div>' +
+          (KEY_PARAM ? '' : '<label for="np-key">Lobby code (ask the host)</label><input id="np-key" data-testid="join-key" maxlength="12" autocapitalize="characters" spellcheck="false" autocomplete="off">') +
           '<label for="np-name">Your name</label><input id="np-name" data-testid="join-name" maxlength="18" value="' + esc(name) + '" enterkeyhint="go">' +
           '<div>Pick your icon</div><div class="np-avs" role="group" aria-label="Pick your icon">' +
           AVATARS.map(function (a) { return '<button type="button" data-testid="join-avatar" data-av="' + a + '" aria-pressed="' + (a === P.avatar) + '" aria-label="Icon ' + a + '">' + a + '</button>'; }).join('') + '</div>' +
@@ -419,7 +503,8 @@
     } else {
       h += '<header><span class="np-av" data-testid="player-avatar">' + esc(me.avatar) + '</span><b data-testid="player-name">' + esc(me.name) + '</b>' +
         (v && v.score != null ? '<span class="np-score" data-testid="player-score">' + esc(v.score) + ' pts</span>' : '') + '</header>';
-      if (P.hostGone) h += '<p class="np-err" data-testid="player-host-left">The big screen disconnected. Hang on, it will reconnect.</p>';
+      if (P.hostGone) h += '<p class="np-err" data-testid="player-host-left">The host disconnected. Hang on: if they are not back in ' + (P.transferS || 20) + ' s, a player becomes the host.</p>';
+      else if (P.newHost) h += '<p class="np-note" data-testid="player-host-changed">👑 ' + esc(P.newHost) + ' is the host now.</p>';
       else if (P.offline) h += '<p class="np-err">Reconnecting…</p>';
       if (!v) h += '<div class="np-status" data-testid="player-status" data-status="wait">⏳ Connecting…</div>';
       else {
@@ -494,7 +579,8 @@
   window.Net = {
     init: init,
     available: function () { return avail; },
-    isPlayer: function () { return !!ROOM_PARAM; },
+    isPlayer: function () { return !!ROOM_PARAM && !promoted; },
+    isPromoted: function () { return promoted; },
     active: function () { return !!H.code; },
     host: function () { if (avail) hostOpen(); },
     changed: changed,

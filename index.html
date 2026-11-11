@@ -50,6 +50,20 @@
   .shield-cta h2 { margin:0 0 4px; font-size:1.25rem; } .shield-cta p { margin:0 0 10px; color:#d9d0ff; }
   .shield-cta .big { font-size:2.6rem; }
   .lobby[hidden], .host-btn[hidden] { display:none; }
+  .lobby-cols { display:grid; gap:12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .lobby-box { display:flex; flex-direction:column; gap:8px; background:rgba(255,255,255,.06); border-radius:16px; padding:12px; min-width:0; }
+  .lobby-box h3 { margin:0; font-size:1.1rem; }
+  .lobby-box label { font-weight:800; font-size:.92rem; }
+  .lobby-box input, .lobby-box select { font:inherit; min-height:48px; border-radius:12px; border:2px solid rgba(255,255,255,.3); padding:6px 12px; background:#fff; color:#1b1446; width:100%; }
+  #lb-key { text-transform:uppercase; letter-spacing:.1em; font-weight:800; }
+  .lobby-err { background:#ffe1e1; color:#7a0010; border-radius:10px; padding:8px 10px; margin:0; font-weight:700; }
+  .lobby-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+  .lobby-list li { display:flex; gap:10px; align-items:center; background:rgba(255,255,255,.1); border-radius:14px; padding:8px 10px; }
+  .lobby-list .lb-text { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; }
+  .lobby-list .lb-name { font-weight:900; overflow-wrap:anywhere; }
+  .lobby-list .lb-meta { color:#d9d0ff; font-size:.88rem; }
+  .lobby-list a { flex:0 0 auto; min-width:84px; }
+  .lobby-text[hidden] { display:none; }
   .lobby .lobby-text { display:block; color:#d9d0ff; font-size:.95rem; }
   .join-btn, .host-btn { min-height:48px; border-radius:16px; font-weight:900; font-size:1.02rem; text-decoration:none; display:flex; align-items:center; justify-content:center; text-align:center; padding:8px 12px; }
   .join-btn { background:linear-gradient(90deg,#22d3ee,#84f06b); color:#1b1446; }
@@ -67,12 +81,30 @@
   <ol class="steps" data-testid="hub-steps"><li>1 · Pick a game</li><li>2 · Watch the 30-second tutorial</li><li>3 · Play together</li></ol>
   <p class="note">Braven Capstone prototype. Fictional company "Northbridge Co.". Shield is a prototype, scripted agent.</p>
 </header>
-<section class="lobby" data-testid="hub-lobby" aria-label="Multi-screen" hidden>
+<section class="lobby" data-testid="hub-lobby" aria-label="Lobby browser" hidden>
   <div>
-    <b>📱 Multi-screen</b>
-    <span class="lobby-text" data-testid="hub-lobby-text">Everyone plays on their own phone: one screen hosts, the rest join with a 4-letter code.</span>
+    <b>📱 Lobby browser</b>
+    <span class="lobby-text" data-testid="hub-lobby-text">Everyone plays on their own phone. The big screen creates a lobby with a code; everyone else taps Join and types that code.</span>
   </div>
-  <a class="join-btn" data-testid="hub-join" href="join/">📱 Join a game with a code</a>
+  <div class="lobby-cols">
+    <form class="lobby-box" data-testid="hub-create-form" autocomplete="off" novalidate>
+      <h3>Create a lobby</h3>
+      <label for="lb-name">Lobby name</label>
+      <input id="lb-name" data-testid="hub-lobby-name" maxlength="24" placeholder="e.g. Room 4B">
+      <label for="lb-game">Game</label>
+      <select id="lb-game" data-testid="hub-lobby-game"></select>
+      <label for="lb-key">Lobby code players type (4 to 12 letters or digits)</label>
+      <input id="lb-key" data-testid="hub-lobby-key" maxlength="12" autocapitalize="characters" spellcheck="false">
+      <p class="lobby-err" role="alert" data-testid="hub-create-error" hidden></p>
+      <button class="join-btn" type="submit" data-testid="hub-create-lobby">📺 Create lobby on this screen</button>
+    </form>
+    <div class="lobby-box">
+      <h3>Open lobbies</h3>
+      <ul class="lobby-list" data-testid="hub-lobby-list" aria-live="polite"></ul>
+      <p class="lobby-text" data-testid="hub-lobby-empty">No open lobbies, create one</p>
+      <a class="host-btn" data-testid="hub-join" href="join/">📱 Join on this phone (or have a code?)</a>
+    </div>
+  </div>
 </section>
 <main id="games" data-testid="game-list" aria-label="Games"></main>
 <section class="shield-cta" data-testid="shield-card" aria-label="Meet Shield">
@@ -86,6 +118,7 @@
   const GAMES = [
     {
       slug: 'inbox-showdown',
+      short: 'Inbox Showdown',
       name: 'Inbox Showdown',
       icon: '📥',
       pitch: 'Teams triage a shared Northbridge inbox; Shield warns before a risky click.',
@@ -95,6 +128,7 @@
     },
     {
       slug: 'first-week-hunt',
+      short: 'First Week Hunt',
       name: 'First Week Hunt',
       icon: '🔎',
       pitch: 'Hot-seat scavenger hunt for 8 hidden risks in the Northbridge office; two wrong taps and you get hacked.',
@@ -104,6 +138,7 @@
     },
     {
       slug: 'phish-or-fine',
+      short: 'Phish or Fine',
       name: 'Phish or Fine? Buzzer Battle',
       icon: '🎣',
       pitch: 'Split-screen buzzer race: call each snippet phish or fine; Shield debriefs every player.',
@@ -136,7 +171,7 @@
       </div>
       <div class="card-actions">
         <a class="play-btn" data-testid="play-btn" href="games/${g.slug}/">▶️ Play ${g.name}</a>
-        <a class="host-btn" data-testid="host-btn" href="games/${g.slug}/?host=1" hidden>📺 Host multi-screen (players join on phones)</a>
+        <a class="host-btn" data-testid="host-btn" href="games/${g.slug}/?host=1&name=${encodeURIComponent(g.short + ' lobby')}" hidden>📺 Host multi-screen (opens a "${g.short} lobby")</a>
         <a class="tut-link" data-testid="tutorial-link" href="games/${g.slug}/?tutorial=1">🎬 Watch the 30-second tutorial</a>
       </div>`;
     list.appendChild(card);
@@ -153,7 +188,48 @@
     rooms = r.ok && r.headers.get('X-Rooms') === '1';
     document.querySelectorAll('[data-testid="host-btn"]').forEach(a => { a.hidden = !rooms; });
     document.querySelector('[data-testid="hub-lobby"]').hidden = !rooms;
+    if (rooms) Lobbies.start();
   }, () => {});
+  // v8 lobby browser (11/11): create a named lobby with a code, or see every lobby live (shared over /ws).
+  const Lobbies = (() => {
+    const $ = t => document.querySelector('[data-testid="' + t + '"]');
+    const form = $('hub-create-form'), sel = $('hub-lobby-game'), keyIn = $('hub-lobby-key'), errEl = $('hub-create-error');
+    const listEl = $('hub-lobby-list'), emptyEl = $('hub-lobby-empty');
+    const CH = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    GAMES.forEach(g => { const o = document.createElement('option'); o.value = g.slug; o.textContent = g.name; sel.appendChild(o); });
+    keyIn.value = Array.from({ length: 6 }, () => CH[Math.floor(Math.random() * CH.length)]).join('');
+    keyIn.addEventListener('input', () => { const v = keyIn.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12); if (v !== keyIn.value) keyIn.value = v; });
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const g = GAMES.find(x => x.slug === sel.value) || GAMES[0];
+      const name = document.getElementById('lb-name').value.replace(/\s+/g, ' ').trim().slice(0, 24) || g.short + ' lobby';
+      const key = keyIn.value.trim().toUpperCase();
+      if (!/^[A-Z0-9]{4,12}$/.test(key)) { errEl.textContent = 'The lobby code needs 4 to 12 letters or digits.'; errEl.hidden = false; return; }
+      location.href = 'games/' + g.slug + '/?host=1&name=' + encodeURIComponent(name) + '&key=' + encodeURIComponent(key);
+    });
+    const el = (tag, cls, text, tid) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; if (tid) e.setAttribute('data-testid', tid); return e; };
+    function draw(lobbies) { // names are host-typed: textContent only
+      listEl.replaceChildren(...lobbies.map(l => {
+        const li = el('li', '', null, 'hub-lobby-item'); li.dataset.code = l.code;
+        const tx = el('div', 'lb-text');
+        tx.appendChild(el('span', 'lb-name', l.name, 'hub-lobby-item-name'));
+        tx.appendChild(el('span', 'lb-meta', l.title + ' · 👥 ' + l.players + '/' + l.max + ' · ' + (l.state === 'in-game' ? '🎮 in game' : '🟢 open'), 'hub-lobby-item-meta'));
+        li.appendChild(tx);
+        const a = el('a', 'join-btn', l.state === 'in-game' || l.players >= l.max ? '👀 Watch' : 'Join', 'hub-lobby-join');
+        a.href = 'join/?lobby=' + encodeURIComponent(l.code); a.setAttribute('aria-label', 'Join ' + l.name);
+        li.appendChild(a);
+        return li;
+      }));
+      emptyEl.hidden = lobbies.length > 0;
+    }
+    function start() {
+      let ws; try { ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + new URL('./', location.href).pathname + 'ws'); } catch (e) { return; }
+      ws.onopen = () => ws.send(JSON.stringify({ t: 'lobbies' }));
+      ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } if (m.t === 'lobbies' && Array.isArray(m.lobbies)) draw(m.lobbies); };
+      ws.onclose = () => setTimeout(start, 1500);
+    }
+    return { start };
+  })();
   window.NorthbridgeHub = { GAMES, narrationLines, rooms: () => rooms };
   document.addEventListener('DOMContentLoaded', () => { if (window.Narrate) window.Narrate.init({ slug: 'hub' }); });
 </script>

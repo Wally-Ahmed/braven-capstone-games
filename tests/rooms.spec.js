@@ -66,8 +66,13 @@ async function setupRoom(browser, slug) {
   await expect(host.page.getByTestId('room-lobby')).toBeVisible();
   const code = (await host.page.getByTestId('room-code').textContent()).trim();
   expect(code).toMatch(/^[A-Z]{4}$/);
+  const key = (await host.page.getByTestId('room-key').textContent()).trim();
+  expect(key).toMatch(/^[A-Z0-9]{4,12}$/);
   const url = (await host.page.getByTestId('room-url').textContent()).trim();
-  expect(url).toBe(origin + '/games/' + slug + '/?room=' + code);
+  expect(url).toBe(origin + '/games/' + slug + '/?room=' + code + '&key=' + key);
+  // v8: the room code and QR sit under a collapsed "Show code / QR"
+  await expect(host.page.locator('[data-testid="room-qr"] svg')).toBeHidden();
+  await host.page.getByTestId('room-show-code').click();
   await expect(host.page.locator('[data-testid="room-qr"] svg')).toBeVisible();
   await expect(host.page.getByTestId('room-start')).toBeDisabled();
 
@@ -215,9 +220,11 @@ test('Phish or Fine: a phone starts the heat and buzzes; the buzz scores on the 
 
 // 11/10 lobby (Wally: "I want to have a multi screen experience with lobbys anyway can make it join"):
 // the hub hosts and joins; phones join by typing the code at /join/ and land in the right game.
-async function joinByCode(page, code, name) {
+async function joinByCode(page, code, name, key) {
   await page.goto(origin + '/join/');
+  await page.getByTestId('have-code').click(); // v8: the code path is the collapsed fallback
   await page.getByTestId('code-input').fill(code.toLowerCase());
+  await page.getByTestId('code-key').fill(key);
   await expect(page.getByTestId('code-input')).toHaveValue(code);
   await page.getByTestId('code-name').fill(name);
   await page.getByTestId('code-avatar').nth(3).click();
@@ -235,14 +242,16 @@ test('Lobby: hub "Host multi-screen" opens the room; two phones join by code at 
   await host.page.locator('[data-slug="phish-or-fine"] [data-testid="host-btn"]').click();
   await expect(host.page.getByTestId('room-lobby')).toBeVisible();
   const code = (await host.page.getByTestId('room-code').textContent()).trim();
+  const key = (await host.page.getByTestId('room-key').textContent()).trim();
+  await expect(host.page.getByTestId('room-name')).toHaveText('Phish or Fine lobby');
   await expect(host.page.getByTestId('room-join-hint')).toContainText(code);
 
   const a = await newPage(browser, { width: 360, height: 640 });
   const b = await newPage(browser, { width: 360, height: 640 });
   const pIssues = watch(a.page, origin);
-  await joinByCode(a.page, code, 'Ana');
+  await joinByCode(a.page, code, 'Ana', key);
   expect(a.page.url()).toBe(origin + '/games/phish-or-fine/?room=' + code);
-  await joinByCode(b.page, code, 'Ben');
+  await joinByCode(b.page, code, 'Ben', key);
   await expect(host.page.getByTestId('room-player')).toHaveCount(2);
   await host.page.getByTestId('room-start').click();
   const S = () => host.page.evaluate(() => JSON.parse(JSON.stringify(window.PhishOrFine.state)));
@@ -274,6 +283,7 @@ test('Lobby: a wrong code shows a clear error on /join/; the hub hides multi-scr
   const p = await newPage(browser, { width: 360, height: 640 });
   await p.page.goto(origin + '/join/?code=zzzz');
   await expect(p.page.getByTestId('code-input')).toHaveValue('ZZZZ');
+  await p.page.getByTestId('code-key').fill('ABCD');
   await p.page.getByTestId('code-name').fill('Ana');
   await p.page.getByTestId('code-join-btn').click();
   await expect(p.page.getByTestId('code-error')).toContainText('No room');
@@ -290,8 +300,9 @@ test('Phish or Fine with 3 phones: the phone sitting out calls each snippet from
   await host.page.goto(origin + '/games/phish-or-fine/?host=1&seed=2');
   await expect(host.page.getByTestId('room-lobby')).toBeVisible();
   const code = (await host.page.getByTestId('room-code').textContent()).trim();
+  const key = (await host.page.getByTestId('room-key').textContent()).trim();
   const phones = [];
-  for (const n of ['Ana', 'Ben', 'Cy']) { const p = await newPage(browser, { width: 360, height: 640 }); await joinByCode(p.page, code, n); phones.push(p); }
+  for (const n of ['Ana', 'Ben', 'Cy']) { const p = await newPage(browser, { width: 360, height: 640 }); await joinByCode(p.page, code, n, key); phones.push(p); }
   await host.page.getByTestId('room-start').click();
   const S = () => host.page.evaluate(() => JSON.parse(JSON.stringify(window.PhishOrFine.state)));
   const x = (await S()).heats[0];
@@ -326,14 +337,18 @@ test('same origin: host and join page sockets use location.host + /ws, join link
   await expect.poll(() => sockets.length).toBeGreaterThan(0);
   expect(sockets.every(u => u === expected)).toBe(true);
   const pageOrigin = await host.page.evaluate(() => location.origin);
-  expect((await host.page.getByTestId('room-url').textContent()).trim()).toBe(pageOrigin + '/games/phish-or-fine/?room=' + code);
+  const key = (await host.page.getByTestId('room-key').textContent()).trim();
+  expect((await host.page.getByTestId('room-url').textContent()).trim()).toBe(pageOrigin + '/games/phish-or-fine/?room=' + code + '&key=' + key);
+  await expect(host.page.getByTestId('room-join-where')).toContainText(pageOrigin.replace(/^https?:\/\//, '') + '/join/');
   await expect(host.page.getByTestId('room-join-hint')).toContainText(pageOrigin.replace(/^https?:\/\//, '') + '/join/');
 
   const phone = await newPage(browser, { width: 360, height: 640 });
   const phoneSockets = [];
   phone.page.on('websocket', ws => phoneSockets.push(ws.url()));
   await phone.page.goto(origin + '/join/');
+  await phone.page.getByTestId('have-code').click();
   await phone.page.locator('#code').fill(code);
+  await phone.page.locator('#key').fill(key);
   await phone.page.locator('#name').fill('Ada');
   await phone.page.getByTestId('code-join-btn').click();
   await expect.poll(() => phoneSockets.length, { timeout: 5000 }).toBeGreaterThan(0);
