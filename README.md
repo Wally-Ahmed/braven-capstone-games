@@ -136,12 +136,12 @@ games/inbox-showdown/index.html    Game A, self-contained
 games/first-week-hunt/index.html   Game B, self-contained
 games/phish-or-fine/index.html     Game C, self-contained
 tests/                             Playwright checks
-Dockerfile, deploy/nginx.conf      nginx:alpine static site on port 8080
-fly.toml, .dockerignore            Fly.io config (kept, no longer the deploy target)
+Dockerfile, .dockerignore          node:20-alpine image running server/index.js on port 8080 (static + rooms)
+fly.toml, deploy/FLY-DEPLOY.md     Fly.io config (always-on single machine) and the deploy runbook
 ```
 
 To add a game: put it at `games/<slug>/index.html`, include `../../shared/menu.css`, then after its own `<style>` `../../shared/theme.css` and `../../shared/tutorial.css`, the scripts `audio.js`, `fx.js`, `menu.js`, `tutorial.js`, `narrate.js` from `../../shared/` (all `defer`, in that order) and `../../shared/roster.js` without `defer`. On `DOMContentLoaded` call `Menu.init({ name, restart, setShield, howTo, shield })`, `Tutorial.init({ slug, name })` and `Narrate.init({ slug })`; expose `narrationLines()` on the page's test hook and add it to `tools/extract-lines.js`; write `shared/narration/<slug>/script.json`, and add one entry (with a `goal`) to `GAMES` in `index.html`.
 
 ## Deploy (later, not done yet)
 
-The planned target is GitHub Pages as a project site, https://wally-ahmed.github.io/braven-capstone-games/ (all paths are relative, so it works under that sub-path). Turning Pages on is Wally's call. The Fly files stay in the repo but are no longer the target.
+Target: Fly.io, https://braven-capstone-games.fly.dev/, running the Node server so room mode works (GitHub Pages would be static only, same-screen play). Not deployed yet: Wally runs `fly auth login` first. Exact steps, rollback and caveats (a deploy resets all rooms): `deploy/FLY-DEPLOY.md`.
