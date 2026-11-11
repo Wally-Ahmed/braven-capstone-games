@@ -38,7 +38,17 @@
     try { var s = kind === 'session' ? sessionStorage : localStorage; if (v === undefined) return s.getItem(k); s.setItem(k, v); } catch (e) { /* storage blocked */ }
     return null;
   }
-  function wsUrl() { return ROOT.replace(/^http/, 'ws') + 'ws'; }
+  // Same origin as the page: the socket and the join links always use location.host, so the backend (/ws) and
+  // the frontend are one domain wherever it is deployed. Only the path prefix comes from ROOT (subpath hosting).
+  var ROOT_PATH = (function () { try { return new URL(ROOT, location.href).pathname; } catch (e) { return '/'; } })();
+  var SELF_LOCAL = /^(localhost|127\.|\[::1\])/.test(location.hostname);
+  function wsUrl() { return (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + ROOT_PATH + 'ws'; }
+  function pageBase() {
+    // X-Public-Origin (a tunnel URL) is honoured only while the big screen itself is on localhost;
+    // on a real deployment the join link is always this page's own origin.
+    if (publicOrigin && SELF_LOCAL) return publicOrigin + ROOT_PATH;
+    return location.origin + ROOT_PATH;
+  }
 
   /* ------------------------------------------------------------------ *
    * Tiny QR code encoder (byte mode, error correction M, versions 1 to 10), after Project Nayuki's
@@ -231,16 +241,8 @@
    * HOST
    * ------------------------------------------------------------------ */
   var H = { conn: null, code: null, hostKey: null, players: [], started: false, seats: 0, lastSent: {}, ov: null, badge: null, showing: false };
-  function joinUrl() {
-    var base = ROOT;
-    if (publicOrigin) { try { base = publicOrigin + new URL(ROOT).pathname; } catch (e) { /* keep ROOT */ } }
-    return base + 'games/' + cfg.slug + '/?room=' + H.code;
-  }
-  function joinBase() {
-    var base = ROOT;
-    if (publicOrigin) { try { base = publicOrigin + new URL(ROOT).pathname; } catch (e) { /* keep ROOT */ } }
-    return base.replace(/^https?:\/\//, '');
-  }
+  function joinUrl() { return pageBase() + 'games/' + cfg.slug + '/?room=' + H.code; }
+  function joinBase() { return pageBase().replace(/^https?:\/\//, ''); }
   function seated() { return H.players.filter(function (p) { return p.seat != null; }).sort(function (a, b) { return a.seat - b.seat; }); }
   function hostOpen() {
     if (H.conn) { showLobby(); return; }

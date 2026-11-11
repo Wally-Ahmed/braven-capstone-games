@@ -78,7 +78,7 @@
     err.hidden = true; btn.disabled = true; btn.textContent = '⏳ Joining…';
     set('nb-room-name', name); set('nb-room-avatar', avatar);
     var ws, done = false;
-    try { ws = new WebSocket(ROOT.replace(/^http/, 'ws') + 'ws'); } catch (x) { fail('Could not reach the game server.'); return; }
+    try { ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + new URL(ROOT).pathname + 'ws'); } catch (x) { fail('Could not reach the game server.'); return; }
     var timer = setTimeout(function () { if (!done) { done = true; try { ws.close(); } catch (x) { /* ignore */ } fail('Could not reach the game server. Multi-screen needs the link from the big screen.'); } }, 6000);
     ws.onopen = function () { ws.send(JSON.stringify({ t: 'join', code: code, name: name, avatar: avatar })); };
     ws.onmessage = function (ev) {

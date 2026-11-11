@@ -312,3 +312,41 @@ test('Phish or Fine with 3 phones: the phone sitting out calls each snippet from
   expectClean(issues);
   await host.ctx.close(); for (const p of phones) await p.ctx.close();
 });
+
+test('same origin: host and join page sockets use location.host + /ws, join link uses location.origin', async ({ browser }) => {
+  const host = await newPage(browser);
+  const sockets = [];
+  host.page.on('websocket', ws => sockets.push(ws.url()));
+  await host.page.goto(origin + '/games/phish-or-fine/');
+  await host.page.getByTestId('btn-rooms').click();
+  await expect(host.page.getByTestId('room-lobby')).toBeVisible();
+  const code = (await host.page.getByTestId('room-code').textContent()).trim();
+  const expected = await host.page.evaluate(() => (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
+  expect(expected).toBe(origin.replace(/^http/, 'ws') + '/ws');
+  await expect.poll(() => sockets.length).toBeGreaterThan(0);
+  expect(sockets.every(u => u === expected)).toBe(true);
+  const pageOrigin = await host.page.evaluate(() => location.origin);
+  expect((await host.page.getByTestId('room-url').textContent()).trim()).toBe(pageOrigin + '/games/phish-or-fine/?room=' + code);
+  await expect(host.page.getByTestId('room-join-hint')).toContainText(pageOrigin.replace(/^https?:\/\//, '') + '/join/');
+
+  const phone = await newPage(browser, { width: 360, height: 640 });
+  const phoneSockets = [];
+  phone.page.on('websocket', ws => phoneSockets.push(ws.url()));
+  await phone.page.goto(origin + '/join/');
+  await phone.page.locator('#code').fill(code);
+  await phone.page.locator('#name').fill('Ada');
+  await phone.page.getByTestId('code-join-btn').click();
+  await expect.poll(() => phoneSockets.length, { timeout: 5000 }).toBeGreaterThan(0);
+  expect(phoneSockets.every(u => u === expected)).toBe(true);
+  await host.ctx.close(); await phone.ctx.close();
+});
+
+test('client code has no hard-coded deployment hosts', async () => {
+  const fs = require('fs');
+  const files = ['index.html', 'join/index.html', 'shield/index.html', 'shared', 'games']
+    .flatMap(function walk(f) { const p = path.join(__dirname, '..', f); return fs.statSync(p).isDirectory() ? fs.readdirSync(p).flatMap(n => walk(path.join(f, n))) : [f]; })
+    .filter(f => /\.(html|js)$/.test(f));
+  const bad = /(trycloudflare|fly\.dev|onrender\.com|github\.io|127\.0\.0\.1:\d|localhost:\d|:8080\b)/;
+  const hits = files.filter(f => bad.test(fs.readFileSync(path.join(__dirname, '..', f), 'utf8')));
+  expect(hits).toEqual([]);
+});
