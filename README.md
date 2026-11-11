@@ -157,7 +157,7 @@ To add a game: put it at `games/<slug>/index.html`, include `../../shared/menu.c
 
 ## Deploy on Render (free plan)
 
-`render.yaml` at the repo root is a Render Blueprint for one free web service (`braven-capstone-games`, Docker, Oregon, auto-deploy from `main`, health check `/healthz`). The same Node process serves the pages and the WebSocket rooms at `/ws`, so the big screen, the join page and the phones all use one domain (`https://braven-capstone-games.onrender.com`, or whatever name Render assigns). Render terminates TLS and passes WebSocket upgrades on the same port; Render injects `PORT` and the server binds `0.0.0.0`. No environment variables are needed.
+`render.yaml` at the repo root is a Render Blueprint for one free web service (`braven-capstone-games`, Docker, Oregon, health check `/healthz`; the live service was created through the API from the public Git URL, so pushes to `main` do NOT deploy by themselves until the GitHub repo is connected inside Render; trigger deploys manually or with Composio `RENDER_TRIGGER_DEPLOY`). The same Node process serves the pages and the WebSocket rooms at `/ws`, so the big screen, the join page and the phones all use one domain (`https://braven-capstone-games.onrender.com`, or whatever name Render assigns). Render terminates TLS and passes WebSocket upgrades on the same port; Render injects `PORT` and the server binds `0.0.0.0`. No environment variables are needed.
 
 - **Blueprint:** Render dashboard > New > Blueprint > pick this repo > Apply.
 - **Or by hand:** New > Web Service > Public Git repository `https://github.com/Wally-Ahmed/braven-capstone-games`, runtime Docker, plan Free, health check path `/healthz`.

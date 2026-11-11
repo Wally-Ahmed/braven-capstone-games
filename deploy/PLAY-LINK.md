@@ -11,4 +11,4 @@ Smoke test at deploy: /, /join/, /shield/, /games/phish-or-fine/, /healthz all r
 Render free plan: spins down after 15 min idle, first load can take about a minute, 750 free instance hours a month.
 Rooms live in memory, so a sleep, restart or redeploy resets every open room.
 
-Redeploy: push to main. autoDeploy is on, so Render builds the Dockerfile and goes live by itself.
+Redeploy: push to main, then trigger a deploy. The live service was created from the public Git URL through the API, so Render has no GitHub webhook on it and a push alone does nothing (verified 11/11 12:30 AM). Trigger from the Render dashboard (Manual Deploy) or with Composio `RENDER_TRIGGER_DEPLOY` on service srv-dbpv6lbrjlhs73b7djig. Connecting the GitHub repo inside Render would make pushes deploy on their own.
